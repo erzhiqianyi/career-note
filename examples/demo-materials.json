@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "materials": [{
+    "id": "demo-research-v1",
+    "jobId": "demo-company-web-engineer",
+    "kind": "公司研究",
+    "title": "架空企業の研究メモ（デモ）",
+    "content": "# デモ\n\n操作確認用です。企業・求人・経歴の実在を示すものではありません。",
+    "sourceNotes": "examples/demo-jobs.json の架空データのみ。外部調査なし。"
+  }],
+  "completeTaskIds": []
+}

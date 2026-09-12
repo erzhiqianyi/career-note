@@ -1,0 +1,11 @@
+# Copy to .dev.vars; Firebase Console > Project settings > Your apps > Web app.
+CAREER_AUTH_MODE=strict
+FIREBASE_API_KEY=your-web-api-key
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project
+FIREBASE_APP_ID=your-web-app-id
+# Only these verified Google accounts can access this personal workspace.
+CAREER_ALLOWED_EMAILS=you@example.com
+# Optional Firebase UID allowlist and administrator UID list.
+CAREER_ALLOWED_UIDS=
+CAREER_ADMIN_UIDS=

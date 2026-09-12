@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "jobs": [{
+    "id": "demo-company-web-engineer",
+    "company": "サンプル株式会社（架空）",
+    "role": "Web エンジニア（デモ）",
+    "url": "https://example.com/careers/demo",
+    "sourceDate": "2026-09-12",
+    "location": "デモの勤務地",
+    "salary": "架空データ・給与情報なし",
+    "business": "操作確認用の架空企業",
+    "description": "データ保存と企業別準備の操作を試す",
+    "requirements": "実在する募集条件ではない",
+    "japanese": "未設定",
+    "foreigner": "判断対象外",
+    "visa": "判断対象外",
+    "matchNotes": "テスト専用。実際の応募には使用しない",
+    "unknowns": "すべて架空のため企業照会不可"
+  }],
+  "completeTaskIds": []
+}

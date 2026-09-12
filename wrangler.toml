@@ -1,0 +1,15 @@
+name = "career-note"
+main = "worker/index.ts"
+compatibility_date = "2026-05-22"
+compatibility_flags = ["nodejs_compat"]
+
+# 本地开发：使用 wrangler dev 时，CAREER_DB 会映射到本地临时 SQLite；部署前替换为真实 D1 database_id。
+[[d1_databases]]
+binding = "CAREER_DB"
+database_name = "career-note"
+database_id = "00000000-0000-4000-8000-000000000000"
+
+# Google ログインのローカル設定は .dev.vars.example を参照。
+# .dev.vars に Firebase Web 設定と CAREER_ALLOWED_EMAILS / CAREER_ALLOWED_UIDS を設定。
+# FIREBASE_PROJECT_ID がある場合、認証は既定で strict。
+# CAREER_ADMIN_UIDS は管理者権限用。アクセス許可リストも別途必要。

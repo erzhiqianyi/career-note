@@ -1,0 +1,4 @@
+interface:
+  display_name: "日本求职准备"
+  short_description: "根据真实履历寻找日本公司，核验岗位并生成专属简历、证据映射和面试练习"
+  default_prompt: "使用 $career-job-prep 根据我的最新履历寻找匹配的日本公司，为最合适的岗位生成专属简历和日中面试资料，并保存到本机求职工作区。"
