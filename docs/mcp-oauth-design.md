@@ -1,6 +1,6 @@
 # Career Note MCP OAuth 接入设计（草案）
 
-状态：已实现（2026-09-14，本机 + 隧道阶段）。已定：废除手动签发令牌，OAuth 为唯一接入方式；`off` 模式采用 §7.4 的 B 方案。实现：[packages/agent-gateway](../packages/agent-gateway/README.md)（2026-09-15 抽成通用包，Career Note 只保留 [worker/agent-tools.ts](../worker/agent-tools.ts) 的工具表与 Firebase 身份适配）、[components/oauth-consent.tsx](../components/oauth-consent.tsx)、[tests/oauth.test.mjs](../tests/oauth.test.mjs)。对应 [06 API](lifecycle/06-api.md)、[04 构成](lifecycle/04-architecture.md)、[Agent 工作流](agent-workflow.md)。采纳后应补一份 ADR-0002，并把端点表合并进 06。
+状态：已实现（2026-09-14，本机 + 隧道阶段）。已定：废除手动签发令牌，OAuth 为唯一接入方式；`off` 模式采用 §7.4 的 B 方案。实现：[@erzhiqian/agent-gateway](https://github.com/erzhiqianyi/agent-gateway)（2026-09-15 抽成独立开源包，发布前暂以 [packages/agent-gateway](../packages/agent-gateway/README.md) workspace 副本提供，Career Note 只保留 [worker/agent-tools.ts](../worker/agent-tools.ts) 的工具表与 Firebase 身份适配）、[components/oauth-consent.tsx](../components/oauth-consent.tsx)、[tests/oauth.test.mjs](../tests/oauth.test.mjs)。对应 [06 API](lifecycle/06-api.md)、[04 构成](lifecycle/04-architecture.md)、[Agent 工作流](agent-workflow.md)。采纳后应补一份 ADR-0002，并把端点表合并进 06。
 
 ## 1. 目标与范围
 
