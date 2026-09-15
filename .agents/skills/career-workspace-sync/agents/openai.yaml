@@ -1,0 +1,4 @@
+interface:
+  display_name: "MCP 数据同步"
+  short_description: "MCP 数据同步，通过配置好的 MCP 同步"
+  default_prompt: "使用 $career-workspace-sync，将本轮明确完成的求职资料同步到我已配置的 Career Note MCP。先读取协议和当前资料，列明本批类型、数量、关联对象与已有版本；若本轮没有明确的数据包或交付范围，先确认待同步内容。检查重复及关联，预览后写入并读回，只补失败后尚未保存的部分，不重新生成求职结论。履历变更须有明确授权，使用专用更新工具；投递状态和真实回答不能混入导入包。"

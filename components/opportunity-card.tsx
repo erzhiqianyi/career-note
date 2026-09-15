@@ -1,9 +1,7 @@
-import {
-  ArrowUpRight,
-  CalendarDays,
-  FileText,
-  ExternalLink,
-} from 'lucide-react';
+'use client';
+import { ArrowUpRight } from 'lucide-react';
+import { useLocale } from '@/components/locale-provider';
+import { RecordRow } from '@/components/record-list';
 import type { Job } from '@/lib/career';
 export default function OpportunityCard({
   job,
@@ -20,16 +18,16 @@ export default function OpportunityCard({
   onPractice: () => void;
   onEdit: () => void;
 }) {
+  const { t } = useLocale();
   return (
-    <article className="opportunity-card">
-      <div className="opportunity-heading">
-        <div>
-          <button className="opportunity-name" onClick={onOpen}>
-            {job.company}
-            <ArrowUpRight size={17} />
-          </button>
-          <p>{job.role}</p>
-        </div>
+    <RecordRow
+      title={
+        <button className="record-title-button" onClick={onOpen}>
+          {job.company}
+          <ArrowUpRight size={16} />
+        </button>
+      }
+      badge={
         <span
           className={
             'badge ' +
@@ -40,72 +38,38 @@ export default function OpportunityCard({
                 : '')
           }
         >
-          {job.status}
+          {t(job.status)}
         </span>
-      </div>
-      <div className="opportunity-body">
-        <div>
-          <dl className="opportunity-facts">
-            <div>
-              <dt>工作地点</dt>
-              <dd>{job.location || '待确认'}</dd>
-            </div>
-            <div>
-              <dt>日语要求</dt>
-              <dd>{job.japanese || '待确认'}</dd>
-            </div>
-          </dl>
-          <details>
-            <summary>匹配点与待确认事项</summary>
-            <p className="prewrap">{job.matchNotes || '匹配情况待补充'}</p>
-            <p className="prewrap">
-              {job.unknowns || '请先核对招聘来源与岗位要求。'}
-            </p>
-          </details>
-          {job.url && (
-            <a
-              className="source-link"
-              href={job.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={14} />
-              招聘原文{job.sourceDate && ` · 信息日期 ${job.sourceDate}`}
-            </a>
-          )}
-        </div>
-        <div className="opportunity-preparation">
-          <h3>从这家公司开始准备</h3>
-          <p>
-            {materialCount
-              ? `已整理 ${materialCount} 份准备材料`
-              : '先整理职位要求与个人经历'}
-            {questionCount > 0 && `，可练习 ${questionCount} 道面试题`}。
-          </p>
-          <button
-            className={questionCount ? 'primary' : 'secondary'}
-            onClick={questionCount ? onPractice : onOpen}
-          >
-            {questionCount ? (
-              <CalendarDays size={17} />
-            ) : (
-              <FileText size={17} />
-            )}{' '}
-            {questionCount ? '练一题面试回答' : '查看准备资料'}
+      }
+      meta={`${job.role} · ${job.location || t('待确认')} · ${job.japanese || t('待确认')}`}
+      description={job.nextAction || t('先整理职位要求与个人经历')}
+      actions={
+        <>
+          <button className="text-button" onClick={onOpen}>
+            {t('查看准备资料')} · {materialCount}
           </button>
-          <div className="opportunity-next">
-            <span>{job.nextAction ? '已安排的下一步' : '跟进安排'}</span>
-            <p>
-              {job.nextAction || '准备好后，为下一步留个日期。'}
-              {job.nextDate && ` · ${job.nextDate}`}
-            </p>
-            <button className="text-button" onClick={onEdit}>
-              {job.nextAction ? '更新进展' : '设置下一步'}
-              <ArrowUpRight size={14} />
+          {questionCount > 0 && (
+            <button className="text-button" onClick={onPractice}>
+              {t('面试练习')} · {questionCount}
             </button>
-          </div>
-        </div>
-      </div>
-    </article>
+          )}
+          <button className="text-button" onClick={onEdit}>
+            {t('更新进展')}
+          </button>
+        </>
+      }
+    >
+      <small className="record-meta">{job.nextDate}</small>
+      <details className="record-extra">
+        <summary>{t('匹配点与待确认事项')}</summary>
+        <p>{job.matchNotes || t('匹配情况待补充')}</p>
+        <p>{job.unknowns || t('请先核对招聘来源与岗位要求。')}</p>
+        {job.url && (
+          <a href={job.url} target="_blank" rel="noreferrer">
+            {t('招聘原文')}
+          </a>
+        )}
+      </details>
+    </RecordRow>
   );
 }

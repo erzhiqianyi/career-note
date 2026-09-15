@@ -34,7 +34,7 @@ Web の JSON export は閲覧・持出し用の状態スナップショット。
 | --- | --- |
 | ページが開かない | doctor、起動ログ、ポート競合を確認。無関係なプロセスは停止しない |
 | API だけ失敗 | Worker 設定、ポート、D1 保存先を確認 |
-| Google 認証失敗 | Firebase provider、localhost、Web 設定、許可リストを確認 |
+| Google 認証失敗 | Firebase provider、localhost、Web 設定、トークンの有効性を確認 |
 | import が途中で失敗 | state で書込み済み ID を確認し、残りだけを整理。盲目の再送を避ける |
 | トークン漏えい疑い | 該当 Agent トークンを失効。必要に応じて秘密を更新し影響調査 |
 | データ消失の疑い | 書込み停止、現物保全、別保存先へ復旧。公開 Issue に DB を添付しない |

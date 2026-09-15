@@ -1,6 +1,22 @@
 'use client';
+import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
+
+import { RecordList, RecordRow } from '@/components/record-list';
+import AgentConnection from '@/components/agent-connection';
+import AgentSetup from '@/components/agent-setup';
+import {
+  findMcpClient,
+  mcpClientHash,
+  mcpClientPage,
+  mcpClients,
+  mcpSetupHash,
+  mcpSetupPage,
+} from '@/lib/mcp-clients';
+import ScheduledSync from '@/components/scheduled-sync';
+import CareerWelcome from '@/components/career-welcome';
 import InterviewPractice from '@/components/interview-practice';
-import ProfileOverview from '@/components/profile-overview';
+import ResumeManager from '@/components/resume-manager';
+import PersonalizedResumes from '@/components/personalized-resumes';
 import OpportunityCard from '@/components/opportunity-card';
 import SkillArchive from '@/components/skill-archive';
 import JobPlatforms from '@/components/job-platforms';
@@ -16,7 +32,9 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BriefcaseBusiness,
+  CalendarClock,
   CalendarDays,
+  Blocks,
   Check,
   ChevronRight,
   Download,
@@ -24,6 +42,8 @@ import {
   FileText,
   LayoutDashboard,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
   Search,
@@ -40,7 +60,7 @@ import {
   materialKinds,
   statuses,
   type MpcTokenRecord,
-  type MpcTokenResponse,
+  type AgentActivity,
   type AuthContext,
   type Job,
   type Material,
@@ -61,12 +81,31 @@ const nav = [
   { label: '公司与投递', icon: BriefcaseBusiness },
   { label: '求职平台', icon: Search },
   { label: '我的履历', icon: UserRound },
+  { label: '个性化简历', icon: FileText },
   { label: '准备资料', icon: FileText },
   { label: '面试练习', icon: CalendarDays },
   { label: '每日分析', icon: Sparkles },
   { label: 'Agent 协作', icon: Workflow },
-  { label: '管理后台', icon: Shield, adminOnly: true },
 ];
+const subPages: Record<string, { parent: string; hash: string }> = {
+  技能库: { parent: 'Agent 协作', hash: '#skills' },
+  定时任务: { parent: 'Agent 协作', hash: '#schedule' },
+  [mcpSetupPage]: { parent: 'Agent 协作', hash: mcpSetupHash },
+  ...Object.fromEntries(
+    mcpClients.map((c) => [
+      mcpClientPage(c.id),
+      { parent: 'Agent 协作', hash: mcpClientHash(c.id) },
+    ]),
+  ),
+};
+const sidebarKey = 'career-note.sidebar-collapsed';
+const hashes: Record<string, string> = {
+  '#interview': '面试练习',
+  '#platforms': '求职平台',
+  ...Object.fromEntries(
+    Object.entries(subPages).map(([label, page]) => [page.hash, label]),
+  ),
+};
 const researchFields = [
   ['company', '公司名称'],
   ['role', '职位名称'],
@@ -92,9 +131,10 @@ const profileFields = [
   ['conditions', '求职条件'],
 ];
 function day(value: string) {
-  return value ? value.slice(0, 10).replaceAll('-', '.') : '待确认';
+  return value ? value.slice(0, 10).replaceAll('-', '.') : '—';
 }
 function Badge({ children }: { children: ReactNode }) {
+  const { t: tr } = useLocale();
   return (
     <span
       className={
@@ -110,15 +150,16 @@ function Badge({ children }: { children: ReactNode }) {
                 : '')
       }
     >
-      {children}
+      {typeof children === 'string' ? tr(children) : children}
     </span>
   );
 }
 function Empty({ title, children }: { title: string; children?: ReactNode }) {
+  const { t: tr } = useLocale();
   return (
     <div className="empty">
       <BriefcaseBusiness size={28} />
-      <h3>{title}</h3>
+      <h3>{tr(title)}</h3>
       {children}
     </div>
   );
@@ -138,10 +179,11 @@ function Field({
   required?: boolean;
   type?: string;
 }) {
+  const { t: tr } = useLocale();
   return (
     <label className={large ? 'field wide' : 'field'}>
       <span>
-        {label}
+        {tr(label)}
         {required && ' *'}
       </span>
       {large ? (
@@ -171,6 +213,7 @@ function Modal({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const { t: tr } = useLocale();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
@@ -184,8 +227,12 @@ function Modal({
       }}
     >
       <div className="modal-head">
-        <h2>{title}</h2>
-        <button className="icon-button" aria-label="关闭" onClick={onClose}>
+        <h2>{tr(title)}</h2>
+        <button
+          className="icon-button"
+          aria-label={tr('关闭')}
+          onClick={onClose}
+        >
           <X size={20} />
         </button>
       </div>
@@ -194,6 +241,7 @@ function Modal({
   );
 }
 export default function Home() {
+  const { t: tr } = useLocale();
   const [active, setActive] = useState('今日准备'),
     [data, setData] = useState<State | null>(null),
     [auth, setAuth] = useState<AuthContext | null>(null),
@@ -207,10 +255,28 @@ export default function Home() {
     [doc, setDoc] = useState<Material | Report | null>(null);
   const [practiceJob, setPracticeJob] = useState('');
   const [moreOpen, setMoreOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      setNavCollapsed(localStorage.getItem(sidebarKey) === '1');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const toggleNav = () => {
+    setNavCollapsed((value) => {
+      try {
+        localStorage.setItem(sidebarKey, value ? '0' : '1');
+      } catch {
+        /* ignore */
+      }
+      return !value;
+    });
+  };
   useEffect(() => {
     const navigate = () => {
-      if (window.location.hash === '#interview') setActive('面试练习');
-      if (window.location.hash === '#platforms') setActive('求职平台');
+      const target = hashes[window.location.hash];
+      if (target) setActive(target);
     };
     navigate();
     window.addEventListener('hashchange', navigate);
@@ -227,12 +293,12 @@ export default function Home() {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [mcpTokens, setMcpTokens] = useState<MpcTokenRecord[]>([]);
-  const [tokenName, setTokenName] = useState('MCP Agent Token');
-  const [tokenDays, setTokenDays] = useState('30');
+  const [agentTrail, setAgentTrail] = useState<{ tokenId: string; rows: AgentActivity[] } | null>(null);
   const visibleNav = useMemo(
-    () => nav.filter((item) => !item.adminOnly || auth?.admin),
+    () => nav,
     [auth],
   );
+  const activePage = subPages[active]?.parent ?? active;
   const reload = useCallback(async () => {
     const epoch = sessionEpoch.current;
     try {
@@ -263,64 +329,87 @@ export default function Home() {
       return false;
     }
   }, []);
-  const invalidateSession = useCallback(() => { sessionEpoch.current++; }, []);
+  const invalidateSession = useCallback(() => {
+    sessionEpoch.current++;
+  }, []);
   useEffect(() => {
     let disposed = false;
     let removeAuth = () => {};
-    void configureCareerAuth().then(config => {
-      if (disposed) return;
-      setAuthConfig(config);
-      removeAuth = listenCareerAuthChanged((user, token) => {
+    void configureCareerAuth()
+      .then((config) => {
         if (disposed) return;
-        if (lastUid.current !== (user?.uid || null)) {
-          sessionEpoch.current++;
-          setData(null);
-          setAuth(null);
-          setMcpTokens([]);
-          setImportOpen(false);
-          setImportText('');
-          setPreview(null);
-          setProfileEdit(false);
-          setJobEdit(null);
-          setSelected('');
-        }
-        lastUid.current = user?.uid || null;
-        setAuthToken(token);
-        setUserName(user?.displayName || '');
-        setUserEmail(user?.email || '');
-        setLoggedIn(false);
-        if (!user && config.mode !== 'off') {
-          setAuth(null);
-          setData(null);
-          return;
-        }
-        void refreshAuth().then(ok => { if (ok && !disposed) void reload(); });
-      }, error => { if (!disposed) setError(error.message); });
-    }).catch(error => { if (!disposed) setError(error.message); });
-    return () => { disposed = true; invalidateSession(); removeAuth(); };
+        setAuthConfig(config);
+        removeAuth = listenCareerAuthChanged(
+          (user, token) => {
+            if (disposed) return;
+            if (lastUid.current !== (user?.uid || null)) {
+              sessionEpoch.current++;
+              setData(null);
+              setAuth(null);
+              setMcpTokens([]);
+              setImportOpen(false);
+              setImportText('');
+              setPreview(null);
+              setProfileEdit(false);
+              setJobEdit(null);
+              setSelected('');
+            }
+            lastUid.current = user?.uid || null;
+            setAuthToken(token);
+            setUserName(user?.displayName || '');
+            setUserEmail(user?.email || '');
+            setLoggedIn(false);
+            if (!user && config.mode !== 'off') {
+              setAuth(null);
+              setData(null);
+              return;
+            }
+            void refreshAuth().then((ok) => {
+              if (ok && !disposed) void reload();
+            });
+          },
+          (error) => {
+            if (!disposed) setError(error.message);
+          },
+        );
+      })
+      .catch((error) => {
+        if (!disposed) setError(error.message);
+      });
+    return () => {
+      disposed = true;
+      invalidateSession();
+      removeAuth();
+    };
   }, [refreshAuth, reload, invalidateSession]);
   useEffect(() => {
     if (!auth) return;
     const timer = setInterval(() => {
-      void refreshAuth().then(ok => { if (ok) void reload(); });
+      void refreshAuth().then((ok) => {
+        if (ok) void reload();
+      });
     }, 30000);
     return () => clearInterval(timer);
   }, [auth, refreshAuth, reload]);
   const refreshMcpTokens = useCallback(async () => {
+    const epoch = sessionEpoch.current;
     try {
       const response = await api<{ tokens: MpcTokenRecord[] }>('mcp/tokens');
+      if (epoch !== sessionEpoch.current) return;
       setMcpTokens(response.tokens || []);
     } catch {
+      if (epoch !== sessionEpoch.current) return;
       setMcpTokens([]);
     }
   }, []);
   useEffect(() => {
-    if (active === '管理后台' && auth?.admin) {
+    if (activePage === 'Agent 协作' && auth) {
       void refreshMcpTokens();
     }
-  }, [active, auth, refreshMcpTokens]);
+  }, [activePage, auth, refreshMcpTokens]);
   useEffect(() => {
-    if (!visibleNav.some((item) => item.label === active)) {
+    const page = subPages[active]?.parent ?? active;
+    if (!visibleNav.some((item) => item.label === page)) {
       setActive('今日准备');
     }
   }, [active, visibleNav]);
@@ -376,31 +465,41 @@ export default function Home() {
       setBusy(false);
     }
   }
-  async function createMcpToken() {
-    const days = Number(tokenDays);
-    if (!tokenName || !days) return;
-    try {
-      const record = await api<MpcTokenResponse>('mcp/tokens', {
-        name: tokenName,
-        scopes: ['career:read', 'career:write', 'agent:write'],
-        expiresInDays: days,
-      });
-      await refreshMcpTokens();
-      await navigator.clipboard.writeText(record.token);
-      setMessage('已生成并复制 MCP token（仅显示一次）');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '生成 token 失败');
-    }
-  }
   async function revokeMcpToken(id: string) {
     await action(() => api('mcp/tokens/revoke', { id }), '已撤销 MCP token');
     await refreshMcpTokens();
+    if (agentTrail?.tokenId === id) await showAgentTrail(id);
+  }
+  async function showAgentTrail(tokenId: string) {
+    if (agentTrail?.tokenId === tokenId) { setAgentTrail(null); return; }
+    try {
+      const response = await api<{ activity: AgentActivity[] }>('mcp/activity?tokenId=' + encodeURIComponent(tokenId) + '&limit=50');
+      setAgentTrail({ tokenId, rows: response.activity });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '读取操作记录失败');
+    }
+  }
+  function describeActivity(row: AgentActivity) {
+    const names: Record<string, string> = { authorized: '完成授权', refreshed: '刷新令牌', revoked: '撤销授权', 'tool:state': '读取工作区', 'tool:resume': '写入履历条目', 'tool:personalized-resumes': '写入个性化简历', 'tool:import/preview': '预览导入', 'tool:import': '导入数据', 'tool:tasks': '排队任务', 'tool:profile': '更新履历摘要' };
+    const base = names[row.event] || (row.event.startsWith('tool:resume/history') ? '读取履历历史' : row.event.startsWith('tool:personalized-resumes') ? '读取个性化简历' : row.event);
+    const requested = row.detail && typeof row.detail.requested === 'object' && row.detail.requested ? Object.entries(row.detail.requested as Record<string, number>).map(([k, v]) => `${k} ${v}`).join('，') : '';
+    const kind = row.detail && typeof row.detail.kind === 'string' ? row.detail.kind : '';
+    return tr(base) + (requested ? `（${requested}）` : kind ? `（${kind}）` : '') + (row.ok ? '' : ' · ' + tr('失败'));
   }
   function go(label: string) {
     window.scrollTo(0, 0);
-    if (visibleNav.some((item) => item.label === label)) {
+    const page = subPages[label]?.parent ?? label;
+    if (visibleNav.some((item) => item.label === page)) {
       setActive(label);
-      window.history.replaceState(null, '', label === '求职平台' ? '#platforms' : label === '面试练习' ? '#interview' : window.location.pathname);
+      window.history.replaceState(
+        null,
+        '',
+        label === '求职平台'
+          ? '#platforms'
+          : label === '面试练习'
+            ? '#interview'
+            : (subPages[label]?.hash ?? window.location.pathname),
+      );
     }
     setMoreOpen(false);
     setSelected('');
@@ -492,101 +591,118 @@ export default function Home() {
           .includes(query.toLowerCase()),
     ) || [];
   const pending = data?.tasks.filter((t) => t.status === '待处理') || [];
-  function promptText() {
-    return `请处理我的本机求职工作区。先阅读 当前项目的 docs/agent-workflow.md。按工作流读取 state 并更新 pending tasks，然后根据来源核验职位信息，基于个人事实准备材料和每日报告，按工作流要求 preview/import 写入结果。严禁编造经历或修改投递状态，严禁代我发送申请或联系企业。`;
-  }
   if (!authConfig || (authConfig.mode !== 'off' && !loggedIn)) {
-    return <main className="login-page">
-      <section className="login-card">
-        <p className="eyebrow">CAREER NOTE</p>
-        <h1>登录就职手帖</h1>
-        <p>使用获准的 Google 账号，访问你的求职资料与面试练习。</p>
-        {error && <p role="alert">{error}</p>}
-        {!authConfig ? <p>{error ? '请检查服务后刷新页面。' : '正在读取登录配置…'}</p> : <>
-          {!getCareerAuth() && <p>尚未配置 Google 登录。请按 README 设置 Firebase 后重启服务。</p>}
-          <button className="primary" disabled={busy || !getCareerAuth()} onClick={() => void login()}>Google 登录</button>
-          {userEmail && <button className="text-button" disabled={busy} onClick={() => void logout()}>退出 {userEmail}</button>}
-        </>}
-      </section>
-    </main>;
+    return (
+      <CareerWelcome
+        ready={!!authConfig}
+        configured={!!getCareerAuth()}
+        busy={busy}
+        error={error}
+        userEmail={userEmail}
+        onLogin={() => void login()}
+        onLogout={() => void logout()}
+      />
+    );
   }
   return (
-    <div className="shell">
+    <div className={navCollapsed ? 'shell nav-collapsed' : 'shell'}>
       <aside className="sidebar">
         <div className="brand">
-          <span>就</span>
+          <span>{tr('就')}</span>
           <div>
-            就职手帖<small>CAREER NOTE / TOKYO</small>
+            {tr('就职手帖')}
+            <small>CAREER NOTE / TOKYO</small>
           </div>
         </div>
-        <nav aria-label="工作区导航">
+        <nav aria-label={tr('工作区导航')}>
           {visibleNav.map(({ label, icon: Icon }) => (
             <button
               key={label}
-              aria-current={active === label ? 'page' : undefined}
-              className={active === label ? 'active' : ''}
+              aria-current={activePage === label ? 'page' : undefined}
+              className={activePage === label ? 'active' : ''}
+              title={navCollapsed ? tr(label) : undefined}
+              aria-label={navCollapsed ? tr(label) : undefined}
               onClick={() => go(label)}
             >
               <Icon size={19} />
-              {label}
+              <span className="nav-label">{tr(label)}</span>
               {label === 'Agent 协作' && pending.length > 0 && (
                 <span className="nav-count">{pending.length}</span>
               )}
             </button>
           ))}
         </nav>
+        <button
+          className="sidebar-toggle"
+          aria-label={navCollapsed ? tr('展开导航栏') : tr('收起导航栏')}
+          title={navCollapsed ? tr('展开导航栏') : tr('收起导航栏')}
+          aria-expanded={!navCollapsed}
+          onClick={toggleNav}
+        >
+          {navCollapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+          <span className="nav-label">{tr('收起导航栏')}</span>
+        </button>
       </aside>
-      <nav className="mobile-nav" aria-label="手机导航">
+      <nav className="mobile-nav" aria-label={tr('手机导航')}>
         {[
           { label: '今日准备', short: '今日', icon: LayoutDashboard },
           { label: '公司与投递', short: '公司', icon: BriefcaseBusiness },
-          { label: '面试练习', short: '面试练习', icon: CalendarDays },
+          { label: '面试练习', short: '面试', icon: CalendarDays },
           { label: '我的履历', short: '履历', icon: UserRound },
         ].map(({ label, short, icon: Icon }) => (
           <button
             key={label}
             className={active === label ? 'active' : ''}
-            aria-label={label}
+            aria-label={tr(label)}
             aria-current={active === label ? 'page' : undefined}
             onClick={() => go(label)}
           >
             <Icon size={21} />
-            <span>{short}</span>
+            <span>{tr(short)}</span>
           </button>
         ))}
         <button
           className={
-            ['求职平台', '准备资料', '每日分析', 'Agent 协作', '管理后台'].includes(active) ||
-            moreOpen
+            [
+              '求职平台',
+              '准备资料',
+              '每日分析',
+              'Agent 协作',
+              '管理后台',
+            ].includes(activePage) || moreOpen
               ? 'active'
               : ''
           }
-          aria-label="更多页面"
+          aria-label={tr('更多页面')}
           aria-haspopup="dialog"
           aria-expanded={moreOpen}
           onClick={() => setMoreOpen(true)}
         >
           <MoreHorizontal size={22} />
-          <span>更多</span>
+          <span>{tr('更多')}</span>
         </button>
       </nav>
       {moreOpen && (
-        <Modal title="更多页面" onClose={() => setMoreOpen(false)}>
+        <Modal title={tr('更多页面')} onClose={() => setMoreOpen(false)}>
           <div className="more-pages">
             {visibleNav
               .filter((item) =>
-                ['求职平台', '准备资料', '每日分析', 'Agent 协作', '管理后台'].includes(
-                  item.label,
-                ),
+                [
+                  '求职平台',
+                  '准备资料',
+                  '每日分析',
+                  'Agent 协作',
+                  '管理后台',
+                ].includes(item.label),
               )
               .map(({ label, icon: Icon }) => (
                 <button
                   key={label}
-                  aria-current={active === label ? 'page' : undefined}
+                  aria-current={activePage === label ? 'page' : undefined}
                   onClick={() => go(label)}
                 >
                   <Icon size={21} />
-                  <span>{label}</span>
+                  <span>{tr(label)}</span>
                   <ChevronRight size={18} />
                 </button>
               ))}
@@ -595,40 +711,67 @@ export default function Home() {
       )}
       <main>
         <header>
-          <span>
-            我的工作区 <span className="muted">/ {active}</span>
-          </span>
+          <div className="header-nav">
+            {(subPages[active] || (active === '公司与投递' && job)) && (
+              <button
+                className="icon-button header-back"
+                aria-label={tr('返回 {0}', [
+                  tr(subPages[active]?.parent ?? active),
+                ])}
+                onClick={() =>
+                  subPages[active]
+                    ? go(subPages[active].parent)
+                    : setSelected('')
+                }
+              >
+                <ArrowLeft size={18} />
+              </button>
+            )}
+            <span className="breadcrumb">
+              {tr(activePage)}
+              {(subPages[active] || (active === '公司与投递' && job)) && (
+                <span className="muted">
+                  / {job ? job.company : tr(findMcpClient(active)?.name ?? active)}
+                  {job?.role ? ' · ' + job.role : ''}
+                </span>
+              )}
+            </span>
+          </div>
           <div className="row">
-          <span className="location">
-              日本 · {data ? day(data.today) : '日本求职'}
+            <LanguageSwitcher />
+            <span className="location">
+              {tr('日本 ·')}
+              {data ? day(data.today) : tr('日本求职')}
             </span>
             {loggedIn && (
               <span className="location">
-                {userName || userEmail || '已登录'}
+                {userName || userEmail || tr('已登录')}
               </span>
             )}
-            {!getCareerAuth() ? <span className="muted">本机模式 · Google 登录未启用</span> : (
-              loggedIn ? (
-                <button
-                  className="text-button"
-                  onClick={() => void logout()}
-                  disabled={busy}
-                >
-                  退出
-                </button>
-              ) : (
-                <button
-                  className="primary"
-                  onClick={() => void login()}
-                  disabled={busy}
-                >
-                  Google 登录
-                </button>
-              )
+            {!getCareerAuth() ? (
+              <span className="muted">
+                {tr('本机模式 · Google 登录未启用')}
+              </span>
+            ) : loggedIn ? (
+              <button
+                className="text-button"
+                onClick={() => void logout()}
+                disabled={busy}
+              >
+                {tr('退出')}
+              </button>
+            ) : (
+              <button
+                className="primary"
+                onClick={() => void login()}
+                disabled={busy}
+              >
+                {tr('Google 登录')}
+              </button>
             )}
             <button
               className="icon-button"
-              aria-label="刷新资料"
+              aria-label={tr('刷新资料')}
               onClick={() => void reload()}
             >
               <RefreshCw size={16} />
@@ -638,66 +781,33 @@ export default function Home() {
         <div className="page">
           {error && (
             <div className="alert" role="alert">
-              {error}
+              {tr(error)}
               <button className="text-button" onClick={() => void reload()}>
-                重试
+                {tr('重试')}
               </button>
             </div>
           )}
           {message && (
             <div className="toast" role="status">
               <Check size={17} />
-              {message}
+              {tr(message)}
             </div>
           )}
-          <div className="page-title">
-            <div>
-              <div className="eyebrow">一歩ずつ、前へ。</div>
-              <h1>{job ? job.company : active}</h1>
-              <p>
-                {job
-                  ? job.role
-                  : active === '求职平台'
-                    ? '找到适合自己的求职入口。'
-                  : active === '今日准备'
-                    ? '从了解一家公司，到准备好下一场面试。'
-                    : active === '公司与投递'
-                      ? '一处整理机会、进展与下一步。'
-                      : active === '我的履历'
-                        ? '一份真实经历，为不同机会选择合适的表达。'
-                        : active === '准备资料'
-                          ? '每家公司，一份有依据的准备。'
-                          : active === '面试练习'
-                            ? '把每一道题，练成你能自然说出的回答。'
-                    : active === '每日分析'
-                      ? '保留判断依据，也记录准备的变化。'
-                      : active === '管理后台'
-                        ? '管理入口与账户策略用于接入权限与审计。'
-                        : '让研究和准备，持续回到你的工作区。'}
-              </p>
-            </div>
-            <div className="row">
-              {active === '我的履历' ? (
-                <button
-                  disabled={!data}
-                  className="primary"
-                  onClick={() => setProfileEdit(true)}
-                >
-                  编辑履历
-                </button>
-              ) : active === '每日分析' ? (
+          {(() => {
+            const action =
+              active === '每日分析' ? (
                 <button
                   className="primary"
                   disabled={busy || !data}
                   onClick={() => void request('每日分析')}
                 >
                   <Sparkles size={17} />
-                  请求今日分析
+                  {tr('请求今日分析')}
                 </button>
               ) : active === '今日准备' && !!data?.questionSets.length ? (
                 <button className="primary" onClick={() => go('面试练习')}>
                   <CalendarDays size={18} />
-                  开始面试练习
+                  {tr('开始面试练习')}
                 </button>
               ) : active === '公司与投递' || active === '今日准备' ? (
                 <button
@@ -706,17 +816,21 @@ export default function Home() {
                   onClick={() => setJobEdit({})}
                 >
                   <Plus size={18} />
-                  添加职位
+                  {tr('添加职位')}
                 </button>
-              ) : null}
-            </div>
-          </div>
+              ) : null;
+            return action ? <div className="page-actions">{action}</div> : null;
+          })()}
           {!data ? (
             <section className="panel">
               <Empty
-                title={error ? '数据服务尚未连接' : '正在读取求职资料…'}
+                title={error ? tr('数据服务尚未连接') : tr('正在读取求职资料…')}
               >
-                <p>资料当前来自当前工作区/租户，仅展示您授权范围内的信息。</p>
+                <p>
+                  {tr(
+                    '资料当前来自当前工作区/租户，仅展示您授权范围内的信息。',
+                  )}
+                </p>
               </Empty>
             </section>
           ) : (
@@ -742,15 +856,28 @@ export default function Home() {
                       <div>
                         <h2>
                           {data.jobs.length
-                            ? `已整理 ${data.jobs.length} 个职位${data.materials.length ? `，准备了 ${data.materials.length} 份材料` : ''}。`
-                            : '先找到一个想了解的职位。'}
+                            ? tr('已整理 {0} 个职位{1}。', [
+                                data.jobs.length,
+                                data.materials.length
+                                  ? tr('，准备了 {0} 份材料', [
+                                      data.materials.length,
+                                    ])
+                                  : '',
+                              ])
+                            : tr('先找到一个想了解的职位。')}
                         </h2>
                         <p>
                           {data.questionSets.length
-                            ? '今天，先练好一道面试题。每次回答都会保留下来。'
+                            ? tr(
+                                '今天，先练好一道面试题。每次回答都会保留下来。',
+                              )
                             : data.jobs.length
-                              ? '下一步，围绕这家公司的要求整理经历和准备材料。'
-                              : '保存招聘来源，再一步步整理经历和准备材料。'}
+                              ? tr(
+                                  '下一步，围绕这家公司的要求整理经历和准备材料。',
+                                )
+                              : tr(
+                                  '保存招聘来源，再一步步整理经历和准备材料。',
+                                )}
                         </p>
                       </div>
                     </section>
@@ -776,12 +903,12 @@ export default function Home() {
                           key={title}
                           className={count === 0 ? 'is-zero' : undefined}
                         >
-                          <span>{title}</span>
+                          <span>{tr(String(title))}</span>
                           <strong>
                             {count}
-                            <small>项</small>
+                            <small>{tr('项')}</small>
                           </strong>
-                          <p>{sub}</p>
+                          <p>{tr(String(sub))}</p>
                         </div>
                       ))}
                     </div>
@@ -792,10 +919,12 @@ export default function Home() {
                         <div className="section-head">
                           <h2>
                             <CalendarDays size={19} />
-                            今天的下一步
+                            {tr('今天的下一步')}
                           </h2>
                           <span className="tag">
-                            {due.length ? '今日到期 / 已逾期' : '按准备进度'}
+                            {due.length
+                              ? tr('今日到期 / 已逾期')
+                              : tr('按准备进度')}
                           </span>
                         </div>
                         {due.length ? (
@@ -812,10 +941,12 @@ export default function Home() {
                                 {String(i + 1).padStart(2, '0')}
                               </span>
                               <span>
-                                <b>{j.nextAction || '跟进投递进展'}</b>
+                                <b>{j.nextAction || tr('跟进投递进展')}</b>
                                 <small>
                                   {j.company} · {day(j.nextDate)}{' '}
-                                  {j.nextDate < data.today ? '· 已逾期' : ''}
+                                  {j.nextDate < data.today
+                                    ? tr('· 已逾期')
+                                    : ''}
                                 </small>
                               </span>
                               <ChevronRight size={17} />
@@ -864,8 +995,8 @@ export default function Home() {
                               >
                                 <span className="step">{n}</span>
                                 <span>
-                                  <b>{t}</b>
-                                  <small>{s}</small>
+                                  <b>{tr(t)}</b>
+                                  <small>{tr(s)}</small>
                                 </span>
                                 <ArrowUpRight size={18} />
                               </button>
@@ -875,12 +1006,13 @@ export default function Home() {
                       </section>
                       <section className="panel">
                         <div className="section-head">
-                          <h2>正在了解的公司</h2>
+                          <h2>{tr('正在了解的公司')}</h2>
                           <button
                             className="text-button"
                             onClick={() => go('公司与投递')}
                           >
-                            查看全部 <ArrowUpRight size={16} />
+                            {tr('查看全部')}
+                            <ArrowUpRight size={16} />
                           </button>
                         </div>
                         {data.jobs.length ? (
@@ -907,8 +1039,8 @@ export default function Home() {
                             ))}
                           </div>
                         ) : (
-                          <Empty title="下一份工作，从一条机会开始">
-                            <p>添加招聘信息，或让 Codex 整理后导入。</p>
+                          <Empty title={tr('下一份工作，从一条机会开始')}>
+                            <p>{tr('添加招聘信息，或让 Codex 整理后导入。')}</p>
                           </Empty>
                         )}
                       </section>
@@ -917,16 +1049,16 @@ export default function Home() {
                       <Sparkles size={24} />
                       <div className="eyebrow">
                         DAILY BRIEF ·{' '}
-                        {latest ? day(latest.date) : '等待第一份分析'}
+                        {latest ? day(latest.date) : tr('等待第一份分析')}
                       </div>
                       <h2>
                         {latest ? (
                           latest.title
                         ) : (
                           <>
-                            让每天的准备
+                            {tr('让每天的准备')}
                             <br />
-                            有一个明确方向。
+                            {tr('有一个明确方向。')}
                           </>
                         )}
                       </h2>
@@ -934,7 +1066,9 @@ export default function Home() {
                         {latest
                           ? latest.content.replace(/[#*]/g, '').slice(0, 110) +
                             '…'
-                          : '结合投递进度、职位要求与准备缺口，整理当日分析和优先事项。'}
+                          : tr(
+                              '结合投递进度、职位要求与准备缺口，整理当日分析和优先事项。',
+                            )}
                       </p>
                       <div className="notice">
                         {latest ? (
@@ -942,7 +1076,8 @@ export default function Home() {
                             className="light-button"
                             onClick={() => setDoc(latest)}
                           >
-                            阅读报告 <ArrowUpRight size={15} />
+                            {tr('阅读报告')}
+                            <ArrowUpRight size={15} />
                           </button>
                         ) : (
                           <button
@@ -950,7 +1085,8 @@ export default function Home() {
                             disabled={busy}
                             onClick={() => void request('每日分析')}
                           >
-                            交给 Codex 分析 <ArrowUpRight size={15} />
+                            {tr('交给 Codex 分析')}
+                            <ArrowUpRight size={15} />
                           </button>
                         )}
                       </div>
@@ -961,23 +1097,16 @@ export default function Home() {
               {active === '公司与投递' &&
                 (job ? (
                   <>
-                    <button
-                      className="text-button back"
-                      onClick={() => setSelected('')}
-                    >
-                      <ArrowLeft size={16} />
-                      返回职位列表
-                    </button>
                     <section className="panel">
                       <div className="section-head">
-                        <h2>投递时间线</h2>
+                        <h2>{tr('投递时间线')}</h2>
                         <div className="row">
                           <Badge>{job.status}</Badge>
                           <button
                             className="secondary"
                             onClick={() => setJobEdit(job)}
                           >
-                            更新进展
+                            {tr('更新进展')}
                           </button>
                         </div>
                       </div>
@@ -985,7 +1114,7 @@ export default function Home() {
                         {job.history.map((h, i) => (
                           <div key={i}>
                             <span className="timeline-dot" />
-                            <b>{h.status}</b>
+                            <b>{tr(h.status)}</b>
                             <small>{day(h.at)}</small>
                           </div>
                         ))}
@@ -993,20 +1122,23 @@ export default function Home() {
                       <div className="next-action">
                         <CalendarDays size={18} />
                         <span>
-                          <b>{job.nextAction || '还没有设置下一步行动'}</b>
+                          <b>{job.nextAction || tr('还没有设置下一步行动')}</b>
                           <small>
                             {job.nextDate
-                              ? `${day(job.nextDate)}${job.nextDate < data.today ? ' · 已逾期' : ''}`
-                              : '设置跟进日期，方便每天查看'}
+                              ? `${day(job.nextDate)}${job.nextDate < data.today ? ' ' + tr('· 已逾期') : ''}`
+                              : tr('设置跟进日期，方便每天查看')}
                           </small>
                         </span>
-                        <Badge>{job.priority}优先级</Badge>
+                        <Badge>
+                          {tr(job.priority)}
+                          {tr('优先级')}
+                        </Badge>
                       </div>
                     </section>
                     <div className="detail-grid">
                       <section className="panel">
                         <div className="section-head">
-                          <h2>职位与公司</h2>
+                          <h2>{tr('职位与公司')}</h2>
                           {job.url && (
                             <a
                               className="text-button"
@@ -1014,7 +1146,8 @@ export default function Home() {
                               target="_blank"
                               rel="noreferrer"
                             >
-                              招聘原文 <ExternalLink size={15} />
+                              {tr('招聘原文')}
+                              <ExternalLink size={15} />
                             </a>
                           )}
                         </div>
@@ -1028,8 +1161,8 @@ export default function Home() {
                             ['信息确认日期', day(job.sourceDate)],
                           ].map(([k, v]) => (
                             <div key={k}>
-                              <dt>{k}</dt>
-                              <dd>{v || '待确认'}</dd>
+                              <dt>{tr(k)}</dt>
+                              <dd>{v || tr('待确认')}</dd>
                             </div>
                           ))}
                         </dl>
@@ -1042,14 +1175,14 @@ export default function Home() {
                           ['我的跟进记录', job.notes],
                         ].map(([k, v]) => (
                           <div className="text-section" key={k}>
-                            <h3>{k}</h3>
-                            <p className="prewrap">{v || '尚未补充'}</p>
+                            <h3>{tr(k)}</h3>
+                            <p className="prewrap">{v || tr('尚未补充')}</p>
                           </div>
                         ))}
                       </section>
                       <section className="panel">
                         <div className="section-head">
-                          <h2>这家公司的准备资料</h2>
+                          <h2>{tr('这家公司的准备资料')}</h2>
                         </div>
                         <button
                           className="secondary block-button"
@@ -1059,27 +1192,29 @@ export default function Home() {
                           }}
                         >
                           <CalendarDays size={17} />
-                          开始面试练习
+                          {tr('开始面试练习')}
                         </button>
-                        <p>结合岗位特点与个人履历整理，完成后保存在这里。</p>
+                        <p>
+                          {tr('结合岗位特点与个人履历整理，完成后保存在这里。')}
+                        </p>
                         <button
                           className="primary block-button"
                           disabled={busy}
                           onClick={() => void request('公司准备', job.id)}
                         >
                           <Sparkles size={17} />
-                          交给 Codex 准备
+                          {tr('交给 Codex 准备')}
                         </button>
                         {pending.some((t) => t.jobId === job.id) && (
                           <div className="inline-note">
-                            已加入待处理队列，等待 Codex 生成。
+                            {tr('已加入待处理队列，等待 Codex 生成。')}
                           </div>
                         )}
                         {data.materials
                           .filter((m) => m.jobId === job.id)
                           .map((m) => (
                             <button
-                              className="doc-card"
+                              className="doc-card record-row"
                               key={m.id}
                               onClick={() => setDoc(m)}
                             >
@@ -1087,18 +1222,19 @@ export default function Home() {
                               <span>
                                 <b>{m.title}</b>
                                 <small>
-                                  {m.kind} · {day(m.createdAt)} · 待核对
+                                  {tr(m.kind)} · {day(m.createdAt)}
+                                  {tr('· 待核对')}
                                 </small>
                               </span>
                               <ChevronRight size={17} />
                             </button>
                           ))}
                         {!data.materials.some((m) => m.jobId === job.id) && (
-                          <Empty title="尚无专属准备材料">
+                          <Empty title={tr('尚无专属准备材料')}>
                             <p>
-                              履歴書 · 職務経歴書
+                              {tr('履歴書 · 職務経歴書')}
                               <br />
-                              志望動機 · 面试准备 · 公司研究
+                              {tr('志望動機 · 面试准备 · 公司研究')}
                             </p>
                           </Empty>
                         )}
@@ -1111,19 +1247,21 @@ export default function Home() {
                       <label className="search">
                         <Search size={17} />
                         <input
-                          aria-label="搜索公司或职位"
-                          placeholder="搜索公司、职位或技能…"
+                          aria-label={tr('搜索公司或职位')}
+                          placeholder={tr('搜索公司、职位或技能…')}
                           value={query}
                           onChange={(e) => setQuery(e.target.value)}
                         />
                       </label>
                       <select
-                        aria-label="筛选投递状态"
+                        aria-label={tr('筛选投递状态')}
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
                       >
                         {['全部', ...statuses].map((s) => (
-                          <option key={s}>{s}</option>
+                          <option key={s} value={s}>
+                            {tr(s)}
+                          </option>
                         ))}
                       </select>
                       <button
@@ -1134,11 +1272,11 @@ export default function Home() {
                         }}
                       >
                         <Upload size={16} />
-                        导入
+                        {tr('导入')}
                       </button>
                     </div>
-                    {visible.length && data.jobs.length <= 3 ? (
-                      <div className="opportunity-list">
+                    {visible.length ? (
+                      <div className="opportunity-list record-list" role="list" aria-label={tr('公司与投递')}>
                         {visible.map((j) => (
                           <OpportunityCard
                             key={j.id}
@@ -1163,121 +1301,73 @@ export default function Home() {
                           />
                         ))}
                       </div>
-                    ) : visible.length ? (
-                      <div className="table-scroll">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>公司 / 职位</th>
-                              <th>投递状态</th>
-                              <th>日语要求</th>
-                              <th>下一步</th>
-                              <th>优先级</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {visible.map((j) => (
-                              <tr key={j.id}>
-                                <td>
-                                  <button
-                                    className="table-link"
-                                    onClick={() => setSelected(j.id)}
-                                  >
-                                    {j.company}
-                                    <small>{j.role}</small>
-                                  </button>
-                                </td>
-                                <td>
-                                  <Badge>{j.status}</Badge>
-                                </td>
-                                <td>{j.japanese || '待确认'}</td>
-                                <td>
-                                  {j.nextAction || '待安排'}
-                                  <small
-                                    className={
-                                      j.nextDate && j.nextDate < data.today
-                                        ? 'overdue'
-                                        : ''
-                                    }
-                                  >
-                                    {j.nextDate ? day(j.nextDate) : ''}
-                                  </small>
-                                </td>
-                                <td>
-                                  {j.priority === '高' ? (
-                                    <span className="priority">高</span>
-                                  ) : (
-                                    j.priority
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
                     ) : (
                       <Empty
                         title={
                           data.jobs.length
-                            ? '没有符合条件的职位'
-                            : '还没有保存职位'
+                            ? tr('没有符合条件的职位')
+                            : tr('还没有保存职位')
                         }
                       >
                         <p>
                           {data.jobs.length
-                            ? '调整搜索词或状态筛选。'
-                            : '手动添加，或将 Agent 整理好的数据导入。'}
+                            ? tr('调整搜索词或状态筛选。')
+                            : tr('手动添加，或将 Agent 整理好的数据导入。')}
                         </p>
                         <button
                           className="text-button centered"
                           disabled={busy}
                           onClick={() => void request('职位研究')}
                         >
-                          请求 Codex 收集职位 <ArrowUpRight size={16} />
+                          {tr('请求 Codex 收集职位')}
+                          <ArrowUpRight size={16} />
                         </button>
                       </Empty>
                     )}
                   </section>
                 ))}
-              {active === '求职平台' && <JobPlatforms platforms={data.platforms || []} reload={reload} />}
-              {active === '我的履历' && (
-                <>
-                  <div className="inline-note">
-                    以真实经历为依据。日语水平、在留资格、技能年限及未确认的成果，请核对后再用于投递。
-                  </div>
-                  <ProfileOverview profile={data.profile} />
-                  <p className="source-line">
-                    资料来源：{data.profile.sourcePath || '手动整理'}
-                    <br />
-                    更新于 {day(data.profile.updatedAt)} · 版本{' '}
-                    {data.profile.revision}
-                  </p>
-                </>
+              {active === '求职平台' && (
+                <JobPlatforms
+                  platforms={data.platforms || []}
+                  reload={reload}
+                />
               )}
+              {active === '我的履历' && (
+                <ResumeManager
+                  entries={data.resume || []}
+                  profile={data.profile}
+                  reload={reload}
+                />
+              )}
+              {active === '个性化简历' && <PersonalizedResumes />}
               {active === '准备资料' && (
                 <section className="panel">
                   <div className="toolbar">
                     <select
-                      aria-label="筛选准备资料类型"
+                      aria-label={tr('筛选准备资料类型')}
                       value={filter}
                       onChange={(e) => setFilter(e.target.value)}
                     >
                       {['全部', ...materialKinds].map((s) => (
-                        <option key={s}>{s}</option>
+                        <option key={s} value={s}>
+                          {tr(s)}
+                        </option>
                       ))}
                     </select>
                     <span className="small muted">
                       {data.materials.length &&
                       data.materials.every((m) => m.reviewStatus === '待核对')
-                        ? `共 ${data.materials.length} 份 AI 草稿，使用前请核对事实与表达。`
-                        : 'AI 文稿使用前需核对事实与表达。'}
+                        ? tr('共 {0} 份 AI 草稿，使用前请核对事实与表达。', [
+                            data.materials.length,
+                          ])
+                        : tr('AI 文稿使用前需核对事实与表达。')}
                     </span>
                   </div>
                   {data.materials
                     .filter((m) => filter === '全部' || m.kind === filter)
                     .map((m) => (
                       <button
-                        className="doc-card"
+                        className="doc-card record-row"
                         key={m.id}
                         onClick={() => setDoc(m)}
                       >
@@ -1286,7 +1376,7 @@ export default function Home() {
                           <b>{m.title}</b>
                           <small>
                             {data.jobs.find((j) => j.id === m.jobId)?.company} ·{' '}
-                            {m.kind} · {day(m.createdAt)}
+                            {tr(m.kind)} · {day(m.createdAt)}
                           </small>
                         </span>
                         {!data.materials.every(
@@ -1298,13 +1388,14 @@ export default function Home() {
                   {!data.materials.filter(
                     (m) => filter === '全部' || m.kind === filter,
                   ).length && (
-                    <Empty title="暂无准备资料">
-                      <p>在公司详情中，把准备任务交给 Codex。</p>
+                    <Empty title={tr('暂无准备资料')}>
+                      <p>{tr('在公司详情中，把准备任务交给 Codex。')}</p>
                       <button
                         className="text-button centered"
                         onClick={() => go('公司与投递')}
                       >
-                        前往公司与投递 <ArrowUpRight size={16} />
+                        {tr('前往公司与投递')}
+                        <ArrowUpRight size={16} />
                       </button>
                     </Empty>
                   )}
@@ -1312,26 +1403,7 @@ export default function Home() {
               )}
               {active === '每日分析' && (
                 <section className="panel">
-                  {data.reports.length === 1 && latest ? (
-                    <article className="first-report">
-                      <div className="eyebrow">
-                        DAILY BRIEF · {day(latest.date)}
-                      </div>
-                      <h2>{latest.title}</h2>
-                      <DocumentText
-                        text={latest.content
-                          .split(/\n(?=##? )/)
-                          .slice(0, 2)
-                          .join('\n')}
-                      />
-                      <button
-                        className="primary"
-                        onClick={() => setDoc(latest)}
-                      >
-                        阅读完整分析 <ArrowUpRight size={16} />
-                      </button>
-                    </article>
-                  ) : (
+                  {
                     data.reports
                       .slice()
                       .sort(
@@ -1341,7 +1413,7 @@ export default function Home() {
                       )
                       .map((r) => (
                         <button
-                          className="report-row"
+                          className="report-row record-row"
                           key={r.id}
                           onClick={() => setDoc(r)}
                         >
@@ -1358,56 +1430,100 @@ export default function Home() {
                           <ArrowUpRight size={19} />
                         </button>
                       ))
-                  )}
+                  }
                   {!data.reports.length && (
-                    <Empty title="还没有每日分析">
-                      <p>请求分析后，由 Codex 读取最新进度并整理建议。</p>
+                    <Empty title={tr('还没有每日分析')}>
+                      <p>
+                        {tr('请求分析后，由 Codex 读取最新进度并整理建议。')}
+                      </p>
                     </Empty>
                   )}
                 </section>
               )}
               {active === 'Agent 协作' && (
                 <>
-                  <SkillArchive />
-                  <div className="dashboard-grid">
-                    <section className="panel">
+                  <AgentConnection onAdd={() => go(mcpSetupPage)} />
+                  <div className="agent-entries">
+                    <button className="agent-entry" onClick={() => go('技能库')}>
+                      <Blocks size={22} />
+                      <span>
+                        <b>{tr('技能库')}</b>
+                        <small>
+                          {tr('浏览并安装求职技能，把指令交给助手执行。')}
+                        </small>
+                      </span>
+                      <ChevronRight size={18} />
+                    </button>
+                    <button className="agent-entry" onClick={() => go('定时任务')}>
+                      <CalendarClock size={22} />
+                      <span>
+                        <b>{tr('定时任务')}</b>
+                        <small>
+                          {tr('配置来源与频率，生成定时收集的任务指令。')}
+                        </small>
+                      </span>
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                  <section className="panel agent-access">
+                    <div className="section-head">
                       <h2>
-                        <Workflow size={20} />
-                        收集 → 分析 → 写入
+                        <Shield size={19} />
+                        {tr('已授权的 AI 助手')}
                       </h2>
-                      <p>
-                        Codex
-                        研究招聘来源，结合个人履历整理内容，再导入这个工作区。网页不调用
-                        AI，也不会自动发送申请。
-                      </p>
-                      <ol className="instructions">
-                        <li>添加职位，或请求收集适合的机会。</li>
-                        <li>在公司详情中提交准备任务。</li>
-                        <li>把下面的指令交给 Codex 处理。</li>
-                        <li>核对生成的材料，再自行投递。</li>
-                      </ol>
-                      <button
-                        className="primary"
-                        onClick={() =>
-                          void action(
-                            () => navigator.clipboard.writeText(promptText()),
-                            '已复制 Codex 工作指令',
-                          )
-                        }
-                      >
-                        <Workflow size={17} />
-                        复制给 Codex 的指令
-                      </button>
-                      <details>
-                        <summary>查看指令</summary>
-                        <p className="prewrap">{promptText()}</p>
-                      </details>
-                    </section>
+                      <span className="tag">
+                        {mcpTokens.filter((item) => !item.revoked).length}
+                        {tr('个有效')}
+                      </span>
+                    </div>
+                    <p>{tr('助手在浏览器里完成登录与同意后才会出现在这里。每个授权只能访问你的工作区，可随时撤销。')}</p>
+                    {auth?.mode !== 'off' && userEmail && (
+                      <p className="small">{tr('当前账号：{0}。授权页登录的是哪个 Google 账号，授权就归哪个账号；用其他账号授权的助手不会显示在这里。', [userEmail])}</p>
+                    )}
+                    {(() => {
+                      const active = mcpTokens.filter((item) => !item.revoked && !item.expired);
+                      const archived = mcpTokens.filter((item) => item.revoked || item.expired);
+                      const row = (item: MpcTokenRecord) => (
+                        <RecordRow key={item.id} title={item.name} badge={<Badge>{item.revoked ? tr('已撤销') : item.expired ? tr('已过期') : tr('有效')}</Badge>} meta={tr('有效期至 {0}', [day(item.expiresAt)]) + (item.lastUsedAt ? ' · ' + tr('最近使用 {0}', [day(item.lastUsedAt)]) : '')} description={item.scopes.join(' · ')} actions={<><button className="text-button" onClick={() => void showAgentTrail(item.id)}>{agentTrail?.tokenId === item.id ? tr('收起记录') : tr('操作记录')}</button>{!item.revoked && !item.expired && <button className="text-button" onClick={() => void revokeMcpToken(item.id)}>{tr('撤销')}</button>}</>}>
+                          {agentTrail?.tokenId === item.id && (
+                            <ul className="agent-trail">
+                              {!agentTrail.rows.length && <li>{tr('还没有操作记录。')}</li>}
+                              {agentTrail.rows.map((entry) => <li key={entry.id}><time dateTime={entry.at}>{entry.at.slice(0, 16).replace('T', ' ')}</time><span>{describeActivity(entry)}</span></li>)}
+                            </ul>
+                          )}
+                        </RecordRow>
+                      );
+                      return (
+                        <>
+                          {!active.length ? (
+                            <Empty title={tr('暂无已授权的助手')}>
+                              <p>{tr('在助手里添加上面的 MCP 地址并完成授权后，会显示在这里。')}</p>
+                              <button className="text-button centered" onClick={() => go(mcpSetupPage)}>
+                                {tr('添加 AI 助手')}
+                                <ArrowUpRight size={16} />
+                              </button>
+                            </Empty>
+                          ) : (
+                            <RecordList label={tr('MCP Token 管理')}>{active.map(row)}</RecordList>
+                          )}
+                          {archived.length > 0 && (
+                            <details className="agent-archive">
+                              <summary>{tr('已撤销 / 已过期（{0}）', [archived.length])}</summary>
+                              <p className="small">{tr('归档保留 180 天的操作记录，用于事后核对；记录不含具体内容，只有工具名和条数。')}</p>
+                              <RecordList label={tr('已撤销 / 已过期的授权')}>{archived.map(row)}</RecordList>
+                            </details>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </section>
+                  <div>
                     <section className="panel">
-                      <h2>资料导入与备份</h2>
+                      <h2>{tr('资料导入与备份')}</h2>
                       <p>
-                        导入 Agent 输出的 JSON
-                        数据包。先预览条目数量，再写入本机数据库。
+                        {tr(
+                          '导入 Agent 输出的 JSON 数据包。先预览条目数量，再写入本机数据库。',
+                        )}
                       </p>
                       <div className="button-stack">
                         <button
@@ -1418,7 +1534,7 @@ export default function Home() {
                           }}
                         >
                           <Upload size={17} />
-                          导入 Agent 数据包
+                          {tr('导入 Agent 数据包')}
                         </button>
                         <button
                           className="secondary"
@@ -1431,27 +1547,31 @@ export default function Home() {
                           }
                         >
                           <Download size={17} />
-                          导出完整资料备份
+                          {tr('导出完整资料备份')}
                         </button>
                       </div>
                       <p className="small">
-                        备份包含私人履历与投递记录。完整备份用于留存；Agent
-                        导入只接收研究、报告和新版本材料。
+                        {tr(
+                          '备份包含私人履历与投递记录。完整备份用于留存；Agent 导入只接收研究、报告和新版本材料。',
+                        )}
                       </p>
                     </section>
                   </div>
                   <section className="panel">
                     <div className="section-head">
-                      <h2>任务队列</h2>
-                      <span className="tag">{pending.length} 项待处理</span>
+                      <h2>{tr('任务队列')}</h2>
+                      <span className="tag">
+                        {pending.length}
+                        {tr('项待处理')}
+                      </span>
                     </div>
                     {data.tasks.map((t) => (
-                      <div className="queue-row" key={t.id}>
+                      <div className="queue-row record-row" key={t.id}>
                         <span>
-                          <b>{t.kind}</b>
+                          <b>{tr(t.kind)}</b>
                           <small>
                             {data.jobs.find((j) => j.id === t.jobId)?.company ||
-                              '整个求职工作区'}{' '}
+                              tr('整个求职工作区')}{' '}
                             · {day(t.createdAt)}
                           </small>
                         </span>
@@ -1459,143 +1579,35 @@ export default function Home() {
                       </div>
                     ))}
                     {!data.tasks.length && (
-                      <Empty title="没有待处理任务">
-                        <p>在公司详情中请求准备，或请求一份每日分析。</p>
+                      <Empty title={tr('没有待处理任务')}>
+                        <p>
+                          {tr('在公司详情中请求准备，或请求一份每日分析。')}
+                        </p>
                       </Empty>
                     )}
                   </section>
                 </>
               )}
-              {active === '管理后台' && (
-                <section className="panel">
-                  <h2>
-                    <Shield size={19} />
-                    管理后台
-                  </h2>
-                  <p>
-                    后台判断依据不是邮箱，而是 UID 与管理员声明（admin
-                    claim）。默认不需要登录时返回本机演示上下文。
-                  </p>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>当前 UID</span>
-                      <input
-                        value={auth?.uid || 'local'}
-                        readOnly
-                        aria-readonly="true"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>身份模式</span>
-                      <input
-                        value={auth?.mode || 'off'}
-                        readOnly
-                        aria-readonly="true"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>是否管理员</span>
-                      <input
-                        value={auth?.admin ? '是' : '否'}
-                        readOnly
-                        aria-readonly="true"
-                      />
-                    </label>
-                  </div>
-                  <p>
-                    管理员账户建议在服务端维护：
-                    <br />
-                    1）Firebase 自定义 claim 中写
-                    <code>admin:true</code>；
-                    <br />
-                    2）或在环境变量中维护 UID 白名单：
-                    <code>CAREER_ADMIN_UIDS</code>。
-                  </p>
-
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>MCP Token 名称</span>
-                      <input
-                        value={tokenName}
-                        onChange={(e) => setTokenName(e.target.value)}
-                        aria-label="MCP Token 名称"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>有效天数</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        value={tokenDays}
-                        onChange={(e) => setTokenDays(e.target.value)}
-                        aria-label="Token 有效天数"
-                      />
-                    </label>
-                    <div className="button-stack">
-                      <button className="secondary" onClick={() => void createMcpToken()}>
-                        生成 MCP Token
-                      </button>
-                    </div>
-                  </div>
-
-                  <section className="panel">
-                    <h3>MCP Token 管理</h3>
-                    {!mcpTokens.length ? (
-                      <Empty title="暂无 MCP Token">
-                        <p>生成后会显示在这里，包含可撤销的 id 与有效期。</p>
-                      </Empty>
-                    ) : (
-                      <div className="table-scroll">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>名称</th>
-                              <th>Owner</th>
-                              <th>Scope</th>
-                              <th>失效时间</th>
-                              <th>最近使用</th>
-                              <th>状态</th>
-                              <th>操作</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {mcpTokens.map((item) => (
-                              <tr key={item.id}>
-                                <td>
-                                  {item.name}
-                                  <small>{item.id.slice(0, 8)}</small>
-                                </td>
-                                <td>{item.ownerUid}</td>
-                                <td>{item.scopes.join(' / ')}</td>
-                                <td>{item.expiresAt || '长期有效'}</td>
-                                <td>{item.lastUsedAt || '未使用'}</td>
-                                <td>{item.revoked ? '已撤销' : '有效'}</td>
-                                <td>
-                                  <button
-                                    className="text-button"
-                                    disabled={item.revoked}
-                                    onClick={() => void revokeMcpToken(item.id)}
-                                  >
-                                    撤销
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </section>
-                </section>
+              {active === '技能库' && <SkillArchive />}
+              {(active === mcpSetupPage || findMcpClient(active)) && (
+                <AgentSetup
+                  client={findMcpClient(active)}
+                  tokens={mcpTokens}
+                  refresh={refreshMcpTokens}
+                  day={day}
+                  onSelect={(client) => go(mcpClientPage(client.id))}
+                  onBack={() => go(mcpSetupPage)}
+                  onDone={() => go('Agent 协作')}
+                />
               )}
+              {active === '定时任务' && <ScheduledSync />}
             </>
           )}
         </div>
       </main>
       {jobEdit && (
         <Modal
-          title={jobEdit.id ? '编辑职位与投递进展' : '添加目标职位'}
+          title={jobEdit.id ? tr('编辑职位与投递进展') : tr('添加目标职位')}
           onClose={() => setJobEdit(null)}
         >
           <form
@@ -1614,7 +1626,7 @@ export default function Home() {
                 <Field
                   key={k}
                   name={k}
-                  label={label}
+                  label={tr(label)}
                   value={String(jobEdit[k as keyof Job] || '')}
                   required={k === 'company' || k === 'role'}
                   type={
@@ -1630,60 +1642,64 @@ export default function Home() {
                 />
               ))}
               <label className="field">
-                <span>投递状态</span>
+                <span>{tr('投递状态')}</span>
                 <select name="status" defaultValue={jobEdit.status || '关注中'}>
                   {statuses.map((s) => (
-                    <option key={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {tr(s)}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="field">
-                <span>优先级</span>
+                <span>{tr('优先级')}</span>
                 <select
                   name="priority"
                   defaultValue={jobEdit.priority || '普通'}
                 >
                   {['高', '普通', '低'].map((s) => (
-                    <option key={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {tr(s)}
+                    </option>
                   ))}
                 </select>
               </label>
               <Field
                 name="nextAction"
-                label="下一步行动"
+                label={tr('下一步行动')}
                 value={jobEdit.nextAction}
               />
               <Field
                 name="nextDate"
-                label="跟进 / 面试日期"
+                label={tr('跟进 / 面试日期')}
                 value={jobEdit.nextDate}
                 type="date"
               />
               <Field
                 name="notes"
-                label="我的跟进记录"
+                label={tr('我的跟进记录')}
                 value={jobEdit.notes}
                 large
               />
             </div>
-            {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error">{tr(error)}</p>}
             <div className="modal-actions">
               <button
                 type="button"
                 className="secondary"
                 onClick={() => setJobEdit(null)}
               >
-                取消
+                {tr('取消')}
               </button>
               <button className="primary" disabled={busy}>
-                {busy ? '保存中…' : '保存职位'}
+                {busy ? tr('保存中…') : tr('保存职位')}
               </button>
             </div>
           </form>
         </Modal>
       )}
       {profileEdit && data && (
-        <Modal title="编辑个人履历" onClose={() => setProfileEdit(false)}>
+        <Modal title={tr('编辑个人履历')} onClose={() => setProfileEdit(false)}>
           <ProfileForm
             profile={data.profile}
             busy={busy}
@@ -1701,8 +1717,11 @@ export default function Home() {
       {doc && (
         <Modal title={doc.title} onClose={() => setDoc(null)}>
           <div className="document-meta">
-            <Badge>{'kind' in doc ? doc.kind : '每日分析'}</Badge>
-            <span>{day(doc.createdAt)} · AI 草稿，使用前请核对</span>
+            <Badge>{'kind' in doc ? tr(doc.kind) : tr('每日分析')}</Badge>
+            <span>
+              {day(doc.createdAt)}
+              {tr('· AI 草稿，使用前请核对')}
+            </span>
             <button
               className="secondary"
               onClick={() =>
@@ -1713,7 +1732,7 @@ export default function Home() {
               }
             >
               <Download size={16} />
-              下载 Markdown
+              {tr('下载 Markdown')}
             </button>
           </div>
           {'jobId' in doc &&
@@ -1722,25 +1741,32 @@ export default function Home() {
               doc.jobRevision !==
                 data.jobs.find((j) => j.id === doc.jobId)?.revision) && (
               <div className="inline-note">
-                此文稿生成后，个人履历或职位信息有更新，请核对是否需要重新准备。
+                {tr(
+                  '此文稿生成后，个人履历或职位信息有更新，请核对是否需要重新准备。',
+                )}
               </div>
             )}
           <article className="document-body">
             <DocumentText text={doc.content} />
           </article>
           <div className="source-box">
-            <h3>依据与待确认事项</h3>
+            <h3>{tr('依据与待确认事项')}</h3>
             <p className="prewrap">{doc.sourceNotes}</p>
           </div>
         </Modal>
       )}
       {importOpen && (
-        <Modal title="导入 Agent 数据包" onClose={() => setImportOpen(false)}>
+        <Modal
+          title={tr('导入 Agent 数据包')}
+          onClose={() => setImportOpen(false)}
+        >
           <p>
-            支持职位研究、公司准备资料和每日分析。导入不会修改你的投递状态。
+            {tr(
+              '支持职位研究、公司准备资料和每日分析。导入不会修改你的投递状态。',
+            )}
           </p>
           <label className="file-input">
-            选择 JSON 文件
+            {tr('选择 JSON 文件')}
             <input
               type="file"
               accept="application/json,.json"
@@ -1759,7 +1785,7 @@ export default function Home() {
           </label>
           <textarea
             className="json-input"
-            aria-label="Agent JSON 数据包"
+            aria-label={tr('Agent JSON 数据包')}
             placeholder='{"schemaVersion":1,"jobs":[],"materials":[],"reports":[]}'
             value={importText}
             onChange={(e) => {
@@ -1769,12 +1795,19 @@ export default function Home() {
           />
           {preview && (
             <div className="inline-note">
-              检查通过：{preview.jobs} 条职位、{preview.materials} 份准备资料、
-              {preview.reports} 份分析报告，{preview.questionSets || 0}{' '}
-              组面试题，{preview.reviews || 0} 份回答点评。
+              {tr('检查通过：')}
+              {preview.jobs}
+              {tr('条职位、')}
+              {preview.materials}
+              {tr('份准备资料、')}
+              {preview.reports}
+              {tr('份分析报告，')}
+              {preview.questionSets || 0} {tr('组面试题，')}
+              {preview.reviews || 0}
+              {tr('份回答点评。')}
             </div>
           )}
-          {error && <p className="form-error">{error}</p>}
+          {error && <p className="form-error">{tr(error)}</p>}
           <div className="modal-actions">
             <button
               className="secondary"
@@ -1790,7 +1823,7 @@ export default function Home() {
                 }, '数据包检查通过')
               }
             >
-              检查并预览
+              {tr('检查并预览')}
             </button>
             <button
               className="primary"
@@ -1808,7 +1841,7 @@ export default function Home() {
                 }
               }}
             >
-              确认导入
+              {tr('确认导入')}
             </button>
           </div>
         </Modal>
@@ -1827,6 +1860,7 @@ function ProfileForm({
   error: string;
   save: (value: unknown) => Promise<void>;
 }) {
+  const { t: tr } = useLocale();
   const initial = useRef(profile);
   return (
     <form
@@ -1843,16 +1877,16 @@ function ProfileForm({
           <Field
             key={k}
             name={k}
-            label={label}
+            label={tr(label)}
             value={String(initial.current[k as keyof typeof profile] || '')}
             large
           />
         ))}
       </div>
-      {error && <p className="form-error">{error}</p>}
+      {error && <p className="form-error">{tr(error)}</p>}
       <div className="modal-actions">
         <button className="primary" disabled={busy}>
-          保存个人履历
+          {tr('保存个人履历')}
         </button>
       </div>
     </form>

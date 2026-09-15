@@ -1,3 +1,4 @@
+import { useLocale } from '@/components/locale-provider';
 import type { Profile } from '@/lib/career';
 function Paragraphs({ text }: { text: string }) {
   return (
@@ -14,6 +15,7 @@ function Paragraphs({ text }: { text: string }) {
   );
 }
 export default function ProfileOverview({ profile }: { profile: Profile }) {
+  const { t: tr } = useLocale();
   const summaryParts = profile.summary.split(/(?<=。)/);
   const lead = summaryParts.slice(0, 2).join('');
   const remaining = summaryParts.slice(2).join('');
@@ -21,17 +23,17 @@ export default function ProfileOverview({ profile }: { profile: Profile }) {
     <div className="profile-columns">
       <div className="profile-column">
         <section className="panel profile-summary">
-          <h2>职业摘要</h2>
-          <p className="profile-text">{lead || '尚未补充'}</p>
+          <h2>{tr('职业摘要')}</h2>
+          <p className="profile-text">{lead || tr('尚未补充')}</p>
           {remaining && (
             <details>
-              <summary>展开完整摘要</summary>
+              <summary>{tr('展开完整摘要')}</summary>
               <Paragraphs text={remaining} />
             </details>
           )}
         </section>
         <section className="panel">
-          <h2>工作经历与证据</h2>
+          <h2>{tr('工作经历与证据')}</h2>
           <div className="experience-list">
             {profile.experience ? (
               profile.experience.split(/\n\s*\n/).map((block, i) => {
@@ -44,16 +46,16 @@ export default function ProfileOverview({ profile }: { profile: Profile }) {
                 );
               })
             ) : (
-              <p>尚未补充</p>
+              <p>{tr('尚未补充')}</p>
             )}
           </div>
         </section>
       </div>
       <div className="profile-column">
         <section className="panel">
-          <h2>目标岗位</h2>
+          <h2>{tr('目标岗位')}</h2>
           <ul className="profile-role-list">
-            {(profile.targetRoles || '尚未补充')
+            {(profile.targetRoles || tr('尚未补充'))
               .split(/[；\n]/)
               .filter(Boolean)
               .map((role, i) => (
@@ -62,9 +64,9 @@ export default function ProfileOverview({ profile }: { profile: Profile }) {
           </ul>
         </section>
         <section className="panel">
-          <h2>技能与项目能力</h2>
+          <h2>{tr('技能与项目能力')}</h2>
           <div className="skill-groups">
-            {(profile.skills || '尚未补充')
+            {(profile.skills || tr('尚未补充'))
               .split('\n')
               .filter(Boolean)
               .map((line, i) => {
@@ -91,12 +93,12 @@ export default function ProfileOverview({ profile }: { profile: Profile }) {
           </div>
         </section>
         <section className="panel">
-          <h2>日语与沟通能力</h2>
-          <Paragraphs text={profile.japanese || '尚未补充'} />
+          <h2>{tr('日语与沟通能力')}</h2>
+          <Paragraphs text={profile.japanese || tr('尚未补充')} />
         </section>
         <section className="panel">
-          <h2>求职条件</h2>
-          <Paragraphs text={profile.conditions || '尚未补充'} />
+          <h2>{tr('求职条件')}</h2>
+          <Paragraphs text={profile.conditions || tr('尚未补充')} />
         </section>
       </div>
     </div>

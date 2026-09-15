@@ -32,10 +32,10 @@ npm ci
 npm run dev
 ```
 
-[http://localhost:4318](http://localhost:4318) を開きます。Ctrl+C でフロントエンドと API を停止します。
+[http://localhost:4210](http://localhost:4210) を開きます。Ctrl+C でフロントエンドと API を停止します。
 
-- 画面：`localhost:4318`
-- Worker API：`127.0.0.1:4319`
+- 画面：`localhost:4210`
+- Worker API：`127.0.0.1:4211`
 - データ：`~/.local/share/career-note/worker-state/`（Git 管理外）
 
 macOS / Linux / Windows の WSL2 を導入対象としています。OS 別手順、ポート変更、Google ログイン、バックアップは[ローカル導入手順](docs/local-setup.md)を参照してください。全 OS・全環境での動作を保証するものではなく、検証範囲は[テスト結果](docs/verification.md)に記録します。
@@ -46,14 +46,14 @@ macOS / Linux / Windows の WSL2 を導入対象としています。OS 別手�
 
 画面は React / vinext、API は Cloudflare Workers、保存先は Wrangler が PC 上で動かすローカル D1 です。通常の起動で Cloudflare にデータをアップロードしません。Google ログインを使う場合は Firebase、外部 Agent に調査を頼む場合はその Agent のサービスと通信します。
 
-求人や資料は **1 つの個人ワークスペース** に保存します。複数の Google アカウントを許可すると同じ資料を共有します。利用者別に分離した SaaS ではありません。
+Google ログインしたユーザーごとに、求人・履歴・資料・練習記録を独立したワークスペースに保存します。新規ユーザーは空の状態から始まり、他のユーザーや従来の本機モードの資料は閲覧できません。
 
 ## 最初の使い方
 
 1. プロフィール画面で経歴・希望条件を入力する。
 2. 求人を登録して出典と確認日を残す。
 3. 応募先の次の行動を決める。
-4. 必要なら外部 Agent に企業研究や資料作成を依頼する。
+4. 必要なら外部 Agent に企業研究や資料作成を依頼する。Agent には MCP アドレスを登録し、ブラウザーで許可するだけでよい（[接続手順](docs/local-setup.md#ai-agent-の接続mcp--oauth)、ホスト型 Agent 向けの `npm run dev:tunnel` も同じ節）。
 5. 面接練習で回答を保存し、振り返る。
 
 実データを入れる前に試すには、別の空データディレクトリを指定し、[架空のサンプル](examples/README.md)を使ってください。
@@ -66,7 +66,7 @@ Firebase で Web アプリを登録し、Google プロバイダーと `localhost
 cp -n .dev.vars.example .dev.vars
 ```
 
-`.dev.vars` に Firebase の Web 設定と許可するメールアドレスを記入し、再起動します。サービスアカウントの秘密鍵は不要です。[詳細手順](docs/local-setup.md#google-ログイン任意)
+`.dev.vars` に Firebase の Web 設定を記入し、再起動します。サービスアカウントの秘密鍵は不要です。[詳細手順](docs/local-setup.md#google-ログイン任意)
 
 ## 開発する
 

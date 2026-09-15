@@ -2,13 +2,43 @@
 
 本工具默认可在本机运行，且可直接接入 Cloudflare Worker API。用户已选择由 Codex 收集、分析并写入，不使用网站 AI API。网页里的请求只进入任务队列；Agent 执行此流程后才算完成。
 
+## 接入步骤
+
+**本机 Agent（Claude Code、Codex CLI、Cursor、VS Code 等）**
+
+```sh
+npm run dev
+claude mcp add --transport http career-note http://127.0.0.1:4211/api/career/mcp
+```
+
+在 Claude Code 里 `/mcp` → career-note → Authenticate（或命令行 `claude mcp login career-note`）。浏览器会打开 `http://localhost:4210/oauth/authorize`，登录（Google 模式）后勾选权限并同意即可，不需要复制任何令牌。
+
+**托管 Agent（claude.ai / ChatGPT 连接器）**：`npm run dev` 只在本机，不碰隧道；需要公网地址时用：
+
+```sh
+npm run dev:tunnel
+```
+
+- **有 cloudflared 具名隧道（推荐，固定地址）**：`.env` 里写 `CAREER_TUNNEL=<隧道名>` 和 `CAREER_PUBLIC_ORIGIN=https://career-local.<你的域名>`；`~/.cloudflared/config.yml` 的 ingress 里、`- service: http_status:404` **之前**加 `hostname: career-local.<你的域名>` → `service: http://127.0.0.1:4211`（DNS 未指向隧道时 `cloudflared tunnel route dns <隧道名> <主机名>`）；本地配置不会热加载，改完要重启所有跑这条隧道的 cloudflared（`cloudflared tunnel info <隧道名>` 能看到有几个 connector，launchd 用 `launchctl kickstart -k gui/$(id -u)/<Label>`）。`dev:tunnel` 启动时会检查 ingress 是否指向 4211、connector 是否在线（没有就临时代起一个），打印 `Public MCP endpoint`，再从公网侧实际请求一次并报告 `Public check OK` 或原因（404 = 有旧 connector 没重启；解析失败 = 本机 DNS 缓存）。
+- **没有具名隧道**：`.env` 不写上面两行，`dev:tunnel` 会开一个随机的 `https://<随机>.trycloudflare.com`，每次启动都变，重启后要在连接器里重新授权。
+
+前提：`.dev.vars` 为 `CAREER_AUTH_MODE=strict`（off 模式下隧道请求一律 403）。详见[ローカル導入](local-setup.md#ai-agent-の接続mcp--oauth)。
+
+## MCP 优先连接
+
+技能使用已配置的 Career Note MCP，不依赖仓库路径。端点为当前网站的 `/api/career/mcp`，通过标准 MCP OAuth 授权（用户在浏览器里登录并同意）获得令牌；没有手动令牌。首先调用 `career_get_contract` 和 `career_get_context`；按需调用 `career_preview_import`、`career_import`，最后读回 context。履历收集技能在用户要求更新摘要时可调用 `career_update_profile`，保留现有字段和 revision。其他研究技能不自动修改履历。
+
+授权 scope：career:read 用于 context，agent:write 用于预览/导入/排队，career:write 用于用户授权的摘要更新（授权页默认不勾选）。没有更改投递状态、原回答、代发申请或跨用户操作的 MCP 工具。投递复盘读取既有历史，保存 reports；无反馈不算失败，原因缺失标未知。
+
+以下 CLI 是维护者的备用路径；独立安装的技能不需要它。
+
 ## 读取当前资料
 
 ```sh
 node scripts/career-data.mjs state
 ```
 
-当前 CLI 使用运行中的 Worker API，与网页读写同一份 D1 数据。默认 API 为 `http://127.0.0.1:4319`，可通过 `CAREER_API_URL` 覆盖；启用 Google 登录后通过 `CAREER_API_TOKEN` 提供具有 agent:write 权限的令牌，不要把令牌写入文档。先运行 `npm run dev`。Worker 数据在项目外 `CAREER_DATA_DIR/worker-state/`，测试时指定临时目录。仅使用全新工作区，不读取或迁移旧数据；不要直接修改数据库。事实母版路径见 profile.sourcePath；只读取本次材料需要的部分，不无差别复制联系信息。网页保存的个人摘要优先保留用户修改，母版和摘要冲突时列为待确认。
+当前 CLI 使用运行中的 Worker API，与网页读写同一份 D1 数据。默认 API 为 `http://127.0.0.1:4211`，可通过 `CAREER_API_URL` 覆盖；启用 Google 登录后该 CLI 没有令牌来源（手动签发已废除），只在本机 off 模式下可用；`CAREER_API_TOKEN` 仅供测试环境注入。先运行 `npm run dev`。Worker 数据在项目外 `CAREER_DATA_DIR/worker-state/`，测试时指定临时目录。仅使用全新工作区，不读取或迁移旧数据；不要直接修改数据库。事实母版路径见 profile.sourcePath；只读取本次材料需要的部分，不无差别复制联系信息。网页保存的个人摘要优先保留用户修改，母版和摘要冲突时列为待确认。
 
 ## 处理任务
 
@@ -129,7 +159,7 @@ Worker 的预览不写入，但尚不覆盖所有导入验证；当前导入逐�
 }
 ```
 
-questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。题组、回答和点评均保留历史，不覆盖已有版本。导入不接受 `attempts`，原回答只能由用户在网页提交。`POST /api/career/attempts` 接收 questionSetId、questionId、answer、language（日语/中文构思/中日混合）、durationSeconds（0–3600，0 表示未记录）、requestReview（布尔值）。保存回答和排入点评任务在同一事务内完成。
+questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。题组、回答和点评均保留历史，不覆盖已有版本。导入不接受 `attempts`，原回答只能由用户在网页提交。`POST /api/career/attempts` 接收 questionSetId、questionId、answer、language（日语/中文构思/中日混合）、durationSeconds（0–3600，0 表示未记录）、requestReview（布尔值）。保存回答和排队按顺序写入；失败后先读回状态，避免重复创建。
 
 ## 外国求职者：海外经验与日语学习同时考虑
 
@@ -144,3 +174,15 @@ questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。题
 - 企业侧也要确认：实际使用日语的场景、是否可用英文辅助、现有团队沟通/培训安排、配属、外国人招聘及手续支持的原始证据。未写明不等于接受或拒绝。
 
 对于带 candidateContext 的新题组，reviews 必须同时包含非空 foreignApplicantNotes 和 simpleAnswer；旧题组和历史点评保持兼容，原回答不迁移或覆盖。questionSets 的其余字段与现有协议一致。
+
+## 来源收集与定时核对
+
+使用 career-source-sync 收集明确授权的网站或邮箱更新；简历版本、投递事件与结果分析分别处理。当前仅通过 reports 保存来源、事件时间、建议状态、去重键与待确认项。通用导入仍拒绝 status/history；无专用状态更新接口，不得声称已同步投递状态。定时任务的来源、频率、时区、窗口、通知与失败策略见 [配置说明](scheduled-sync.md)。无新事件的来源收集不重复写报告；明确要求每日复盘的任务仍按该任务约定生成报告。
+
+## 構造化された履歴情報
+
+履歴の事実は `career_get_resume` で読み、種類別のフィールド定義を確認する。構造化データがある場合、旧profile.experienceよりも新しい各レコードを優先する。元文書との矛盾は残して本人へ確認する。
+
+本人が履歴の保存・更新を依頼した場合は `career_save_resume_entry` を使う。kindはbasics、employment、education、project、skill、achievement、language、preferences、document。id、revision、kind、language（ja/zh/en。言語ごとに独立したレコードで、省略時はja）、data（種類別の文字列フィールド）、parentId、sourceNotes、verification（recorded/confirmed/pending）、archivedを渡す。別言語版を作る場合は翻訳ではなく本人確認済みの事実を同じ構造で新しいidに保存し、parentIdは同じ言語のレコードへ向ける。新規は新しいidとrevision 0、更新は最新revisionと保持する全フィールドを渡す。確認済みの注記が原文にあるだけならrecordedとし、今回の本人確認と混同しない。
+
+documentの本文は更新できないため、新しい版は新しいidを使う。旧母版を保持し、雇主・顧客・成果・個人開発・未実装の計画を分ける。大量のMarkdownをexperienceやskillsへ再投入しない。書込み後は対象id・各フィールド・revisionを読んで確認する。失敗時は読み戻してから未完了レコードのみ再開する。仕様は[構造化履歴管理](structured-resume.md)を参照。

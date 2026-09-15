@@ -1,11 +1,26 @@
 'use client';
+import { useLocale } from '@/components/locale-provider';
+
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { ExternalLink, Plus, Search, Star, X } from 'lucide-react';
 import { api } from '@/lib/career';
-import { platformCategories, type JobPlatform } from '@/lib/job-platforms';
+import {
+  builtinPlatforms,
+  platformCategories,
+  type JobPlatform,
+} from '@/lib/job-platforms';
 
 type Props = { platforms: JobPlatform[]; reload: () => Promise<void> };
 export default function JobPlatforms({ platforms, reload }: Props) {
+  const { t: tr } = useLocale();
+  function platformText(
+    platform: JobPlatform,
+    field: 'description' | 'cautions',
+  ) {
+    const value = platform[field];
+    const original = builtinPlatforms.find((item) => item.id === platform.id);
+    return original?.[field] === value ? tr(value) : value;
+  }
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('使用中');
   const [category, setCategory] = useState('全部类别');
@@ -25,7 +40,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
         (filter !== '已停用' || !p.enabled) &&
         (filter !== '收藏' || p.favorite) &&
         (category === '全部类别' || p.category === category) &&
-        `${p.name} ${p.description} ${p.notes}`
+        `${p.name} ${p.description} ${platformText(p, 'description')} ${p.notes}`
           .toLowerCase()
           .includes(query.toLowerCase()),
     )
@@ -66,7 +81,9 @@ export default function JobPlatforms({ platforms, reload }: Props) {
     <div className="platforms-page">
       <div className="platform-intro">
         <p>
-          选择你想使用的求职入口，记录搜索方向和使用心得。收藏的平台会排在前面。
+          {tr(
+            '选择你想使用的求职入口，记录搜索方向和使用心得。收藏的平台会排在前面。',
+          )}
         </p>
         <button
           className="primary"
@@ -76,53 +93,62 @@ export default function JobPlatforms({ platforms, reload }: Props) {
           }}
         >
           <Plus size={17} />
-          添加平台
+          {tr('添加平台')}
         </button>
       </div>
       <p className="muted">
-        内置平台提供求职入口；具体岗位的日语、经验和在留资格支持仍需逐项确认。这里不会自动采集职位。
+        {tr(
+          '内置平台提供求职入口；具体岗位的日语、经验和在留资格支持仍需逐项确认。这里不会自动采集职位。',
+        )}
       </p>
       <div className="platform-filters">
         <label className="field">
-          <span>搜索平台</span>
+          <span>{tr('搜索平台')}</span>
           <div className="platform-search">
             <Search size={17} />
             <input
-              aria-label="搜索平台"
+              aria-label={tr('搜索平台')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="名称、方向或备注"
+              placeholder={tr('名称、方向或备注')}
             />
           </div>
         </label>
         <label className="field">
-          <span>类别</span>
+          <span>{tr('类别')}</span>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
-            <option>全部类别</option>
+            <option value={'全部类别'}>{tr('全部类别')}</option>
             {platformCategories.map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>
+                {tr(c)}
+              </option>
             ))}
           </select>
         </label>
         <label className="field">
-          <span>显示范围</span>
+          <span>{tr('显示范围')}</span>
           <select value={filter} onChange={(e) => setFilter(e.target.value)}>
             {['使用中', '全部', '收藏', '已停用', '已删除'].map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>
+                {tr(c)}
+              </option>
             ))}
           </select>
         </label>
       </div>
       {error && !edit && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
-      {notice && <output>{notice}</output>}
-      <p className="muted">{visible.length} 个平台</p>
+      {notice && <output>{tr(notice)}</output>}
+      <p className="muted">
+        {visible.length}
+        {tr('个平台')}
+      </p>
       <div className="platform-grid">
         {visible.map((p) => (
           <article
@@ -135,7 +161,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
               <button
                 className="icon-button"
                 disabled={busy || p.deleted}
-                aria-label={`${p.favorite ? '取消收藏' : '收藏'} ${p.name}`}
+                aria-label={`${tr(p.favorite ? '取消收藏' : '收藏')} ${p.name}`}
                 aria-pressed={p.favorite}
                 onClick={() =>
                   void save(
@@ -148,23 +174,30 @@ export default function JobPlatforms({ platforms, reload }: Props) {
               </button>
             </div>
             <div className="row">
-              <span className="badge">{p.category}</span>
+              <span className="badge">{tr(p.category)}</span>
               <span className="muted">
-                {p.builtin ? '内置' : '自定义'}
+                {p.builtin ? tr('内置') : tr('自定义')}
                 {!p.enabled ? ' · 已停用' : ''}
               </span>
             </div>
-            <p>{p.description || '还没有平台说明。'}</p>
-            {p.notes && <p className="platform-notes">我的备注：{p.notes}</p>}
+            <p>{platformText(p, 'description') || tr('还没有平台说明。')}</p>
+            {p.notes && (
+              <p className="platform-notes">
+                {tr('我的备注：')}
+                {p.notes}
+              </p>
+            )}
             {p.builtin && (
               <details>
-                <summary>适用条件与来源</summary>
-                <p>{p.cautions}</p>
+                <summary>{tr('适用条件与来源')}</summary>
+                <p>{platformText(p, 'cautions')}</p>
                 <a href={p.sourceUrl} target="_blank" rel="noreferrer">
-                  查看内置推荐依据
+                  {tr('查看内置推荐依据')}
                 </a>
                 <p className="muted">
-                  来源核验：{p.verifiedAt} · 不代表当前网址或个人备注已经核验
+                  {tr('来源核验：')}
+                  {p.verifiedAt}
+                  {tr('· 不代表当前网址或个人备注已经核验')}
                 </p>
               </details>
             )}
@@ -176,7 +209,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                     void save({ ...p, deleted: false }, '平台已恢复')
                   }
                 >
-                  恢复平台
+                  {tr('恢复平台')}
                 </button>
               ) : (
                 <>
@@ -186,7 +219,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    访问平台
+                    {tr('访问平台')}
                     <ExternalLink size={15} />
                   </a>
                   <button
@@ -196,7 +229,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                       setEdit(p);
                     }}
                   >
-                    编辑
+                    {tr('编辑')}
                   </button>
                   <button
                     disabled={busy}
@@ -207,7 +240,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                       )
                     }
                   >
-                    {p.enabled ? '停用' : '启用'}
+                    {p.enabled ? tr('停用') : tr('启用')}
                   </button>
                   <button
                     disabled={busy}
@@ -218,7 +251,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                       )
                     }
                   >
-                    删除
+                    {tr('删除')}
                   </button>
                 </>
               )}
@@ -228,8 +261,8 @@ export default function JobPlatforms({ platforms, reload }: Props) {
       </div>
       {!visible.length && (
         <div className="panel empty">
-          <h3>没有符合条件的平台</h3>
-          <p>试着修改筛选条件，或添加自己的求职入口。</p>
+          <h3>{tr('没有符合条件的平台')}</h3>
+          <p>{tr('试着修改筛选条件，或添加自己的求职入口。')}</p>
           <button
             onClick={() => {
               setQuery('');
@@ -237,7 +270,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
               setCategory('全部类别');
             }}
           >
-            查看全部平台
+            {tr('查看全部平台')}
           </button>
         </div>
       )}
@@ -252,12 +285,12 @@ export default function JobPlatforms({ platforms, reload }: Props) {
         >
           <div className="modal-head">
             <h2 id="platform-dialog-title">
-              {edit.id ? '编辑平台' : '添加平台'}
+              {edit.id ? tr('编辑平台') : tr('添加平台')}
             </h2>
             <button
               disabled={busy}
               className="icon-button"
-              aria-label="关闭平台编辑"
+              aria-label={tr('关闭平台编辑')}
               onClick={() => setEdit(null)}
             >
               <X size={20} />
@@ -266,7 +299,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
           <form onSubmit={(e) => void submit(e)}>
             <div className="form-grid">
               <label className="field">
-                <span>平台名称 *</span>
+                <span>{tr('平台名称 *')}</span>
                 <input
                   autoFocus
                   name="name"
@@ -276,15 +309,17 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                 />
               </label>
               <label className="field">
-                <span>类别</span>
+                <span>{tr('类别')}</span>
                 <select name="category" defaultValue={edit.category || '其他'}>
                   {platformCategories.map((c) => (
-                    <option key={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {tr(c)}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="field wide">
-                <span>平台网址 *</span>
+                <span>{tr('平台网址 *')}</span>
                 <input
                   name="url"
                   type="url"
@@ -295,7 +330,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                 />
               </label>
               <label className="field wide">
-                <span>平台说明</span>
+                <span>{tr('平台说明')}</span>
                 <textarea
                   name="description"
                   rows={3}
@@ -304,19 +339,19 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                 />
               </label>
               <label className="field wide">
-                <span>我的备注</span>
+                <span>{tr('我的备注')}</span>
                 <textarea
                   name="notes"
                   rows={3}
                   maxLength={5000}
-                  placeholder="例如：搜索后端岗位；留意日语要求"
+                  placeholder={tr('例如：搜索后端岗位；留意日语要求')}
                   defaultValue={edit.notes}
                 />
               </label>
             </div>
             {error && (
               <p role="alert" className="form-error">
-                {error}
+                {tr(error)}
               </p>
             )}
             <div className="modal-actions">
@@ -325,10 +360,10 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                 disabled={busy}
                 onClick={() => setEdit(null)}
               >
-                取消
+                {tr('取消')}
               </button>
               <button className="primary" disabled={busy}>
-                {busy ? '保存中…' : '保存平台'}
+                {busy ? tr('保存中…') : tr('保存平台')}
               </button>
             </div>
           </form>

@@ -11,7 +11,7 @@
 | React / vinext | 表示、入力、保存要求、Agent 指示文のコピー | 画面状態。Firebase SDK のセッション管理あり |
 | Vite プロキシ | `/api/career/*` をローカル Worker に転送 | 業務データは永続化しない |
 | Worker | 入力検証、認証、権限、D1 操作 | D1 へ書き込む |
-| ローカル D1 | records / meta / mcp_tokens | 求人、資料、回答、設定、トークンのハッシュ |
+| ローカル D1 | records / meta / mcp_tokens / oauth_* | 求人、資料、回答、設定、トークンのハッシュ、OAuth クライアント・コード・refresh |
 | Firebase Auth（任意） | Google サインイン、ID トークン発行 | Firebase プロジェクトの認証ユーザー |
 | 外部 Agent（任意） | 調査、文章案、添削 | 利用者が渡したデータは当該サービスの扱いに従う |
 
@@ -23,7 +23,7 @@ Google へ送るのはログインに必要な情報。職務経歴を Firebase 
 2. 起動スクリプトが `.env`、ポート、データ保存先を解決し、2 つの子プロセスを起動する。
 3. ブラウザーが `/api/career/auth/config` を取得する。
 4. 認証が必要なら Firebase SDK で Google ログインする。
-5. API に Bearer ID トークンを送り、署名・クレーム・許可アカウントを検証する。
+5. API に Bearer ID トークンを送り、署名・クレームを検証し、プロジェクト ID と UID に基づく専用ワークスペースを使用する。
 6. Worker が必要なテーブルを作成し、対象データを取得・保存する。
 
 ## 論理データモデル
@@ -44,7 +44,9 @@ erDiagram
 | --- | --- | --- |
 | records | `(kind, id)`、body JSON | jobs / materials / reports / tasks / questionSets / attempts / reviews / platforms:UID |
 | meta | id、body JSON | id=`profile` のプロフィール |
-| mcp_tokens | id、token_hash unique、owner_uid、scopes、expires_at、revoked | Agent 用 Bearer トークン管理 |
+| mcp_tokens | id、token_hash unique、owner_uid、scopes、expires_at、revoked、client_id、audience | OAuth で発行した Agent 用 Bearer トークン |
+| agent_activity | id、owner_uid、token_id、client_id、event、ok、detail(件数のみ)、at | Agent ごとの操作履歴。所有者ごとに 500 件・180 日 |
+| oauth_clients / oauth_codes / oauth_refresh_tokens | client_id、redirect_uris、code_hash、code_challenge、token_hash、successor_id | OAuth 認可サーバーの状態（秘密はすべてハッシュ） |
 
 JSON 内に revision、createdAt、sourceNotes 等を保持する。プロフィールや求人の更新は revision を比較するが、すべての更新に原子的な楽観ロックがあるわけではない。複数同時編集は前提にしない。
 

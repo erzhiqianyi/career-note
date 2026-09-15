@@ -66,6 +66,7 @@ export function build(root) {
     }
   }
   for (const path of ['AGENTS.md', 'docs/agent-workflow.md', 'docs/skills.md', 'scripts/archive-skills.mjs']) files[path] = readFileSync(safe(root, path));
+  if (existsSync(join(root, 'docs/scheduled-sync.md'))) files['docs/scheduled-sync.md'] = readFileSync(safe(root, 'docs/scheduled-sync.md'));
   const entries = Object.keys(files).sort().map(path => ({path, sha256: hash(files[path]), bytes: files[path].length}));
   const revision = hash(JSON.stringify(entries));
   const directory = join(root, 'public/skill-archive');
@@ -88,6 +89,25 @@ export function build(root) {
     const manifest = JSON.parse(strFromU8(unzipSync(bytes)['manifest.json']));
     return {url: `/skill-archive/${name}`, createdAt: manifest.createdAt, revision: manifest.revision, skillCount: manifest.skillCount, bytes: bytes.length};
   }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  for (const skill of skills) {
+    const prefix = '.agents/skills/';
+    const content = Object.fromEntries(skill.files.map(path => [path.slice(prefix.length), files[path]]));
+    const digest = hash(JSON.stringify(skill.files.map(path => hash(files[path])))).slice(0,16);
+    skill.downloadUrl = '/skill-archive/skill-' + skill.name + '-' + digest + '.zip';
+    const output = join(root, 'public', skill.downloadUrl);
+    if (!existsSync(output)) writeFileSync(output, zipSync(content));
+    else {
+      const restored = unzipSync(readFileSync(output));
+      if (Object.keys(restored).length !== Object.keys(content).length || Object.entries(content).some(([path,bytes]) => !restored[path] || hash(restored[path]) !== hash(bytes))) throw new Error('Single skill archive content mismatch');
+    }
+  }
+  mkdirSync(join(root, 'lib'), {recursive:true});
+  // Screenshots for the MCP connection guides; the page only renders images that exist.
+  const guides = join(root, 'public/mcp-guides');
+  const shots = existsSync(guides) ? readdirSync(guides).filter(name => /\.(png|jpe?g|webp)$/i.test(name)).sort() : [];
+  const shotsText = JSON.stringify(shots) + '\n';
+  if (!existsSync(join(root, 'lib/mcp-guides.generated.json')) || readFileSync(join(root, 'lib/mcp-guides.generated.json'), 'utf8') !== shotsText) writeFileSync(join(root, 'lib/mcp-guides.generated.json'), shotsText);
+  writeFileSync(join(root, 'lib/career-protocol.generated.json'), JSON.stringify({workflow: readFileSync(join(root,'docs/agent-workflow.md'),'utf8')},null,2)+'\n');
   const result = {schemaVersion: 1, generatedAt: createdAt, revision, archiveUrl: `/skill-archive/${archive.split('/').at(-1)}`, skills, history};
   const output = join(root, 'lib/skill-archive.generated.json');
   mkdirSync(dirname(output), {recursive: true});

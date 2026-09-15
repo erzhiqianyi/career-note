@@ -1,0 +1,3538 @@
+{
+  "今日准备": {
+    "ja": "今日の準備",
+    "en": "Today"
+  },
+  "公司与投递": {
+    "ja": "企業・応募",
+    "en": "Companies & applications"
+  },
+  "求职平台": {
+    "ja": "求人サービス",
+    "en": "Job platforms"
+  },
+  "我的履历": {
+    "ja": "マイプロフィール",
+    "en": "My profile"
+  },
+  "准备资料": {
+    "ja": "準備資料",
+    "en": "Preparation materials"
+  },
+  "面试练习": {
+    "ja": "面接練習",
+    "en": "Interview practice"
+  },
+  "每日分析": {
+    "ja": "日次分析",
+    "en": "Daily analysis"
+  },
+  "Agent 协作": {
+    "ja": "Agent 連携",
+    "en": "Agent collaboration"
+  },
+  "管理后台": {
+    "ja": "管理画面",
+    "en": "Administration"
+  },
+  "公司名称": {
+    "ja": "企業名",
+    "en": "Company name"
+  },
+  "职位名称": {
+    "ja": "職種名",
+    "en": "Role title"
+  },
+  "招聘来源链接": {
+    "ja": "求人情報のリンク",
+    "en": "Job source URL"
+  },
+  "信息确认日期": {
+    "ja": "情報確認日",
+    "en": "Date verified"
+  },
+  "工作地点": {
+    "ja": "勤務地",
+    "en": "Location"
+  },
+  "薪资范围": {
+    "ja": "給与範囲",
+    "en": "Salary range"
+  },
+  "公司业务与特点": {
+    "ja": "事業内容・特徴",
+    "en": "Business & company details"
+  },
+  "岗位要求": {
+    "ja": "応募要件",
+    "en": "Requirements"
+  },
+  "职位内容": {
+    "ja": "業務内容",
+    "en": "Job description"
+  },
+  "日语要求": {
+    "ja": "日本語要件",
+    "en": "Japanese requirements"
+  },
+  "外国人招聘信息": {
+    "ja": "外国人採用情報",
+    "en": "International hiring information"
+  },
+  "在留资格支持信息": {
+    "ja": "在留資格の支援情報",
+    "en": "Residence status support"
+  },
+  "与我的匹配点": {
+    "ja": "自分とのマッチ点",
+    "en": "My fit for this role"
+  },
+  "待确认事项": {
+    "ja": "要確認事項",
+    "en": "Items to confirm"
+  },
+  "职业摘要": {
+    "ja": "職務要約",
+    "en": "Professional summary"
+  },
+  "目标岗位": {
+    "ja": "希望職種",
+    "en": "Target roles"
+  },
+  "技能与项目能力": {
+    "ja": "スキル・プロジェクト能力",
+    "en": "Skills & project experience"
+  },
+  "工作经历与证据": {
+    "ja": "職務経験と根拠",
+    "en": "Experience & evidence"
+  },
+  "日语与沟通能力": {
+    "ja": "日本語・コミュニケーション力",
+    "en": "Japanese & communication"
+  },
+  "求职条件": {
+    "ja": "希望条件",
+    "en": "Job preferences"
+  },
+  "待确认": {
+    "ja": "要確認",
+    "en": "To confirm"
+  },
+  "需重做": {
+    "ja": "再作成が必要",
+    "en": "Needs revision"
+  },
+  "面试中": {
+    "ja": "面接中",
+    "en": "Interviewing"
+  },
+  "内定": {
+    "ja": "内定",
+    "en": "Offer received"
+  },
+  "已核对": {
+    "ja": "確認済み",
+    "en": "Reviewed"
+  },
+  "未通过": {
+    "ja": "不採用",
+    "en": "Not selected"
+  },
+  "关闭": {
+    "ja": "閉じる",
+    "en": "Close"
+  },
+  "全部": {
+    "ja": "すべて",
+    "en": "All"
+  },
+  "无法连接本机数据服务": {
+    "ja": "ローカルデータサービスに接続できません",
+    "en": "Cannot connect to the local data service"
+  },
+  "登录验证失败": {
+    "ja": "ログイン認証に失敗しました",
+    "en": "Authentication failed"
+  },
+  "操作失败": {
+    "ja": "操作に失敗しました",
+    "en": "Operation failed"
+  },
+  "已登录": {
+    "ja": "ログイン済み",
+    "en": "Signed in"
+  },
+  "登录失败": {
+    "ja": "ログインに失敗しました",
+    "en": "Sign-in failed"
+  },
+  "已退出登录": {
+    "ja": "ログアウトしました",
+    "en": "Signed out"
+  },
+  "退出失败": {
+    "ja": "ログアウトに失敗しました",
+    "en": "Sign-out failed"
+  },
+  "已生成并复制 MCP token（仅显示一次）": {
+    "ja": "MCP token を生成してコピーしました（一度のみ表示）",
+    "en": "MCP token created and copied (shown only once)"
+  },
+  "生成 token 失败": {
+    "ja": "token の生成に失敗しました",
+    "en": "Token creation failed"
+  },
+  "已撤销 MCP token": {
+    "ja": "MCP token を無効にしました",
+    "en": "MCP token revoked"
+  },
+  "已加入 Codex 待处理队列；分析完成后会显示结果。": {
+    "ja": "Codex の処理待ちに追加しました。分析後に結果が表示されます。",
+    "en": "Added to the Codex queue. Results will appear after analysis."
+  },
+  "公司准备": {
+    "ja": "企業別の準備",
+    "en": "Company preparation"
+  },
+  "已撤回": {
+    "ja": "辞退済み",
+    "en": "Withdrawn"
+  },
+  "待处理": {
+    "ja": "処理待ち",
+    "en": "Pending"
+  },
+  "登录就职手帖": {
+    "ja": "就職手帖にログイン",
+    "en": "Sign in to Career Note"
+  },
+  "使用获准的 Google 账号，访问你的求职资料与面试练习。": {
+    "ja": "許可された Google アカウントで、求職資料と面接練習にアクセスします。",
+    "en": "Use an authorized Google account to access your materials and interview practice."
+  },
+  "请检查服务后刷新页面。": {
+    "ja": "サービスを確認し、ページを再読み込みしてください。",
+    "en": "Check the service, then refresh this page."
+  },
+  "正在读取登录配置…": {
+    "ja": "ログイン設定を読み込み中…",
+    "en": "Loading sign-in settings…"
+  },
+  "尚未配置 Google 登录。请按 README 设置 Firebase 后重启服务。": {
+    "ja": "Google ログインが未設定です。README に従って Firebase を設定し、サービスを再起動してください。",
+    "en": "Google sign-in is not configured. Follow the README to set up Firebase, then restart the service."
+  },
+  "Google 登录": {
+    "ja": "Google でログイン",
+    "en": "Sign in with Google"
+  },
+  "退出": {
+    "ja": "ログアウト",
+    "en": "Sign out"
+  },
+  "就": {
+    "ja": "就",
+    "en": "CN"
+  },
+  "就职手帖": {
+    "ja": "就職手帖",
+    "en": "Career Note"
+  },
+  "工作区导航": {
+    "ja": "ワークスペースのナビゲーション",
+    "en": "Workspace navigation"
+  },
+  "手机导航": {
+    "ja": "モバイルナビゲーション",
+    "en": "Mobile navigation"
+  },
+  "今日": {
+    "ja": "今日",
+    "en": "Today"
+  },
+  "公司": {
+    "ja": "企業",
+    "en": "Companies"
+  },
+  "履历": {
+    "ja": "プロフィール",
+    "en": "Profile"
+  },
+  "更多页面": {
+    "ja": "その他のページ",
+    "en": "More pages"
+  },
+  "更多": {
+    "ja": "その他",
+    "en": "More"
+  },
+  "我的工作区": {
+    "ja": "マイワークスペース",
+    "en": "My workspace"
+  },
+  "日本 ·": {
+    "ja": "日本 ·",
+    "en": "Japan · "
+  },
+  "日本求职": {
+    "ja": "日本での就職",
+    "en": "Job search in Japan"
+  },
+  "本机模式 · Google 登录未启用": {
+    "ja": "ローカルモード · Google ログイン無効",
+    "en": "Local mode · Google sign-in disabled"
+  },
+  "刷新资料": {
+    "ja": "資料を再読み込み",
+    "en": "Refresh materials"
+  },
+  "重试": {
+    "ja": "再試行",
+    "en": "Retry"
+  },
+  "一歩ずつ、前へ。": {
+    "ja": "一歩ずつ、前へ。",
+    "en": "One step forward, every day."
+  },
+  "找到适合自己的求职入口。": {
+    "ja": "自分に合う求人サービスを見つけよう。",
+    "en": "Find the right place to start your search."
+  },
+  "从了解一家公司，到准备好下一场面试。": {
+    "ja": "企業を知ることから、次の面接の準備まで。",
+    "en": "From getting to know a company to preparing for your next interview."
+  },
+  "一处整理机会、进展与下一步。": {
+    "ja": "求人、進捗、次の一歩をひとつの場所に。",
+    "en": "Keep opportunities, progress and next steps together."
+  },
+  "一份真实经历，为不同机会选择合适的表达。": {
+    "ja": "実際の経験を、応募先に合った言葉で伝える。",
+    "en": "Express your experience in a way that fits each opportunity."
+  },
+  "每家公司，一份有依据的准备。": {
+    "ja": "一社ごとに、根拠のある準備を。",
+    "en": "Prepare for each company with evidence."
+  },
+  "把每一道题，练成你能自然说出的回答。": {
+    "ja": "一問ずつ、自分の言葉で自然に答えられるように。",
+    "en": "Practice until each answer feels natural in your own words."
+  },
+  "保留判断依据，也记录准备的变化。": {
+    "ja": "判断の根拠と、準備の変化を残そう。",
+    "en": "Keep the reasoning behind your decisions and track your preparation."
+  },
+  "管理入口与账户策略用于接入权限与审计。": {
+    "ja": "アクセス権限と監査のための管理・アカウント設定。",
+    "en": "Manage account access and audit settings."
+  },
+  "让研究和准备，持续回到你的工作区。": {
+    "ja": "調査と準備の成果を、ワークスペースに蓄積しよう。",
+    "en": "Bring your research and preparation back to your workspace."
+  },
+  "编辑履历": {
+    "ja": "プロフィールを編集",
+    "en": "Edit profile"
+  },
+  "请求今日分析": {
+    "ja": "今日の分析を依頼",
+    "en": "Request today's analysis"
+  },
+  "开始面试练习": {
+    "ja": "面接練習を始める",
+    "en": "Start interview practice"
+  },
+  "添加职位": {
+    "ja": "求人を追加",
+    "en": "Add a job"
+  },
+  "数据服务尚未连接": {
+    "ja": "データサービスに未接続",
+    "en": "Data service disconnected"
+  },
+  "正在读取求职资料…": {
+    "ja": "求職資料を読み込み中…",
+    "en": "Loading career data…"
+  },
+  "资料当前来自当前工作区/租户，仅展示您授权范围内的信息。": {
+    "ja": "現在のワークスペースの資料のうち、アクセスが許可された情報のみ表示します。",
+    "en": "Showing only information you are authorized to access in this workspace."
+  },
+  "已投递": {
+    "ja": "応募済み",
+    "en": "Applied"
+  },
+  "书类选考": {
+    "ja": "書類選考中",
+    "en": "Document screening"
+  },
+  "已整理 {0} 个职位{1}。": {
+    "ja": "求人 {0} 件を整理済み{1}。",
+    "en": "{0} jobs saved{1}."
+  },
+  "，准备了 {0} 份材料": {
+    "ja": "、資料 {0} 件を準備済み",
+    "en": ", with {0} materials prepared"
+  },
+  "先找到一个想了解的职位。": {
+    "ja": "まずは気になる求人をひとつ見つけよう。",
+    "en": "Start with one job you want to learn about."
+  },
+  "今天，先练好一道面试题。每次回答都会保留下来。": {
+    "ja": "今日は面接の一問を練習しよう。回答は毎回保存されます。",
+    "en": "Practice one interview question today. Each answer is saved."
+  },
+  "下一步，围绕这家公司的要求整理经历和准备材料。": {
+    "ja": "次は、この企業の要件に合わせて経験と資料を整理しよう。",
+    "en": "Next, organize your experience and materials around this company's requirements."
+  },
+  "保存招聘来源，再一步步整理经历和准备材料。": {
+    "ja": "求人の出典を保存し、経験と資料を少しずつ整理しよう。",
+    "en": "Save the job source, then build your experience notes and materials step by step."
+  },
+  "关注职位": {
+    "ja": "気になる求人",
+    "en": "Saved jobs"
+  },
+  "全部保存的求职机会": {
+    "ja": "保存したすべての求人",
+    "en": "All saved opportunities"
+  },
+  "进行中的投递": {
+    "ja": "選考中の応募",
+    "en": "Active applications"
+  },
+  "等待回复或进入下一阶段": {
+    "ja": "返信待ち・次の選考へ",
+    "en": "Awaiting a reply or next stage"
+  },
+  "待准备面试": {
+    "ja": "準備する面接",
+    "en": "Interviews to prepare"
+  },
+  "把准备留在面试之前": {
+    "ja": "面接までに準備を",
+    "en": "Prepare before the interview"
+  },
+  "专属准备资料": {
+    "ja": "企業別の準備資料",
+    "en": "Company-specific materials"
+  },
+  "按公司整理并保留版本": {
+    "ja": "企業ごとに整理し、版を保存",
+    "en": "Organized by company, with versions saved"
+  },
+  "项": {
+    "ja": "件",
+    "en": " items"
+  },
+  "今天的下一步": {
+    "ja": "今日の次の一歩",
+    "en": "Next steps today"
+  },
+  "今日到期 / 已逾期": {
+    "ja": "本日期限 / 期限超過",
+    "en": "Due today / overdue"
+  },
+  "按准备进度": {
+    "ja": "準備の進捗順",
+    "en": "By preparation progress"
+  },
+  "跟进投递进展": {
+    "ja": "応募の進捗を確認",
+    "en": "Follow up on applications"
+  },
+  "· 已逾期": {
+    "ja": "· 期限超過",
+    "en": "· Overdue"
+  },
+  "核对求职条件与日语能力": {
+    "ja": "希望条件と日本語力を確認",
+    "en": "Review preferences and Japanese level"
+  },
+  "整理个人履历": {
+    "ja": "プロフィールを整理",
+    "en": "Organize your profile"
+  },
+  "确认目标岗位、工作条件和当前日语水平。": {
+    "ja": "希望職種、勤務条件、現在の日本語力を確認しよう。",
+    "en": "Confirm your target roles, working conditions and current Japanese level."
+  },
+  "补充工作经历、项目事实和求职条件。": {
+    "ja": "職務経験、プロジェクトの事実、希望条件を追加しよう。",
+    "en": "Add work experience, project facts and job preferences."
+  },
+  "练一题自我介绍": {
+    "ja": "自己紹介を一問練習",
+    "en": "Practice a self-introduction"
+  },
+  "整理公司准备资料": {
+    "ja": "企業別の資料を整理",
+    "en": "Organize company materials"
+  },
+  "收集目标职位": {
+    "ja": "希望求人を集める",
+    "en": "Collect target jobs"
+  },
+  "先用自己的话回答，再交给 Codex 点评。": {
+    "ja": "まず自分の言葉で答えてから、Codex に講評を依頼しよう。",
+    "en": "Answer in your own words first, then ask Codex for feedback."
+  },
+  "保留招聘链接、岗位要求和信息确认日期。": {
+    "ja": "求人リンク、応募要件、情報確認日を保存しよう。",
+    "en": "Save the job link, requirements and verification date."
+  },
+  "查看 Agent 待处理任务": {
+    "ja": "Agent の処理待ちを確認",
+    "en": "View pending Agent tasks"
+  },
+  "整理每日分析": {
+    "ja": "日次分析を整理",
+    "en": "Prepare daily analysis"
+  },
+  "从匹配点和准备缺口中，确定下一步行动。": {
+    "ja": "マッチ点と準備不足から、次の行動を決めよう。",
+    "en": "Decide your next step based on your fit and preparation gaps."
+  },
+  "正在了解的公司": {
+    "ja": "検討中の企業",
+    "en": "Companies you are exploring"
+  },
+  "查看全部": {
+    "ja": "すべて見る",
+    "en": "View all"
+  },
+  "下一份工作，从一条机会开始": {
+    "ja": "次の仕事は、ひとつの求人から",
+    "en": "Your next job starts with one opportunity"
+  },
+  "添加招聘信息，或让 Codex 整理后导入。": {
+    "ja": "求人情報を追加するか、Codex が整理したデータをインポートしよう。",
+    "en": "Add a job or import research prepared by Codex."
+  },
+  "等待第一份分析": {
+    "ja": "最初の分析を待っています",
+    "en": "Waiting for the first analysis"
+  },
+  "让每天的准备": {
+    "ja": "毎日の準備に",
+    "en": "Give your daily preparation"
+  },
+  "有一个明确方向。": {
+    "ja": "明確な方向を。",
+    "en": "a clear direction."
+  },
+  "结合投递进度、职位要求与准备缺口，整理当日分析和优先事项。": {
+    "ja": "応募状況、求人要件、準備の不足を踏まえて、今日の分析と優先事項を整理します。",
+    "en": "Review application progress, requirements and preparation gaps to set today's priorities."
+  },
+  "阅读报告": {
+    "ja": "レポートを読む",
+    "en": "Read report"
+  },
+  "交给 Codex 分析": {
+    "ja": "Codex に分析を依頼",
+    "en": "Ask Codex to analyze"
+  },
+  "返回职位列表": {
+    "ja": "求人一覧に戻る",
+    "en": "Back to jobs"
+  },
+  "投递时间线": {
+    "ja": "応募履歴",
+    "en": "Application timeline"
+  },
+  "更新进展": {
+    "ja": "進捗を更新",
+    "en": "Update progress"
+  },
+  "还没有设置下一步行动": {
+    "ja": "次の行動が未設定です",
+    "en": "No next step set"
+  },
+  "设置跟进日期，方便每天查看": {
+    "ja": "フォロー日を設定すると、毎日確認できます",
+    "en": "Set a follow-up date to keep it on your daily list"
+  },
+  "优先级": {
+    "ja": "優先度",
+    "en": "Priority"
+  },
+  "职位与公司": {
+    "ja": "求人・企業",
+    "en": "Job & company"
+  },
+  "招聘原文": {
+    "ja": "求人原文",
+    "en": "Original job posting"
+  },
+  "在留资格支持": {
+    "ja": "在留資格の支援",
+    "en": "Residence status support"
+  },
+  "工作内容": {
+    "ja": "仕事内容",
+    "en": "Responsibilities"
+  },
+  "匹配点": {
+    "ja": "マッチ点",
+    "en": "Fit"
+  },
+  "我的跟进记录": {
+    "ja": "フォロー記録",
+    "en": "My follow-up notes"
+  },
+  "尚未补充": {
+    "ja": "未入力",
+    "en": "Not added yet"
+  },
+  "这家公司的准备资料": {
+    "ja": "この企業の準備資料",
+    "en": "Materials for this company"
+  },
+  "结合岗位特点与个人履历整理，完成后保存在这里。": {
+    "ja": "求人の特徴とプロフィールを基に整理し、完成後にここに保存します。",
+    "en": "Materials based on the role and your profile will be saved here when ready."
+  },
+  "交给 Codex 准备": {
+    "ja": "Codex に準備を依頼",
+    "en": "Ask Codex to prepare"
+  },
+  "已加入待处理队列，等待 Codex 生成。": {
+    "ja": "処理待ちに追加済み。Codex の生成を待っています。",
+    "en": "Queued, waiting for Codex to prepare the materials."
+  },
+  "· 待核对": {
+    "ja": "· 要確認",
+    "en": "· Needs review"
+  },
+  "尚无专属准备材料": {
+    "ja": "企業別の準備資料はまだありません",
+    "en": "No company-specific materials yet"
+  },
+  "履歴書 · 職務経歴書": {
+    "ja": "履歴書 · 職務経歴書",
+    "en": "Résumé · Career history"
+  },
+  "志望動機 · 面试准备 · 公司研究": {
+    "ja": "志望動機 · 面接準備 · 企業研究",
+    "en": "Motivation statement · Interview prep · Company research"
+  },
+  "搜索公司或职位": {
+    "ja": "企業・求人を検索",
+    "en": "Search companies or jobs"
+  },
+  "搜索公司、职位或技能…": {
+    "ja": "企業、職種、スキルで検索…",
+    "en": "Search companies, roles or skills…"
+  },
+  "筛选投递状态": {
+    "ja": "応募状況で絞り込み",
+    "en": "Filter application status"
+  },
+  "导入": {
+    "ja": "インポート",
+    "en": "Import"
+  },
+  "公司 / 职位": {
+    "ja": "企業 / 職種",
+    "en": "Company / role"
+  },
+  "投递状态": {
+    "ja": "応募状況",
+    "en": "Application status"
+  },
+  "下一步": {
+    "ja": "次の一歩",
+    "en": "Next step"
+  },
+  "待安排": {
+    "ja": "未定",
+    "en": "Not scheduled"
+  },
+  "高": {
+    "ja": "高",
+    "en": "High"
+  },
+  "没有符合条件的职位": {
+    "ja": "条件に合う求人がありません",
+    "en": "No matching jobs"
+  },
+  "还没有保存职位": {
+    "ja": "保存した求人はありません",
+    "en": "No saved jobs yet"
+  },
+  "调整搜索词或状态筛选。": {
+    "ja": "検索語や応募状況の条件を変えてください。",
+    "en": "Try a different search or status filter."
+  },
+  "手动添加，或将 Agent 整理好的数据导入。": {
+    "ja": "手動で追加するか、Agent が整理したデータをインポートしてください。",
+    "en": "Add a job manually or import data prepared by an Agent."
+  },
+  "职位研究": {
+    "ja": "求人調査",
+    "en": "Job research"
+  },
+  "请求 Codex 收集职位": {
+    "ja": "Codex に求人収集を依頼",
+    "en": "Ask Codex to find jobs"
+  },
+  "以真实经历为依据。日语水平、在留资格、技能年限及未确认的成果，请核对后再用于投递。": {
+    "ja": "実際の経験に基づいて記入してください。日本語力、在留資格、経験年数、未確認の成果は、応募前に確認しましょう。",
+    "en": "Use your actual experience. Verify Japanese ability, residence status, years of experience and unconfirmed achievements before applying."
+  },
+  "资料来源：": {
+    "ja": "資料の出典：",
+    "en": "Source: "
+  },
+  "手动整理": {
+    "ja": "手動で整理",
+    "en": "Manually prepared"
+  },
+  "更新于": {
+    "ja": "更新日",
+    "en": "Updated "
+  },
+  "· 版本": {
+    "ja": "· バージョン",
+    "en": "· Version "
+  },
+  "筛选准备资料类型": {
+    "ja": "資料の種類で絞り込み",
+    "en": "Filter material type"
+  },
+  "待核对": {
+    "ja": "要確認",
+    "en": "Needs review"
+  },
+  "共 {0} 份 AI 草稿，使用前请核对事实与表达。": {
+    "ja": "AI 下書きは {0} 件です。使用前に事実と表現を確認してください。",
+    "en": "{0} AI drafts. Check facts and wording before use."
+  },
+  "AI 文稿使用前需核对事实与表达。": {
+    "ja": "AI の文章は使用前に事実と表現を確認してください。",
+    "en": "Check facts and wording before using AI drafts."
+  },
+  "暂无准备资料": {
+    "ja": "準備資料はまだありません",
+    "en": "No preparation materials yet"
+  },
+  "在公司详情中，把准备任务交给 Codex。": {
+    "ja": "企業の詳細画面から Codex に準備を依頼してください。",
+    "en": "Ask Codex to prepare materials from a company's detail page."
+  },
+  "前往公司与投递": {
+    "ja": "企業・応募へ",
+    "en": "Go to companies & applications"
+  },
+  "阅读完整分析": {
+    "ja": "分析の全文を読む",
+    "en": "Read full analysis"
+  },
+  "还没有每日分析": {
+    "ja": "日次分析はまだありません",
+    "en": "No daily analysis yet"
+  },
+  "请求分析后，由 Codex 读取最新进度并整理建议。": {
+    "ja": "依頼後、Codex が最新の進捗を読み取り、提案を整理します。",
+    "en": "After your request, Codex reviews your latest progress and prepares suggestions."
+  },
+  "收集 → 分析 → 写入": {
+    "ja": "収集 → 分析 → 保存",
+    "en": "Collect → Analyze → Save"
+  },
+  "Codex 研究招聘来源，结合个人履历整理内容，再导入这个工作区。网页不调用 AI，也不会自动发送申请。": {
+    "ja": "Codex が求人の出典を調査し、プロフィールを基に内容を整理して、このワークスペースにインポートします。ウェブ画面から AI を呼び出したり、自動応募したりはしません。",
+    "en": "Codex researches job sources, prepares content using your profile and imports it here. This website does not call AI or submit applications automatically."
+  },
+  "添加职位，或请求收集适合的机会。": {
+    "ja": "求人を追加するか、希望に合う求人の収集を依頼します。",
+    "en": "Add a job or request a search for suitable opportunities."
+  },
+  "在公司详情中提交准备任务。": {
+    "ja": "企業の詳細画面から準備を依頼します。",
+    "en": "Request preparation from a company's detail page."
+  },
+  "把下面的指令交给 Codex 处理。": {
+    "ja": "下の指示を Codex に渡します。",
+    "en": "Give the instructions below to Codex."
+  },
+  "核对生成的材料，再自行投递。": {
+    "ja": "生成された資料を確認し、自分で応募します。",
+    "en": "Review the generated materials, then apply yourself."
+  },
+  "已复制 Codex 工作指令": {
+    "ja": "Codex への指示をコピーしました",
+    "en": "Codex instructions copied"
+  },
+  "复制给 Codex 的指令": {
+    "ja": "Codex への指示をコピー",
+    "en": "Copy instructions for Codex"
+  },
+  "查看指令": {
+    "ja": "指示を見る",
+    "en": "View instructions"
+  },
+  "资料导入与备份": {
+    "ja": "データのインポート・バックアップ",
+    "en": "Data import & backup"
+  },
+  "导入 Agent 输出的 JSON 数据包。先预览条目数量，再写入本机数据库。": {
+    "ja": "Agent が出力した JSON をインポートします。件数をプレビューしてから、ローカルデータベースに保存します。",
+    "en": "Import an Agent JSON package. Preview item counts before saving to the local database."
+  },
+  "导入 Agent 数据包": {
+    "ja": "Agent データをインポート",
+    "en": "Import Agent data"
+  },
+  "导出完整资料备份": {
+    "ja": "すべての資料をバックアップ",
+    "en": "Export full backup"
+  },
+  "备份包含私人履历与投递记录。完整备份用于留存；Agent 导入只接收研究、报告和新版本材料。": {
+    "ja": "バックアップには個人のプロフィールと応募記録が含まれます。完全バックアップは保管用です。Agent のインポートは調査、レポート、新しい版の資料のみ受け付けます。",
+    "en": "Backups include your private profile and application history. Full backups are for safekeeping; Agent imports accept research, reports and new material versions only."
+  },
+  "任务队列": {
+    "ja": "タスク一覧",
+    "en": "Task queue"
+  },
+  "项待处理": {
+    "ja": "件が処理待ち",
+    "en": " pending"
+  },
+  "整个求职工作区": {
+    "ja": "求職ワークスペース全体",
+    "en": "Entire career workspace"
+  },
+  "没有待处理任务": {
+    "ja": "処理待ちのタスクはありません",
+    "en": "No pending tasks"
+  },
+  "在公司详情中请求准备，或请求一份每日分析。": {
+    "ja": "企業の詳細画面から準備を依頼するか、日次分析を依頼してください。",
+    "en": "Request company preparation or a daily analysis."
+  },
+  "后台判断依据不是邮箱，而是 UID 与管理员声明（admin claim）。默认不需要登录时返回本机演示上下文。": {
+    "ja": "管理者判定にはメールではなく UID と admin claim を使います。ログイン不要の場合はローカルのデモコンテキストを返します。",
+    "en": "Administrator access uses the UID and admin claim, not email. Without required sign-in, a local demo context is returned."
+  },
+  "当前 UID": {
+    "ja": "現在の UID",
+    "en": "Current UID"
+  },
+  "身份模式": {
+    "ja": "認証モード",
+    "en": "Authentication mode"
+  },
+  "是否管理员": {
+    "ja": "管理者",
+    "en": "Administrator"
+  },
+  "是": {
+    "ja": "はい",
+    "en": "Yes"
+  },
+  "否": {
+    "ja": "いいえ",
+    "en": "No"
+  },
+  "管理员账户建议在服务端维护：": {
+    "ja": "管理者アカウントはサーバー側で管理することを推奨します：",
+    "en": "Manage administrator accounts on the server:"
+  },
+  "1）Firebase 自定义 claim 中写": {
+    "ja": "1）Firebase のカスタム claim に設定",
+    "en": "1) Set a Firebase custom claim"
+  },
+  "2）或在环境变量中维护 UID 白名单：": {
+    "ja": "2）または環境変数で UID の許可リストを設定：",
+    "en": "2) Or configure an allowed UID list in environment variables:"
+  },
+  "。": {
+    "ja": "。",
+    "en": "."
+  },
+  "MCP Token 名称": {
+    "ja": "MCP Token 名",
+    "en": "MCP token name"
+  },
+  "有效天数": {
+    "ja": "有効日数",
+    "en": "Validity in days"
+  },
+  "Token 有效天数": {
+    "ja": "Token の有効日数",
+    "en": "Token validity in days"
+  },
+  "生成 MCP Token": {
+    "ja": "MCP Token を生成",
+    "en": "Create MCP token"
+  },
+  "MCP Token 管理": {
+    "ja": "MCP Token 管理",
+    "en": "MCP token management"
+  },
+  "暂无 MCP Token": {
+    "ja": "MCP Token はありません",
+    "en": "No MCP tokens yet"
+  },
+  "生成后会显示在这里，包含可撤销的 id 与有效期。": {
+    "ja": "生成後、無効化できる ID と有効期限がここに表示されます。",
+    "en": "Created tokens appear here with a revocable ID and expiry date."
+  },
+  "名称": {
+    "ja": "名前",
+    "en": "Name"
+  },
+  "失效时间": {
+    "ja": "有効期限",
+    "en": "Expires"
+  },
+  "最近使用": {
+    "ja": "最終使用",
+    "en": "Last used"
+  },
+  "状态": {
+    "ja": "状態",
+    "en": "Status"
+  },
+  "操作": {
+    "ja": "操作",
+    "en": "Actions"
+  },
+  "长期有效": {
+    "ja": "無期限",
+    "en": "No expiry"
+  },
+  "未使用": {
+    "ja": "未使用",
+    "en": "Never used"
+  },
+  "已撤销": {
+    "ja": "無効化済み",
+    "en": "Revoked"
+  },
+  "有效": {
+    "ja": "有効",
+    "en": "Active"
+  },
+  "撤销": {
+    "ja": "無効化",
+    "en": "Revoke"
+  },
+  "编辑职位与投递进展": {
+    "ja": "求人・応募状況を編集",
+    "en": "Edit job & application progress"
+  },
+  "添加目标职位": {
+    "ja": "希望求人を追加",
+    "en": "Add a target job"
+  },
+  "职位与投递进展已保存": {
+    "ja": "求人・応募状況を保存しました",
+    "en": "Job and application progress saved"
+  },
+  "关注中": {
+    "ja": "検討中",
+    "en": "Following"
+  },
+  "普通": {
+    "ja": "通常",
+    "en": "Normal"
+  },
+  "低": {
+    "ja": "低",
+    "en": "Low"
+  },
+  "下一步行动": {
+    "ja": "次の行動",
+    "en": "Next action"
+  },
+  "跟进 / 面试日期": {
+    "ja": "フォロー / 面接日",
+    "en": "Follow-up / interview date"
+  },
+  "取消": {
+    "ja": "キャンセル",
+    "en": "Cancel"
+  },
+  "保存中…": {
+    "ja": "保存中…",
+    "en": "Saving…"
+  },
+  "保存职位": {
+    "ja": "求人を保存",
+    "en": "Save job"
+  },
+  "编辑个人履历": {
+    "ja": "プロフィールを編集",
+    "en": "Edit personal profile"
+  },
+  "个人履历已保存": {
+    "ja": "プロフィールを保存しました",
+    "en": "Profile saved"
+  },
+  "· AI 草稿，使用前请核对": {
+    "ja": "· AI 下書き、使用前に確認",
+    "en": "· AI draft — review before use"
+  },
+  "下载 Markdown": {
+    "ja": "Markdown をダウンロード",
+    "en": "Download Markdown"
+  },
+  "此文稿生成后，个人履历或职位信息有更新，请核对是否需要重新准备。": {
+    "ja": "生成後にプロフィールまたは求人情報が更新されています。再作成が必要か確認してください。",
+    "en": "Your profile or job details changed after this draft was created. Check whether it needs updating."
+  },
+  "依据与待确认事项": {
+    "ja": "根拠・要確認事項",
+    "en": "Evidence & items to confirm"
+  },
+  "支持职位研究、公司准备资料和每日分析。导入不会修改你的投递状态。": {
+    "ja": "求人調査、企業別の資料、日次分析に対応しています。インポートで応募状況は変更されません。",
+    "en": "Supports job research, company materials and daily analysis. Importing does not change application status."
+  },
+  "选择 JSON 文件": {
+    "ja": "JSON ファイルを選択",
+    "en": "Choose a JSON file"
+  },
+  "文件不能超过 3 MB": {
+    "ja": "ファイルは 3 MB 以下にしてください",
+    "en": "File must not exceed 3 MB"
+  },
+  "Agent JSON 数据包": {
+    "ja": "Agent JSON データ",
+    "en": "Agent JSON package"
+  },
+  "检查通过：": {
+    "ja": "確認済み：",
+    "en": "Validated: "
+  },
+  "条职位、": {
+    "ja": "件の求人、",
+    "en": " jobs,"
+  },
+  "份准备资料、": {
+    "ja": "件の準備資料、",
+    "en": " materials,"
+  },
+  "份分析报告，": {
+    "ja": "件の分析レポート、",
+    "en": " reports,"
+  },
+  "组面试题，": {
+    "ja": "組の面接質問、",
+    "en": " question sets,"
+  },
+  "份回答点评。": {
+    "ja": "件の回答講評。",
+    "en": " answer reviews."
+  },
+  "数据包检查通过": {
+    "ja": "データの検証に合格しました",
+    "en": "Package validation passed"
+  },
+  "检查并预览": {
+    "ja": "検証してプレビュー",
+    "en": "Validate & preview"
+  },
+  "Agent 数据已写入本机": {
+    "ja": "Agent データをローカルに保存しました",
+    "en": "Agent data saved locally"
+  },
+  "确认导入": {
+    "ja": "インポートを確定",
+    "en": "Confirm import"
+  },
+  "保存个人履历": {
+    "ja": "プロフィールを保存",
+    "en": "Save profile"
+  },
+  "使用中": {
+    "ja": "使用中",
+    "en": "In use"
+  },
+  "全部类别": {
+    "ja": "すべてのカテゴリ",
+    "en": "All categories"
+  },
+  "已删除": {
+    "ja": "削除済み",
+    "en": "Deleted"
+  },
+  "已停用": {
+    "ja": "無効",
+    "en": "Disabled"
+  },
+  "收藏": {
+    "ja": "お気に入り",
+    "en": "Favorites"
+  },
+  "保存失败": {
+    "ja": "保存に失敗しました",
+    "en": "Save failed"
+  },
+  "平台已保存": {
+    "ja": "求人サービスを保存しました",
+    "en": "Platform saved"
+  },
+  "选择你想使用的求职入口，记录搜索方向和使用心得。收藏的平台会排在前面。": {
+    "ja": "使いたい求人サービスを選び、検索方針や使用メモを残しましょう。お気に入りは上に表示されます。",
+    "en": "Choose your job platforms and keep notes on search strategies. Favorites appear first."
+  },
+  "添加平台": {
+    "ja": "サービスを追加",
+    "en": "Add platform"
+  },
+  "内置平台提供求职入口；具体岗位的日语、经验和在留资格支持仍需逐项确认。这里不会自动采集职位。": {
+    "ja": "内蔵リストは求職の入口です。各求人の日本語・経験・在留資格の支援は個別に確認してください。求人の自動収集は行いません。",
+    "en": "Built-in platforms are starting points. Verify each job's language, experience and residence support requirements. Jobs are not collected automatically."
+  },
+  "搜索平台": {
+    "ja": "サービスを検索",
+    "en": "Search platforms"
+  },
+  "名称、方向或备注": {
+    "ja": "名前、分野、メモ",
+    "en": "Name, focus or notes"
+  },
+  "类别": {
+    "ja": "カテゴリ",
+    "en": "Category"
+  },
+  "显示范围": {
+    "ja": "表示範囲",
+    "en": "Show"
+  },
+  "个平台": {
+    "ja": "件のサービス",
+    "en": " platforms"
+  },
+  "取消收藏": {
+    "ja": "お気に入りを解除",
+    "en": "Remove from favorites"
+  },
+  "已取消收藏": {
+    "ja": "お気に入りを解除しました",
+    "en": "Removed from favorites"
+  },
+  "已收藏": {
+    "ja": "お気に入りに追加しました",
+    "en": "Added to favorites"
+  },
+  "内置": {
+    "ja": "内蔵",
+    "en": "Built-in"
+  },
+  "自定义": {
+    "ja": "カスタム",
+    "en": "Custom"
+  },
+  "· 已停用": {
+    "ja": "· 無効",
+    "en": "· Disabled"
+  },
+  "还没有平台说明。": {
+    "ja": "説明はまだありません。",
+    "en": "No description yet."
+  },
+  "我的备注：": {
+    "ja": "自分のメモ：",
+    "en": "My notes: "
+  },
+  "适用条件与来源": {
+    "ja": "対象条件・出典",
+    "en": "Suitability & sources"
+  },
+  "查看内置推荐依据": {
+    "ja": "推薦の根拠を見る",
+    "en": "View recommendation source"
+  },
+  "来源核验：": {
+    "ja": "出典確認：",
+    "en": "Source verified: "
+  },
+  "· 不代表当前网址或个人备注已经核验": {
+    "ja": "· 現在の URL や個人メモの確認を意味しません",
+    "en": "· Does not verify the current URL or personal notes"
+  },
+  "平台已恢复": {
+    "ja": "サービスを復元しました",
+    "en": "Platform restored"
+  },
+  "恢复平台": {
+    "ja": "サービスを復元",
+    "en": "Restore platform"
+  },
+  "访问平台": {
+    "ja": "サービスを開く",
+    "en": "Visit platform"
+  },
+  "编辑": {
+    "ja": "編集",
+    "en": "Edit"
+  },
+  "平台已停用": {
+    "ja": "サービスを無効にしました",
+    "en": "Platform disabled"
+  },
+  "平台已启用": {
+    "ja": "サービスを有効にしました",
+    "en": "Platform enabled"
+  },
+  "停用": {
+    "ja": "無効にする",
+    "en": "Disable"
+  },
+  "启用": {
+    "ja": "有効にする",
+    "en": "Enable"
+  },
+  "平台已删除，可在“已删除”中恢复": {
+    "ja": "削除しました。「削除済み」から復元できます",
+    "en": "Platform deleted. Restore it from Deleted."
+  },
+  "删除": {
+    "ja": "削除",
+    "en": "Delete"
+  },
+  "没有符合条件的平台": {
+    "ja": "条件に合うサービスがありません",
+    "en": "No matching platforms"
+  },
+  "试着修改筛选条件，或添加自己的求职入口。": {
+    "ja": "絞り込みを変えるか、求人サービスを追加してください。",
+    "en": "Change the filters or add your own job platform."
+  },
+  "查看全部平台": {
+    "ja": "すべてのサービスを見る",
+    "en": "View all platforms"
+  },
+  "编辑平台": {
+    "ja": "サービスを編集",
+    "en": "Edit platform"
+  },
+  "关闭平台编辑": {
+    "ja": "編集画面を閉じる",
+    "en": "Close platform editor"
+  },
+  "平台名称 *": {
+    "ja": "サービス名 *",
+    "en": "Platform name *"
+  },
+  "其他": {
+    "ja": "その他",
+    "en": "Other"
+  },
+  "平台网址 *": {
+    "ja": "サービス URL *",
+    "en": "Platform URL *"
+  },
+  "平台说明": {
+    "ja": "サービスの説明",
+    "en": "Platform description"
+  },
+  "我的备注": {
+    "ja": "自分のメモ",
+    "en": "My notes"
+  },
+  "例如：搜索后端岗位；留意日语要求": {
+    "ja": "例：バックエンド求人を検索、日本語要件を確認",
+    "en": "Example: Search backend roles; check Japanese requirements"
+  },
+  "保存平台": {
+    "ja": "サービスを保存",
+    "en": "Save platform"
+  },
+  "匹配点与待确认事项": {
+    "ja": "マッチ点・要確認事項",
+    "en": "Fit & items to confirm"
+  },
+  "匹配情况待补充": {
+    "ja": "マッチ状況は未入力",
+    "en": "Fit notes not added yet"
+  },
+  "请先核对招聘来源与岗位要求。": {
+    "ja": "求人の出典と応募要件を先に確認してください。",
+    "en": "Check the job source and requirements first."
+  },
+  " · 信息日期 {0}": {
+    "ja": " · 情報日 {0}",
+    "en": " · Source date {0}"
+  },
+  "从这家公司开始准备": {
+    "ja": "この企業の準備を始めよう",
+    "en": "Start preparing for this company"
+  },
+  "已整理 {0} 份准备材料": {
+    "ja": "準備資料 {0} 件を整理済み",
+    "en": "{0} preparation materials ready"
+  },
+  "先整理职位要求与个人经历": {
+    "ja": "まず求人要件と自分の経験を整理",
+    "en": "Start with the job requirements and your experience"
+  },
+  "，可练习 {0} 道面试题": {
+    "ja": "、面接質問 {0} 問を練習できます",
+    "en": ", with {0} interview questions to practice"
+  },
+  "练一题面试回答": {
+    "ja": "面接の一問を練習",
+    "en": "Practice one answer"
+  },
+  "查看准备资料": {
+    "ja": "準備資料を見る",
+    "en": "View materials"
+  },
+  "已安排的下一步": {
+    "ja": "予定している次の一歩",
+    "en": "Your scheduled next step"
+  },
+  "跟进安排": {
+    "ja": "フォローの予定",
+    "en": "Follow-up plan"
+  },
+  "准备好后，为下一步留个日期。": {
+    "ja": "準備ができたら、次の行動の日付を決めましょう。",
+    "en": "When ready, set a date for your next step."
+  },
+  "设置下一步": {
+    "ja": "次の一歩を設定",
+    "en": "Set next step"
+  },
+  "已复制，粘贴到 Codex 即可调用。": {
+    "ja": "コピーしました。Codex に貼り付けて使えます。",
+    "en": "Copied. Paste into Codex to use it."
+  },
+  "未能复制，请展开技能后手动复制调用指令。": {
+    "ja": "コピーできませんでした。技能を開き、指示を手動でコピーしてください。",
+    "en": "Could not copy. Expand the skill and copy its instructions manually."
+  },
+  "技能档案": {
+    "ja": "技能アーカイブ",
+    "en": "Skill archive"
+  },
+  "个项目技能": {
+    "ja": "件のプロジェクト技能",
+    "en": " project skills"
+  },
+  "项目技能的统一目录，保留说明、参考文档和历史备份。": {
+    "ja": "説明、参考資料、過去のバックアップをまとめた技能一覧です。",
+    "en": "A catalog of project skills with instructions, references and backup history."
+  },
+  "下载全部技能备份": {
+    "ja": "技能の全バックアップをダウンロード",
+    "en": "Download all skill backups"
+  },
+  "归档于": {
+    "ja": "アーカイブ日時",
+    "en": "Archived "
+  },
+  "查看技能目录与说明": {
+    "ja": "技能の一覧・説明を見る",
+    "en": "View skill catalog & instructions"
+  },
+  "复制调用指令": {
+    "ja": "呼び出し指示をコピー",
+    "en": "Copy invocation"
+  },
+  "查看「": {
+    "ja": "「",
+    "en": "View “"
+  },
+  "」完整说明": {
+    "ja": "」の説明をすべて見る",
+    "en": "” instructions"
+  },
+  "查看源文件位置（": {
+    "ja": "ソースファイルの場所（",
+    "en": "Source file locations ("
+  },
+  "个文件）": {
+    "ja": "ファイル）",
+    "en": " files)"
+  },
+  "暂无项目技能。添加到 .agents/skills 后重新归档。": {
+    "ja": "技能はまだありません。.agents/skills に追加し、再アーカイブしてください。",
+    "en": "No project skills yet. Add them to .agents/skills and archive again."
+  },
+  "历史备份（": {
+    "ja": "過去のバックアップ（",
+    "en": "Backup history ("
+  },
+  "份）": {
+    "ja": "件）",
+    "en": " items)"
+  },
+  "个技能 ·": {
+    "ja": "技能 ·",
+    "en": " skills ·"
+  },
+  "KB · 版本": {
+    "ja": "KB · バージョン",
+    "en": "KB · Version "
+  },
+  "下载 {0} 版本 {1} 的技能备份": {
+    "ja": "{0} バージョン {1} の技能バックアップをダウンロード",
+    "en": "Download skill backup from {0}, version {1}"
+  },
+  "下载": {
+    "ja": "ダウンロード",
+    "en": "Download"
+  },
+  "如何新增技能或恢复备份": {
+    "ja": "技能の追加・バックアップの復元方法",
+    "en": "How to add skills or restore backups"
+  },
+  "技能放在项目的": {
+    "ja": "技能はプロジェクトの",
+    "en": "Store skills in the project's "
+  },
+  "中，新增或修改后执行": {
+    "ja": "に置き、追加・変更後に実行します：",
+    "en": "and, after adding or changing them, run "
+  },
+  "更新目录与备份。启动和构建项目时也会更新。": {
+    "ja": "一覧とバックアップを更新します。起動時とビルド時にも更新されます。",
+    "en": "to update the catalog and backups. They also update at startup and build time."
+  },
+  "恢复前先解压到临时目录，核对 manifest.json，再与当前项目逐项比较。备份包含项目技能及工作流说明；完整求职资料请使用下方的资料备份入口。": {
+    "ja": "復元前に一時フォルダーへ展開し、manifest.json を確認して、現在のプロジェクトと比較してください。バックアップは技能とワークフローの説明を含みます。求職資料全体は下の資料バックアップを使ってください。",
+    "en": "Before restoring, extract to a temporary folder, check manifest.json and compare with the current project. These backups contain skills and workflow instructions. Use the data backup below for your complete career data."
+  },
+  "展开完整摘要": {
+    "ja": "要約をすべて表示",
+    "en": "Expand full summary"
+  },
+  "日语": {
+    "ja": "日本語",
+    "en": "Japanese"
+  },
+  "回答点评": {
+    "ja": "回答の講評",
+    "en": "Answer review"
+  },
+  "回答已保存，点评请求已交给 Codex。处理完成后，建议会出现在下方。": {
+    "ja": "回答を保存し、Codex に講評を依頼しました。処理後に下に提案が表示されます。",
+    "en": "Answer saved and sent to Codex for review. Suggestions will appear below when ready."
+  },
+  "本次回答已保存。你可以查看历史，或继续提交点评。": {
+    "ja": "今回の回答を保存しました。履歴の確認や講評の依頼ができます。",
+    "en": "Answer saved. View your history or request feedback."
+  },
+  "已请求点评这个回答版本。": {
+    "ja": "この回答版の講評を依頼しました。",
+    "en": "Review requested for this answer version."
+  },
+  "指令已复制，可以发给当前 Codex 对话处理。": {
+    "ja": "指示をコピーしました。現在の Codex チャットに貼り付けてください。",
+    "en": "Instructions copied. Paste them into your current Codex chat."
+  },
+  "练习公司": {
+    "ja": "練習する企業",
+    "en": "Practice company"
+  },
+  "题组版本": {
+    "ja": "質問セットの版",
+    "en": "Question set version"
+  },
+  "模拟练习 · 不改变投递状态": {
+    "ja": "模擬練習 · 応募状況は変更されません",
+    "en": "Practice session · Application status stays unchanged"
+  },
+  "先为这家公司准备一组问题": {
+    "ja": "まずこの企業の質問セットを準備しよう",
+    "en": "Prepare a question set for this company first"
+  },
+  "Codex 会结合公司特点、岗位要求和你的经历整理练习题。": {
+    "ja": "Codex が企業の特徴、求人要件、あなたの経験を基に質問を整理します。",
+    "en": "Codex prepares questions based on the company, role and your experience."
+  },
+  "已请求公司准备，等待 Codex 写入题组。": {
+    "ja": "企業別の準備を依頼しました。Codex の質問セット保存を待っています。",
+    "en": "Company preparation requested. Waiting for Codex to save the questions."
+  },
+  "请求公司准备": {
+    "ja": "企業別の準備を依頼",
+    "en": "Request company preparation"
+  },
+  "结合你的求职背景": {
+    "ja": "あなたの求職背景を踏まえて",
+    "en": "Based on your job-search background"
+  },
+  "工作经验单独看": {
+    "ja": "職務経験は分けて確認",
+    "en": "Review work experience separately"
+  },
+  "用能说出口的日语练习": {
+    "ja": "口に出せる日本語で練習",
+    "en": "Practice Japanese you can say aloud"
+  },
+  "沟通练习与企业确认事项": {
+    "ja": "コミュニケーション練習・企業への確認事項",
+    "en": "Communication practice & questions for the company"
+  },
+  "先独立回答 → 提交点评 → 根据追问再说一次。每次保留原回答。": {
+    "ja": "自分で回答 → 講評を依頼 → 追加質問を踏まえて再回答。毎回の原文を保存します。",
+    "en": "Answer independently → Request feedback → Try again with follow-up questions. Every original answer is saved."
+  },
+  "已练问题": {
+    "ja": "練習済みの質問",
+    "en": "Questions practiced"
+  },
+  "面试前要做什么": {
+    "ja": "面接前にやること",
+    "en": "Before the interview"
+  },
+  "按题练习": {
+    "ja": "一問ずつ練習",
+    "en": "Practice by question"
+  },
+  "建议顺序": {
+    "ja": "おすすめの順番",
+    "en": "Suggested order"
+  },
+  "秒": {
+    "ja": "秒",
+    "en": " seconds"
+  },
+  "建议": {
+    "ja": "目安",
+    "en": "Suggested "
+  },
+  "换个简单说法，理解这道题": {
+    "ja": "簡単な言い方で質問を理解しよう",
+    "en": "Understand the question in simpler words"
+  },
+  "为什么提前练这题": {
+    "ja": "この質問を先に練習する理由",
+    "en": "Why practice this question"
+  },
+  "卡住时，看看回答思路": {
+    "ja": "困ったら回答のヒントを見る",
+    "en": "Stuck? View answer hints"
+  },
+  "面试官可能继续问": {
+    "ja": "想定される追加質問",
+    "en": "Possible follow-up questions"
+  },
+  "你的回答": {
+    "ja": "あなたの回答",
+    "en": "Your answer"
+  },
+  "· 尚未保存": {
+    "ja": "· 未保存",
+    "en": "· Unsaved"
+  },
+  "先用自己的话回答。可以直接写日语，也可以先用中文理清思路；口述后可粘贴转写稿。": {
+    "ja": "まず自分の言葉で答えましょう。日本語で書くか、先に中国語で考えを整理できます。口述後の文字起こしも貼り付けられます。",
+    "en": "Answer in your own words. Write in Japanese or organize your thoughts in Chinese first. You can also paste a transcript of your spoken answer."
+  },
+  "回答语言": {
+    "ja": "回答言語",
+    "en": "Answer language"
+  },
+  "中文构思": {
+    "ja": "中国語で構想",
+    "en": "Chinese draft"
+  },
+  "中日混合": {
+    "ja": "中国語・日本語混在",
+    "en": "Chinese & Japanese"
+  },
+  "实际口述时长（可选）": {
+    "ja": "実際の発話時間（任意）",
+    "en": "Actual speaking time (optional)"
+  },
+  "实际口述秒数": {
+    "ja": "実際の発話秒数",
+    "en": "Speaking time in seconds"
+  },
+  "当前分析文字内容；发音、重音和真实语速需要音频依据。网站不录音，也不即时调用 AI。": {
+    "ja": "分析対象はテキストです。発音、アクセント、実際の話速には音声が必要です。録音やリアルタイムの AI 呼び出しは行いません。",
+    "en": "Analysis uses text. Pronunciation, accent and actual speaking pace require audio. This website does not record audio or call AI in real time."
+  },
+  "保存本次回答": {
+    "ja": "今回の回答を保存",
+    "en": "Save answer"
+  },
+  "保存并请 Codex 点评": {
+    "ja": "保存して Codex に講評を依頼",
+    "en": "Save & request Codex feedback"
+  },
+  "回答记录与点评": {
+    "ja": "回答履歴・講評",
+    "en": "Answer history & feedback"
+  },
+  "选择历史回答": {
+    "ja": "過去の回答を選択",
+    "en": "Select a previous answer"
+  },
+  "第": {
+    "ja": "第",
+    "en": "Attempt "
+  },
+  "次 ·": {
+    "ja": "回 ·",
+    "en": "·"
+  },
+  "保存第一段回答后，这里会保留原文、修改建议和下次练习重点。": {
+    "ja": "最初の回答を保存すると、原文、修正案、次回の重点がここに残ります。",
+    "en": "After you save your first answer, its original text, suggestions and next practice focus appear here."
+  },
+  "这次保存的原回答 ·": {
+    "ja": "今回保存した回答の原文 ·",
+    "en": "Saved original answer · "
+  },
+  " · {0} 秒": {
+    "ja": " · {0} 秒",
+    "en": " · {0} seconds"
+  },
+  "个人履历在这次回答后有更新，点评时需要核对差异。": {
+    "ja": "回答後にプロフィールが更新されています。講評時に差分を確認してください。",
+    "en": "Your profile changed after this answer. Review the differences when giving feedback."
+  },
+  "这次最值得改进的地方": {
+    "ja": "今回いちばん改善したい点",
+    "en": "Top improvement for this answer"
+  },
+  "保留的优点": {
+    "ja": "残したい良い点",
+    "en": "Strengths to keep"
+  },
+  "工作能力与回答内容": {
+    "ja": "業務能力・回答内容",
+    "en": "Work skills & answer content"
+  },
+  "日语表达（单独点评）": {
+    "ja": "日本語表現（個別の講評）",
+    "en": "Japanese expression (separate review)"
+  },
+  "事实与追问风险": {
+    "ja": "事実・追加質問のリスク",
+    "en": "Facts & follow-up risks"
+  },
+  "外国求职者的沟通建议": {
+    "ja": "外国人求職者へのコミュニケーション提案",
+    "en": "Communication tips for international applicants"
+  },
+  "先练这一版：简短、礼貌、能说出口": {
+    "ja": "まずこの版を練習：短く、丁寧に、口に出せる形で",
+    "en": "Practice this version first: short, polite and easy to say"
+  },
+  "参考改写：理解结构后，用自己的话重说": {
+    "ja": "参考の書き換え：構成を理解して、自分の言葉でもう一度",
+    "en": "Reference rewrite: understand the structure, then say it in your own words"
+  },
+  "下一轮追问": {
+    "ja": "次の追加質問",
+    "en": "Next follow-up questions"
+  },
+  "下一次只练这件事": {
+    "ja": "次回はこの一点を練習",
+    "en": "One focus for next time"
+  },
+  "点评依据与局限": {
+    "ja": "講評の根拠・限界",
+    "en": "Feedback evidence & limitations"
+  },
+  "重新作答，保存下一版": {
+    "ja": "もう一度答えて、次の版を保存",
+    "en": "Try again and save a new version"
+  },
+  "等待 Codex 点评": {
+    "ja": "Codex の講評を待っています",
+    "en": "Waiting for Codex feedback"
+  },
+  "这次回答还没有点评": {
+    "ja": "この回答の講評はまだありません",
+    "en": "No feedback for this answer yet"
+  },
+  "请求已加入任务队列。可以复制指令发给 Codex 现在处理，也会由每日任务处理；结果写回后自动显示。": {
+    "ja": "処理待ちに追加しました。指示を Codex に渡して今すぐ処理することも、日次タスクに任せることもできます。保存された結果は自動表示されます。",
+    "en": "Your request is queued. Copy the instructions to Codex to process now, or wait for the daily task. Results appear automatically once saved."
+  },
+  "提交后，Codex 会针对这份已保存的回答分析，而不是评价尚未保存的编辑内容。": {
+    "ja": "送信後、Codex はこの保存済み回答を分析します。未保存の編集内容は対象外です。",
+    "en": "Codex will review this saved answer, not your unsaved edits."
+  },
+  "请求点评这个版本": {
+    "ja": "この版の講評を依頼",
+    "en": "Request feedback on this version"
+  },
+  "准备投递": {
+    "ja": "応募準備中",
+    "en": "Preparing to apply"
+  },
+  "履歴書": {
+    "ja": "履歴書",
+    "en": "Résumé"
+  },
+  "職務経歴書": {
+    "ja": "職務経歴書",
+    "en": "Career history"
+  },
+  "志望動機": {
+    "ja": "志望動機",
+    "en": "Motivation statement"
+  },
+  "面试准备": {
+    "ja": "面接準備",
+    "en": "Interview preparation"
+  },
+  "公司研究": {
+    "ja": "企業研究",
+    "en": "Company research"
+  },
+  "请求失败": {
+    "ja": "リクエストに失敗しました",
+    "en": "Request failed"
+  },
+  "IT・软件工程": {
+    "ja": "IT・ソフトウェア",
+    "en": "IT & software engineering"
+  },
+  "双语・国际业务": {
+    "ja": "バイリンガル・国際業務",
+    "en": "Bilingual & international roles"
+  },
+  "综合・多行业": {
+    "ja": "総合・複数業界",
+    "en": "General & multiple industries"
+  },
+  "转职中介": {
+    "ja": "転職エージェント",
+    "en": "Recruitment agencies"
+  },
+  "平台已更新，请刷新后重新编辑": {
+    "ja": "サービスが更新されています。再読み込みして編集してください",
+    "en": "Platform changed. Refresh before editing again."
+  },
+  "请检查平台字段：{0}": {
+    "ja": "サービスの項目を確認してください：{0}",
+    "en": "Check platform field: {0}"
+  },
+  "平台网址需要完整的 http 或 https 链接，且不能包含账号密码": {
+    "ja": "URL は完全な http / https リンクにし、認証情報を含めないでください",
+    "en": "Use a complete HTTP or HTTPS URL without account credentials"
+  },
+  "请选择有效的平台类别": {
+    "ja": "有効なカテゴリを選択してください",
+    "en": "Choose a valid platform category"
+  },
+  "日本 IT／Web 招聘平台，覆盖后端、数据和基础设施等岗位，可筛选多国籍职场。": {
+    "ja": "日本の IT・Web 求人サービス。バックエンド、データ、インフラなどの求人を掲載し、多国籍の職場で絞り込めます。",
+    "en": "Japanese IT/Web recruitment platform covering backend, data and infrastructure roles, with filters for multinational workplaces."
+  },
+  "并非外国人专用平台；海外经验、工作日语、在留资格支持需逐岗确认。": {
+    "ja": "外国人専用ではありません。海外経験、業務上の日本語、在留資格の支援は求人ごとに確認してください。",
+    "en": "Not exclusive to international applicants. Check overseas experience, workplace Japanese and residence support for each role."
+  },
+  "按职种、关键词、公司和地区搜索日本招聘信息，适合拓宽 Java、后端和数据工程职位来源。": {
+    "ja": "職種、キーワード、企業、地域で日本の求人を検索できます。Java、バックエンド、データエンジニアの求人元を広げるのに役立ちます。",
+    "en": "Search Japanese jobs by role, keyword, company and location to broaden sources for Java, backend and data engineering roles."
+  },
+  "并非外国人专用平台；核对实际雇主、雇用形式、语言要求及原始招聘页，留意重复职位。": {
+    "ja": "外国人専用ではありません。実際の雇用主、雇用形態、言語要件、求人原文を確認し、重複求人にも注意してください。",
+    "en": "Not exclusive to international applicants. Check the employer, employment type, language requirements and original posting, and watch for duplicates."
+  },
+  "面向多国籍工程师的招聘平台，包含以日语工作的技术岗位和国际化团队机会。": {
+    "ja": "多国籍エンジニア向けの求人サービス。日本語を使う技術職や国際的なチームの求人を含みます。",
+    "en": "Recruitment platform for engineers of different nationalities, including Japanese-speaking technical roles and international teams."
+  },
+  "全球化岗位不等于语言门槛低；逐岗核对商务日语、英语和签证支持。本次参考官方搜索索引。": {
+    "ja": "国際的な求人でも言語要件が低いとは限りません。ビジネス日本語、英語、ビザ支援を個別に確認してください。今回の参照元は公式検索インデックスです。",
+    "en": "Global roles do not necessarily have low language requirements. Check business Japanese, English and visa support individually. This entry used official search indexes."
+  },
+  "外国工程师专门转职中介，提供 IT 职位搜索和顾问支持。": {
+    "ja": "外国人エンジニア専門の転職エージェント。IT 求人の検索とアドバイザーの支援を提供します。",
+    "en": "Recruitment agency for international engineers, offering IT job searches and advisor support."
+  },
+  "确认具体公司、配属、雇用方式及对海外经验和日语能力的要求。": {
+    "ja": "企業、配属先、雇用形態、海外経験と日本語力の要件を確認してください。",
+    "en": "Check the company, assignment, employment type and requirements for overseas experience and Japanese ability."
+  },
+  "面向外国籍 IT 工程师的转职渠道，可按已有技术经验寻找岗位并咨询顾问。": {
+    "ja": "外国籍 IT エンジニア向けの転職サービス。技術経験に合う求人検索やアドバイザーへの相談ができます。",
+    "en": "Career service for international IT engineers, with role searches based on technical experience and advisor consultations."
+  },
+  "逐岗核对工作语言，不默认免日语或免英语要求。本次参考官方搜索索引，职位详情待重新核验。": {
+    "ja": "使用言語を求人ごとに確認し、日本語・英語が不要とは判断しないでください。今回の参照元は公式検索インデックスで、求人詳細は再確認が必要です。",
+    "en": "Check working languages for each role; do not assume Japanese or English is unnecessary. This entry used official search indexes; job details need verification."
+  },
+  "面向外国求职者，提供中文相关工作及 Web／IT 工程师职位方向。": {
+    "ja": "外国人求職者向けに、中国語関連の仕事や Web・IT エンジニアの求人を提供します。",
+    "en": "Offers international applicants Chinese-related work and Web/IT engineering opportunities."
+  },
+  "先核对技术职责与经验是否匹配，再看中文是否有用。本次参考官方搜索索引，职位详情待重新核验。": {
+    "ja": "まず技術的な仕事内容と経験の適合を確認し、その後に中国語の有用性を見てください。今回は公式検索インデックスを参照しており、求人詳細は再確認が必要です。",
+    "en": "Check technical responsibilities and experience fit before considering Chinese-language advantages. This entry used official search indexes; job details need verification."
+  },
+  "面向英语使用者的日本软件开发岗位，可筛选无需日语、接受海外申请和远程工作。": {
+    "ja": "英語話者向けの日本のソフトウェア開発求人。日本語不要、海外応募可、リモート勤務で絞り込めます。",
+    "en": "Software development jobs in Japan for English speakers, with filters for no Japanese requirement, overseas applicants and remote work."
+  },
+  "日语与居住地要求逐岗列出；英语岗位也需要核对实际沟通要求。": {
+    "ja": "日本語・居住地の条件は求人ごとに記載されています。英語の求人でも実際のコミュニケーション要件を確認してください。",
+    "en": "Japanese and residency requirements are listed per role. Verify actual communication requirements even for English-speaking jobs."
+  },
+  "主要面向英语软件开发者，平台说明会筛选适合外国技术人才的公司和职位。": {
+    "ja": "主に英語話者のソフトウェア開発者向け。外国人技術者に適した企業・求人を選定すると説明しています。",
+    "en": "Primarily for English-speaking software developers. The platform states that it selects companies and roles suitable for international technical talent."
+  },
+  "重点看技术经验、日语等级、居住地与搬迁支持；平台筛选不等于个人符合条件。": {
+    "ja": "技術経験、日本語レベル、居住地、転居支援を重点的に確認してください。掲載審査は個人の応募資格を保証しません。",
+    "en": "Focus on technical experience, Japanese level, residency and relocation support. Platform screening does not mean you personally qualify."
+  },
+  "面向双语和多语人才的日本求职平台，覆盖 IT、销售、市场等职业方向。": {
+    "ja": "バイリンガル・多言語人材向けの日本の求人サービス。IT、営業、マーケティングなどを扱います。",
+    "en": "Japanese job platform for bilingual and multilingual talent, covering IT, sales, marketing and other fields."
+  },
+  "部分岗位要求商务日语或其他语言；按具体职位核对。": {
+    "ja": "ビジネス日本語や他の言語が必要な求人もあります。個別に確認してください。",
+    "en": "Some roles require business Japanese or other languages. Check each posting."
+  },
+  "聚焦日英双语职业岗位及外资、国际化企业。": {
+    "ja": "日英バイリンガルの専門職と、外資系・国際的な企業に特化しています。",
+    "en": "Focuses on Japanese-English bilingual professional roles and foreign-owned or international companies."
+  },
+  "适合能使用日语和英语工作的求职者；语言及在日工作资格要求因岗位而异。": {
+    "ja": "日本語と英語で働ける求職者向けです。言語と日本での就労資格は求人ごとに異なります。",
+    "en": "For applicants able to work in Japanese and English. Language and Japanese work eligibility requirements vary by role."
+  },
+  "提供面向外国求职者的日本职位搜索、简历创建与申请入口。": {
+    "ja": "外国人求職者向けに、日本の求人検索、履歴書作成、応募への入口を提供します。",
+    "en": "Provides international applicants with Japanese job searches, résumé creation and application entry points."
+  },
+  "逐岗核对语言、经验和居住地条件；本次参考官方搜索索引，详情需再次打开核验。": {
+    "ja": "言語、経験、居住地の条件を個別に確認してください。今回は公式検索インデックスを参照しており、詳細は再度開いて確認が必要です。",
+    "en": "Check language, experience and residency requirements individually. This entry used official search indexes; open the details again to verify."
+  },
+  "提供日本多行业职位入口，可用于拓宽英语及其他职业机会的搜索。": {
+    "ja": "日本の幅広い業界の求人を掲載し、英語を使う仕事やその他の職種の検索範囲を広げられます。",
+    "en": "Offers jobs across Japanese industries to broaden searches for English-speaking and other career opportunities."
+  },
+  "确认雇用形式、语言、是否接受海外申请及在留资格支持。": {
+    "ja": "雇用形態、言語、海外応募の可否、在留資格の支援を確認してください。",
+    "en": "Check employment type, languages, overseas application eligibility and residence support."
+  },
+  "面试": {
+    "ja": "面接",
+    "en": "Practice"
+  },
+  "为在日本工作的下一步": {
+    "ja": "日本で働く、その次の一歩へ",
+    "en": "Your next step toward working in Japan"
+  },
+  "让每一次求职准备，": {
+    "ja": "就職準備の一歩を、",
+    "en": "Make every step"
+  },
+  "都有迹可循。": {
+    "ja": "積み重ねていこう。",
+    "en": "of preparation count."
+  },
+  "从发现心仪公司，到写好一份材料、练好一次面试。把零散的信息，整理成每天可以推进的一步。": {
+    "ja": "気になる企業を見つけ、応募書類を整え、面接を練習する。散らばった情報を、今日進められる一歩に。",
+    "en": "Discover a company, prepare your application, and rehearse your interview. Turn scattered information into a clear next step."
+  },
+  "正在登录…": {
+    "ja": "ログイン中…",
+    "en": "Signing in…"
+  },
+  "使用 Google 登录": {
+    "ja": "Google でログイン",
+    "en": "Sign in with Google"
+  },
+  "先看看功能示例": {
+    "ja": "まずはサンプルを見る",
+    "en": "Explore the examples"
+  },
+  "Google 登录暂未就绪，请联系工作区管理者。": {
+    "ja": "Google ログインの準備ができていません。管理者にご確認ください。",
+    "en": "Google sign-in is not ready yet. Please contact the workspace owner."
+  },
+  "退出并切换账号": {
+    "ja": "ログアウトしてアカウントを変更",
+    "en": "Sign out and switch accounts"
+  },
+  "功能示例": {
+    "ja": "機能サンプル",
+    "en": "Feature examples"
+  },
+  "手帖一页": {
+    "ja": "手帖のひとページ",
+    "en": "A page from your notebook"
+  },
+  "虚构示例 · 无需登录": {
+    "ja": "架空のサンプル · ログイン不要",
+    "en": "Fictional example · No sign-in needed"
+  },
+  "公司与机会": {
+    "ja": "企業・求人",
+    "en": "Opportunities"
+  },
+  "求职材料": {
+    "ja": "応募書類",
+    "en": "Materials"
+  },
+  "从一家公司开始": {
+    "ja": "ひとつの企業から始める",
+    "en": "Start with one company"
+  },
+  "青空科技（虚构）": {
+    "ja": "青空テック（架空）",
+    "en": "Aozora Tech (fictional)"
+  },
+  "后端工程师 · 东京": {
+    "ja": "バックエンドエンジニア · 東京",
+    "en": "Backend engineer · Tokyo"
+  },
+  "为什么值得关注": {
+    "ja": "気になる理由",
+    "en": "Why it interests you"
+  },
+  "岗位重视 API 设计与团队协作，可以结合自己的项目经历准备。": {
+    "ja": "API 設計とチームでの開発を重視する求人。自分のプロジェクト経験と結びつけて準備。",
+    "en": "The role values API design and teamwork. Prepare examples from your own projects."
+  },
+  "还需要确认": {
+    "ja": "確認しておきたいこと",
+    "en": "Questions to clarify"
+  },
+  "日语沟通场景、远程办公安排与选考流程。": {
+    "ja": "日本語でのやり取り、リモート勤務、選考の流れ。",
+    "en": "Japanese communication needs, remote work arrangements, and the interview process."
+  },
+  "整理一个能说明技术取舍的项目故事": {
+    "ja": "技術選定の理由を説明できるエピソードを整理する",
+    "en": "Outline a project story that explains a technical trade-off"
+  },
+  "让材料回应岗位": {
+    "ja": "求人に合わせて書類を整える",
+    "en": "Tailor your materials to the role"
+  },
+  "一份志望动机的提纲": {
+    "ja": "志望動機のアウトライン",
+    "en": "An outline for your motivation"
+  },
+  "青空科技（虚构） · 准备草稿": {
+    "ja": "青空テック（架空） · 下書き",
+    "en": "Aozora Tech (fictional) · Draft"
+  },
+  "为什么是这家公司": {
+    "ja": "なぜこの企業なのか",
+    "en": "Why this company"
+  },
+  "从业务与岗位出发，写下真正感兴趣的部分。": {
+    "ja": "事業や仕事内容から、本当に興味を持った点を整理。",
+    "en": "Start with what interests you about the business and the role."
+  },
+  "我能带来什么": {
+    "ja": "どのように貢献できるか",
+    "en": "What you can contribute"
+  },
+  "选择一段真实经历，用行动与结果支撑。": {
+    "ja": "実際の経験を選び、行動と結果で裏付ける。",
+    "en": "Choose a real experience and support it with actions and outcomes."
+  },
+  "希望如何成长": {
+    "ja": "どのように成長したいか",
+    "en": "How you want to grow"
+  },
+  "把个人方向与团队需要连接起来。": {
+    "ja": "自分の目指す方向と、チームのニーズをつなぐ。",
+    "en": "Connect your direction with what the team needs."
+  },
+  "材料与公司关联，修改后仍可回看历史版本。": {
+    "ja": "書類は企業ごとに整理。修正後も過去の版を確認できます。",
+    "en": "Keep materials linked to each company and revisit earlier versions."
+  },
+  "把经历说清楚": {
+    "ja": "経験を自分の言葉で伝える",
+    "en": "Tell your story clearly"
+  },
+  "练习一段项目介绍": {
+    "ja": "プロジェクトの説明を練習",
+    "en": "Rehearse a project introduction"
+  },
+  "先整理思路": {
+    "ja": "まず考えを整理する",
+    "en": "Organize your thoughts"
+  },
+  "遇到了什么问题？为什么这样做？结果如何？": {
+    "ja": "どんな課題があり、なぜその方法を選び、どうなったか。",
+    "en": "What was the problem? Why did you choose that approach? What happened?"
+  },
+  "再练习表达": {
+    "ja": "次に言葉にしてみる",
+    "en": "Then practice your answer"
+  },
+  "用日语组织回答，保存后回看，补充具体事例。": {
+    "ja": "日本語で回答を組み立て、保存して振り返り、具体例を補う。",
+    "en": "Compose your answer in Japanese, save it, and review where a concrete example would help."
+  },
+  "示例仅用于了解功能，不会写入你的资料。": {
+    "ja": "機能紹介用のサンプルです。個人データには保存されません。",
+    "en": "These examples are not saved to your workspace."
+  },
+  "从机会到面试": {
+    "ja": "求人探しから面接まで",
+    "en": "From opportunity to interview"
+  },
+  "找到值得投入的机会": {
+    "ja": "時間をかけたい企業を見つける",
+    "en": "Find opportunities worth your time"
+  },
+  "把职位、匹配点和待确认事项放在一起，知道下一步该做什么。": {
+    "ja": "求人情報、自分との接点、確認事項をまとめて、次にすることを明確に。",
+    "en": "Keep roles, points of fit, and open questions together so you know what to do next."
+  },
+  "准备有针对性的材料": {
+    "ja": "企業に合った書類を準備する",
+    "en": "Prepare a focused application"
+  },
+  "围绕每家公司整理履历、志望动机与经历证据，保留可核对的版本。": {
+    "ja": "履歴書、志望動機、経験の根拠を企業ごとに整理し、確認できる版を残す。",
+    "en": "Organize your resume, motivation, and supporting experience by company, with versions you can review."
+  },
+  "把想法练成面试回答": {
+    "ja": "考えを面接の回答にする",
+    "en": "Turn your ideas into answers"
+  },
+  "使用前了解": {
+    "ja": "使う前に知っておきたいこと",
+    "en": "Before you start"
+  },
+  "登录后，怎么开始？": {
+    "ja": "ログインしたら、何から始める？",
+    "en": "How do I get started after signing in?"
+  },
+  "先整理个人履历与求职方向，再添加一家公司，准备材料并练习面试。也可以让你的 AI 助手协助研究，将核对后的结果导入手帖。": {
+    "ja": "プロフィールと就職の方向性を整理したら、企業を追加して書類の準備や面接練習へ。AI アシスタントで調査し、確認した結果を手帖に取り込むこともできます。",
+    "en": "Start with your profile and goals, add a company, then prepare materials and practice. Your AI assistant can help with research; import the results after reviewing them."
+  },
+  "谁可以登录？资料会公开吗？": {
+    "ja": "誰がログインできる？資料は公開される？",
+    "en": "Who can sign in? Are my materials public?"
+  },
+  "目前是个人工作区，需要管理者允许你的 Google 账号。求职资料保存在本机，登录用于验证身份；未登录访客只能看到这里的虚构示例。": {
+    "ja": "現在は個人用のワークスペースです。管理者が許可した Google アカウントで利用できます。就職資料はローカルに保存され、ログインは本人確認に使われます。ログイン前はこの架空サンプルのみ閲覧できます。",
+    "en": "This is a personal workspace for Google accounts approved by its owner. Career materials stay on this machine; sign-in verifies your identity. Visitors can only see these fictional examples."
+  },
+  "会自动生成材料或替我投递吗？": {
+    "ja": "書類の自動生成や応募代行はする？",
+    "en": "Does it generate materials or apply for me?"
+  },
+  "网页负责整理与练习，研究和材料草稿由你使用的 AI 助手协作完成。内容需自行核对，申请也由你决定并发送。": {
+    "ja": "この画面は情報整理と練習のためのものです。調査や書類の下書きは、お使いの AI アシスタントと進めます。内容は自分で確認し、応募も自分で判断して送信します。",
+    "en": "The app organizes your preparation and practice. Work with your AI assistant on research and drafts, review the content yourself, and decide when to send an application."
+  },
+  "你的准备，按自己的节奏。": {
+    "ja": "自分のペースで、準備を進めよう。",
+    "en": "Prepare at your own pace."
+  },
+  "从构思到日语表达，记录回答、复盘不足，再练一次。": {
+    "ja": "考えを整理し、日本語で伝える。回答を記録して振り返り、もう一度練習。",
+    "en": "Move from ideas to answers in Japanese. Record, review, and practice again."
+  },
+  "先构思，再用日语练习回答。": {
+    "ja": "まず考えを整理してから、日本語で回答を練習。",
+    "en": "Organize your thoughts, then practice answering in Japanese."
+  },
+  "我的 Agent 访问令牌": {
+    "ja": "自分の Agent アクセストークン",
+    "en": "My Agent access tokens"
+  },
+  "令牌仅能访问你的工作区。请只交给你信任的助手，可随时撤销。": {
+    "ja": "トークンでアクセスできるのは自分のワークスペースのみです。信頼するアシスタントにだけ共有し、いつでも無効化できます。",
+    "en": "Tokens can only access your workspace. Share them only with assistants you trust; revoke them at any time."
+  },
+  "使用 Google 账号即可登录，首次登录会获得独立的工作区。每位用户只能管理自己的求职资料；未登录访客只能查看功能示例。": {
+    "ja": "Google アカウントでログインすると、自分専用のワークスペースを利用できます。各ユーザーが管理できるのは自分の就職資料のみです。ログイン前は機能サンプルを閲覧できます。",
+    "en": "Sign in with Google to get your own workspace. Each user can only manage their own career data; visitors can browse feature examples."
+  },
+  "选择本次要做的事": {
+    "ja": "今回進めたいことを選ぶ",
+    "en": "Choose what to work on"
+  },
+  "下载全部技能": {
+    "ja": "すべてのスキルをダウンロード",
+    "en": "Download all skills"
+  },
+  "每个技能都可独立安装，通过已配置的 MCP 读取与同步你的资料。": {
+    "ja": "各スキルを単独でインストールし、設定済みの MCP で自分の資料を読み書きできます。",
+    "en": "Install each skill independently and use your configured MCP to read and sync your data."
+  },
+  "搜索技能": {
+    "ja": "スキルを検索",
+    "en": "Search skills"
+  },
+  "技能列表": {
+    "ja": "スキル一覧",
+    "en": "Skills"
+  },
+  "复制指令": {
+    "ja": "指示をコピー",
+    "en": "Copy prompt"
+  },
+  "已复制调用指令": {
+    "ja": "呼び出し指示をコピーしました",
+    "en": "Prompt copied"
+  },
+  "复制失败，请在详情中手动复制。": {
+    "ja": "コピーできませんでした。詳細から手動でコピーしてください。",
+    "en": "Copy failed. Please copy manually from the details."
+  },
+  "没有匹配的技能": {
+    "ja": "該当するスキルがありません",
+    "en": "No matching skills"
+  },
+  "历史备份": {
+    "ja": "過去のバックアップ",
+    "en": "Previous backups"
+  },
+  "说明文档": {
+    "ja": "説明ドキュメント",
+    "en": "Documentation"
+  },
+  "下载此技能": {
+    "ja": "このスキルをダウンロード",
+    "en": "Download this skill"
+  },
+  "连接你的 AI 助手": {
+    "ja": "AI アシスタントを接続する",
+    "en": "Connect your AI assistant"
+  },
+  "一次配置，按需调用技能。研究与分析由助手完成，结果直接同步到你的工作区。": {
+    "ja": "一度設定すれば、必要なスキルを呼び出せます。アシスタントの調査・分析結果を自分のワークスペースに同期します。",
+    "en": "Configure once, then use the skills you need. Your assistant researches and analyzes, and syncs the results to your workspace."
+  },
+  "创建自己的访问令牌": {
+    "ja": "自分のアクセストークンを作成",
+    "en": "Create your access token"
+  },
+  "在下方访问设置中创建，复制到助手的凭据设置。": {
+    "ja": "下のアクセス設定で作成し、アシスタントの認証設定に保存します。",
+    "en": "Create it in the access settings below and save it in your assistant’s credential settings."
+  },
+  "填入服务地址，使用 Bearer 令牌认证。": {
+    "ja": "サービス URL を入力し、Bearer トークンで認証します。",
+    "en": "Enter the service URL and authenticate with a Bearer token."
+  },
+  "安装所需技能，复制指令，要求完成后同步并读回。": {
+    "ja": "必要なスキルをインストールし、指示をコピーして、完了後の同期と読み戻しを依頼します。",
+    "en": "Install a skill, copy its prompt, and ask for results to be synced and read back."
+  },
+  "MCP 服务地址": {
+    "ja": "MCP サーバーアドレス",
+    "en": "MCP server URL"
+  },
+  "复制地址": {
+    "ja": "アドレスをコピー",
+    "en": "Copy URL"
+  },
+  "当前地址只在本机可用。远程助手需配置它能访问的服务；网页不会自动替助手建立连接。": {
+    "ja": "この URL はこの端末内でのみ利用できます。リモートのアシスタントには到達可能なサービスを設定してください。画面から自動接続はしません。",
+    "en": "This URL works only on this machine. A remote assistant needs a service it can reach; the website does not configure that connection automatically."
+  },
+  "有效期至 {0}": {
+    "ja": "有効期限 {0}",
+    "en": "Expires {0}"
+  },
+  "令牌仅显示这一次，请妥善保存。": {
+    "ja": "トークンは今回のみ表示されます。安全に保存してください。",
+    "en": "The token is shown only once. Store it securely."
+  },
+  "新访问令牌": {
+    "ja": "新しいアクセストークン",
+    "en": "New access token"
+  },
+  "复制令牌": {
+    "ja": "トークンをコピー",
+    "en": "Copy token"
+  },
+  "我已保存": {
+    "ja": "保存しました",
+    "en": "I saved it"
+  },
+  "已复制访问令牌": {
+    "ja": "アクセストークンをコピーしました",
+    "en": "Access token copied"
+  },
+  "令牌已生成，请复制并保存在助手的凭据设置中。": {
+    "ja": "トークンを作成しました。コピーしてアシスタントの認証設定に保存してください。",
+    "en": "Token created. Copy it into your assistant’s credential settings."
+  },
+  "履历收集与分析": {
+    "ja": "経歴の整理・分析",
+    "en": "Profile collection & analysis"
+  },
+  "岗位收集与匹配": {
+    "ja": "求人の調査・比較",
+    "en": "Job research & matching"
+  },
+  "公司专属申请材料": {
+    "ja": "企業別の応募書類",
+    "en": "Tailored application materials"
+  },
+  "面试练习与回答复盘": {
+    "ja": "面接練習・回答レビュー",
+    "en": "Interview practice & review"
+  },
+  "投递结果与行动复盘": {
+    "ja": "応募結果・次の行動の振り返り",
+    "en": "Application outcomes & next steps"
+  },
+  "MCP 数据同步": {
+    "ja": "MCP データ同期",
+    "en": "MCP data sync"
+  },
+  "整理用户提供的简历、项目经历和求职方向，形成有依据的履历摘要并按请求同步；不寻找公司或代写投递结果。": {
+    "ja": "経歴と根拠を整理し、依頼に応じてプロフィールを同期します。",
+    "en": "Organize your resume and supporting evidence, then sync your profile when requested."
+  },
+  "根据已有履历和求职条件核验日本招聘岗位，比较匹配点与缺口并保存研究；不生成全套申请材料或提交申请。": {
+    "ja": "実際の求人情報を確認し、経歴との接点や不足を比較して保存します。",
+    "en": "Verify live job postings, compare fit and gaps, and save the research."
+  },
+  "围绕指定公司与岗位生成有事实依据的履歴書、職務経歴書、志望动机与研究材料，保存新版本；不自动发送申请。": {
+    "ja": "特定企業・求人に合わせた応募書類を、根拠とともに新しい版として保存します。",
+    "en": "Prepare evidence-based materials for a specific company and role, saved as new versions."
+  },
+  "按岗位生成面试练习题组，或基于用户真实回答逐项点评并保存；不把参考答案当作用户回答。": {
+    "ja": "求人に合わせた練習問題、または本人の回答に基づくレビューを作成します。",
+    "en": "Create role-specific interview questions or review your actual answers."
+  },
+  "分析已有投递历史、面试记录和准备材料，找出阶段性瓶颈并保存复盘报告；不推断未记录的结果或代改状态。": {
+    "ja": "応募履歴と面接記録から課題を整理し、次の行動をレポートにまとめます。",
+    "en": "Analyze recorded application outcomes and practice history, then save actionable findings."
+  },
+  "将已有求职研究、材料、题组和点评同步到用户配置的 Career Note MCP，执行协议检查、预览、写入与读回；不生成新的求职结论。": {
+    "ja": "完成済みの資料を検証・プレビューし、MCP に保存して読み戻します。",
+    "en": "Validate, preview, save, and read back completed content through MCP."
+  },
+  "日本求职完整准备入口，根据用户范围衔接履历分析、岗位研究、申请材料、面试练习和结果复盘，并通过已配置的 MCP 同步；不自动投递。": {
+    "ja": "ユーザーの依頼範囲に応じて、経歴整理から応募結果の振り返りまでつなぎます。",
+    "en": "Coordinate the requested stages from profile analysis to application outcome review."
+  },
+  "日本求职准备": {
+    "ja": "日本での就職準備",
+    "en": "Complete job preparation"
+  },
+  "定时收集配置": {
+    "ja": "定期収集の設定",
+    "en": "Scheduled collection setup"
+  },
+  "尚未启用": {
+    "ja": "未有効化",
+    "en": "Not enabled"
+  },
+  "设置来源与频率，生成交给助手的任务指令。网页不会自行抓取或启动定时任务。": {
+    "ja": "取得元と頻度を指定し、アシスタント用の指示を作成します。この画面では収集や定期タスクを開始しません。",
+    "en": "Choose sources and frequency to prepare instructions for your assistant. This page does not start collection or schedule a task."
+  },
+  "配置来源与执行时间": {
+    "ja": "取得元と実行時刻を設定",
+    "en": "Configure sources and timing"
+  },
+  "来源与账号范围": {
+    "ja": "取得元とアカウントの範囲",
+    "en": "Sources and account scope"
+  },
+  "填写平台账号别名与页面，或邮箱账号别名、文件夹和筛选条件；不要填写密码或令牌。": {
+    "ja": "サイトのアカウント別名とページ、またはメールのアカウント別名・フォルダ・検索条件を記入。パスワードやトークンは入力しないでください。",
+    "en": "Enter account aliases and pages, or mailbox aliases, folders and filters. Do not enter passwords or tokens."
+  },
+  "收集内容": {
+    "ja": "収集内容",
+    "en": "What to collect"
+  },
+  "投递动态": {
+    "ja": "応募の更新",
+    "en": "Application updates"
+  },
+  "简历版本变化": {
+    "ja": "履歴書の変更",
+    "en": "Resume changes"
+  },
+  "简历与投递动态": {
+    "ja": "履歴書と応募の更新",
+    "en": "Resume and application updates"
+  },
+  "执行频率": {
+    "ja": "実行頻度",
+    "en": "Frequency"
+  },
+  "每天": {
+    "ja": "毎日",
+    "en": "Daily"
+  },
+  "工作日": {
+    "ja": "平日",
+    "en": "Weekdays"
+  },
+  "每周一": {
+    "ja": "毎週月曜日",
+    "en": "Every Monday"
+  },
+  "执行时间": {
+    "ja": "実行時刻",
+    "en": "Run time"
+  },
+  "时区": {
+    "ja": "タイムゾーン",
+    "en": "Time zone"
+  },
+  "每次回看天数": {
+    "ja": "毎回確認する過去の日数",
+    "en": "Lookback days"
+  },
+  "当前保存核对报告，投递状态由你确认后更新。无变化保持安静；新增、失败或待确认时通知。": {
+    "ja": "現在は照合レポートを保存し、応募状況は本人の確認後に更新します。変更なしでは通知せず、新規情報・失敗・要確認時に通知します。",
+    "en": "Save a reconciliation report; application status is updated after your review. Stay quiet when unchanged; notify on new information, failures or items needing review."
+  },
+  "生成任务指令": {
+    "ja": "タスク指示を生成",
+    "en": "Generate task instructions"
+  },
+  "先在助手中试跑，再创建任务。复制成功不代表已启用。": {
+    "ja": "アシスタントで試行してからタスクを作成してください。コピーだけでは有効化されません。",
+    "en": "Test in your assistant before creating the task. Copying does not enable it."
+  },
+  "定时任务指令": {
+    "ja": "定期タスクの指示",
+    "en": "Scheduled task instructions"
+  },
+  "复制定时任务指令": {
+    "ja": "定期タスクの指示をコピー",
+    "en": "Copy task instructions"
+  },
+  "已复制定时任务指令": {
+    "ja": "定期タスクの指示をコピーしました",
+    "en": "Task instructions copied"
+  },
+  "请填写来源与账号范围": {
+    "ja": "取得元とアカウントの範囲を入力してください",
+    "en": "Enter the sources and account scope"
+  },
+  "配置无效": {
+    "ja": "設定が無効です",
+    "en": "Invalid configuration"
+  },
+  "来源收集与状态核对": {
+    "ja": "取得元の収集と状況照合",
+    "en": "Source collection and reconciliation"
+  },
+  "从用户指定的求职网站、邮箱或简历文件收集更新，核对履历变化与投递事件，通过 MCP 保存有来源的核对报告；适用于单次检查和已配置的定时收集。": {
+    "ja": "指定された求人サイト・メール・履歴書の更新を照合し、出典付きレポートを保存します。",
+    "en": "Collect updates from selected job sites, mailboxes or resume files and save source-backed reconciliation reports."
+  },
+  "请求已加入任务队列。复制指令交给助手处理；如已配置包含回答点评的定时任务，也可等待该任务执行。结果写回后显示。": {
+    "ja": "依頼をキューに追加しました。指示をアシスタントに渡してください。回答レビューを含む定期タスクを設定済みの場合は、その実行を待つこともできます。保存後に結果を表示します。",
+    "en": "Request queued. Copy the instructions to your assistant, or wait for a configured task that includes answer reviews. Results appear after they are saved."
+  },
+  "回答已保存，点评请求已加入队列。将指令交给助手处理后，建议会出现在下方。": {
+    "ja": "回答を保存し、レビュー依頼をキューに追加しました。アシスタントが処理すると、ここに助言が表示されます。",
+    "en": "Answer saved and review queued. Give the instructions to your assistant; its feedback will appear below."
+  },
+  "基本资料": {
+    "ja": "基本情報",
+    "en": "Basic information"
+  },
+  "姓名": {
+    "ja": "氏名",
+    "en": "Name"
+  },
+  "姓名读音": {
+    "ja": "氏名の読み",
+    "en": "Name pronunciation"
+  },
+  "职业定位": {
+    "ja": "専門領域",
+    "en": "Professional headline"
+  },
+  "所在地": {
+    "ja": "所在地",
+    "en": "Location"
+  },
+  "个人网站": {
+    "ja": "個人サイト",
+    "en": "Website"
+  },
+  "工作经历": {
+    "ja": "職歴",
+    "en": "Employment"
+  },
+  "雇主": {
+    "ja": "雇用先",
+    "en": "Employer"
+  },
+  "客户或项目": {
+    "ja": "顧客・プロジェクト",
+    "en": "Client or assignment"
+  },
+  "职位": {
+    "ja": "職種",
+    "en": "Role"
+  },
+  "开始年月": {
+    "ja": "開始年月",
+    "en": "Start month"
+  },
+  "结束年月": {
+    "ja": "終了年月",
+    "en": "End month"
+  },
+  "职责": {
+    "ja": "担当業務",
+    "en": "Responsibilities"
+  },
+  "使用技术": {
+    "ja": "使用技術",
+    "en": "Technologies"
+  },
+  "教育经历": {
+    "ja": "学歴",
+    "en": "Education"
+  },
+  "学校": {
+    "ja": "学校",
+    "en": "School"
+  },
+  "专业或课程": {
+    "ja": "専攻・コース",
+    "en": "Major or course"
+  },
+  "学位": {
+    "ja": "学位",
+    "en": "Degree"
+  },
+  "补充说明": {
+    "ja": "補足",
+    "en": "Additional information"
+  },
+  "项目经历": {
+    "ja": "プロジェクト",
+    "en": "Projects"
+  },
+  "项目名称": {
+    "ja": "プロジェクト名",
+    "en": "Project name"
+  },
+  "本人角色": {
+    "ja": "本人の役割",
+    "en": "Your role"
+  },
+  "解决的问题": {
+    "ja": "解決する課題",
+    "en": "Problem"
+  },
+  "本人贡献": {
+    "ja": "本人の貢献",
+    "en": "Your contribution"
+  },
+  "项目状态": {
+    "ja": "プロジェクトの状態",
+    "en": "Project status"
+  },
+  "项目链接": {
+    "ja": "プロジェクトURL",
+    "en": "Project URL"
+  },
+  "技能": {
+    "ja": "スキル",
+    "en": "Skills"
+  },
+  "技能名称": {
+    "ja": "スキル名",
+    "en": "Skill name"
+  },
+  "技能分类": {
+    "ja": "分類",
+    "en": "Category"
+  },
+  "应用场景": {
+    "ja": "使用場面",
+    "en": "Usage"
+  },
+  "使用年数（已确认）": {
+    "ja": "使用年数（確認済み）",
+    "en": "Years used (confirmed)"
+  },
+  "成果案例": {
+    "ja": "成果事例",
+    "en": "Achievements"
+  },
+  "成果标题": {
+    "ja": "成果のタイトル",
+    "en": "Achievement title"
+  },
+  "背景与问题": {
+    "ja": "背景・課題",
+    "en": "Context and problem"
+  },
+  "本人行动": {
+    "ja": "本人の行動",
+    "en": "Your actions"
+  },
+  "成果": {
+    "ja": "成果",
+    "en": "Outcome"
+  },
+  "数字口径与限制": {
+    "ja": "数値の範囲・制約",
+    "en": "Measurement scope and limits"
+  },
+  "语言能力": {
+    "ja": "言語能力",
+    "en": "Languages"
+  },
+  "语言": {
+    "ja": "言語",
+    "en": "Language"
+  },
+  "能力说明": {
+    "ja": "能力の説明",
+    "en": "Proficiency"
+  },
+  "证书或资格": {
+    "ja": "資格",
+    "en": "Qualification"
+  },
+  "取得年月": {
+    "ja": "取得年月",
+    "en": "Qualification month"
+  },
+  "实际使用场景": {
+    "ja": "実際の使用場面",
+    "en": "Practical usage"
+  },
+  "求职意向": {
+    "ja": "希望条件",
+    "en": "Preferences"
+  },
+  "希望地点": {
+    "ja": "希望勤務地",
+    "en": "Preferred locations"
+  },
+  "入职时间": {
+    "ja": "入社可能時期",
+    "en": "Availability"
+  },
+  "希望年薪": {
+    "ja": "希望年収",
+    "en": "Expected salary"
+  },
+  "其他条件": {
+    "ja": "その他の条件",
+    "en": "Other conditions"
+  },
+  "文档版本": {
+    "ja": "文書の版",
+    "en": "Documents"
+  },
+  "文档标题": {
+    "ja": "文書タイトル",
+    "en": "Document title"
+  },
+  "文档语言": {
+    "ja": "文書言語",
+    "en": "Document language"
+  },
+  "文档正文": {
+    "ja": "本文",
+    "en": "Document content"
+  },
+  "简历资料库": {
+    "ja": "職歴資料ライブラリ",
+    "en": "Resume library"
+  },
+  "按经历积累，按机会选择。": {
+    "ja": "経験を蓄積し、機会に合わせて選ぶ。",
+    "en": "Build on your experience. Select for each opportunity."
+  },
+  "导出履历数据": {
+    "ja": "履歴データを書き出す",
+    "en": "Export resume data"
+  },
+  "履历分类": {
+    "ja": "履歴の分類",
+    "en": "Resume categories"
+  },
+  "已归档": {
+    "ja": "アーカイブ済み",
+    "en": "Archived"
+  },
+  "新增记录": {
+    "ja": "記録を追加",
+    "en": "Add record"
+  },
+  "编辑记录": {
+    "ja": "記録を編集",
+    "en": "Edit record"
+  },
+  "关联经历": {
+    "ja": "関連する経歴",
+    "en": "Related experience"
+  },
+  "无关联": {
+    "ja": "関連なし",
+    "en": "None"
+  },
+  "来源与依据": {
+    "ja": "出典・根拠",
+    "en": "Sources and evidence"
+  },
+  "确认状态": {
+    "ja": "確認状態",
+    "en": "Verification"
+  },
+  "已有资料记载": {
+    "ja": "資料に記載あり",
+    "en": "Recorded in sources"
+  },
+  "本人已确认": {
+    "ja": "本人確認済み",
+    "en": "Confirmed by you"
+  },
+  "保存中": {
+    "ja": "保存中",
+    "en": "Saving"
+  },
+  "保存记录": {
+    "ja": "記録を保存",
+    "en": "Save record"
+  },
+  "这里还没有记录。新增一条，或通过 MCP 整理已有资料。": {
+    "ja": "まだ記録がありません。新規追加するか、MCPで既存資料を整理できます。",
+    "en": "No records yet. Add one or organize existing sources through MCP."
+  },
+  "至今或待确认": {
+    "ja": "現在または要確認",
+    "en": "Present or unconfirmed"
+  },
+  "另存新版本": {
+    "ja": "新しい版を保存",
+    "en": "Save new version"
+  },
+  "修改历史": {
+    "ja": "変更履歴",
+    "en": "Revision history"
+  },
+  "恢复": {
+    "ja": "復元",
+    "en": "Restore"
+  },
+  "归档": {
+    "ja": "アーカイブ",
+    "en": "Archive"
+  },
+  "查看文档": {
+    "ja": "文書を表示",
+    "en": "View document"
+  },
+  "版本": {
+    "ja": "版",
+    "en": "Revision"
+  },
+  "尚未补充来源": {
+    "ja": "出典は未記入",
+    "en": "No source recorded"
+  },
+  "旧版履历原文（保留）": {
+    "ja": "旧履歴の原文（保存）",
+    "en": "Preserved legacy source"
+  },
+  "原文保留用于核对；分类记录是当前简历管理入口。": {
+    "ja": "原文は照合用に保存し、分類別の記録で履歴を管理します。",
+    "en": "The source is preserved for reference. Manage your resume through categorized records."
+  },
+  "查看职业摘要": {
+    "ja": "職務要約を表示",
+    "en": "View professional summary"
+  },
+  "查看详情": {
+    "ja": "詳細を表示",
+    "en": "View details"
+  },
+  "简历的骨架。生成投递简历时按岗位挑选经历并调整表述。": {
+    "ja": "履歴書の骨格。応募用の履歴書を作る際、職種に合わせて経歴を選び表現を調整します。",
+    "en": "The backbone of every résumé. When tailoring for a role, experiences are selected and rephrased from here."
+  },
+  "学历与课程背景，日文履歴書的必填项。": {
+    "ja": "学歴と履修内容。日本の履歴書では必須項目です。",
+    "en": "Education and coursework — required on a Japanese rirekisho."
+  },
+  "挂在经历下的具体项目，按岗位要求选取最相关的几项。": {
+    "ja": "経歴に紐づく具体的なプロジェクト。職種に応じて関連性の高いものを選びます。",
+    "en": "Projects linked to an experience; the most relevant few are picked per role."
+  },
+  "按分类整理并标注年数，方便与职位要求逐项对照。": {
+    "ja": "分類と年数を整理し、求人要件と一つずつ照合できるようにします。",
+    "en": "Grouped by category with years, so they can be checked line by line against job requirements."
+  },
+  "用背景、行动、成果三段记录，志望动机与面试回答的素材。": {
+    "ja": "背景・行動・成果の三段で記録。志望動機や面接回答の素材になります。",
+    "en": "Recorded as context, action and result — material for motivation letters and interview answers."
+  },
+  "语言能力与资格，决定可投递的岗位范围。": {
+    "ja": "語学力と資格。応募できる求人の範囲を決めます。",
+    "en": "Languages and certifications, which define the range of roles you can apply to."
+  },
+  "目标岗位与条件，用于筛选机会和确定简历方向。": {
+    "ja": "希望職種と条件。機会の絞り込みと履歴書の方向性に使います。",
+    "en": "Target roles and conditions, used to filter opportunities and set the résumé's direction."
+  },
+  "已生成的完整文档版本，可回看与下载。": {
+    "ja": "生成済みの完全な文書版。見返しやダウンロードができます。",
+    "en": "Complete generated document versions to review and download."
+  },
+  "来源与核对": {
+    "ja": "出典と確認",
+    "en": "Source & verification"
+  },
+  "年": {
+    "ja": "年",
+    "en": "yrs"
+  },
+  "还没有基本资料": {
+    "ja": "基本情報が未登録です",
+    "en": "No basic profile yet"
+  },
+  "编辑基本资料": {
+    "ja": "基本情報を編集",
+    "en": "Edit basics"
+  },
+  "填写基本资料": {
+    "ja": "基本情報を入力",
+    "en": "Add basics"
+  },
+  "导出 JSON": {
+    "ja": "JSONを書き出す",
+    "en": "Export JSON"
+  },
+  "生成投递简历时只引用这里的记录；待确认的内容会被标注为未确认事项，投递前请逐条核对。": {
+    "ja": "応募用の履歴書はここの記録だけを参照します。未確認の内容は未確認事項として記録されるため、応募前に一つずつ確認してください。",
+    "en": "Tailored résumés draw only on these records; unverified items are flagged as such — check each one before applying."
+  },
+  "筛选确认状态": {
+    "ja": "確認状態で絞り込む",
+    "en": "Filter by verification"
+  },
+  "全部记录": {
+    "ja": "すべての記録",
+    "en": "All records"
+  },
+  "这里还没有记录": {
+    "ja": "まだ記録がありません",
+    "en": "No records yet"
+  },
+  "没有符合筛选条件的记录": {
+    "ja": "条件に合う記録がありません",
+    "en": "No records match the filter"
+  },
+  "新增一条，或通过 MCP 整理已有资料。": {
+    "ja": "新しく追加するか、MCPで既存資料を整理してください。",
+    "en": "Add one, or organise existing material through MCP."
+  },
+  "切换筛选条件查看其他记录。": {
+    "ja": "絞り込み条件を変えて他の記録を表示します。",
+    "en": "Change the filter to see other records."
+  },
+  "未分类": {
+    "ja": "未分類",
+    "en": "Uncategorised"
+  },
+  "记录语言": {
+    "ja": "記録の言語",
+    "en": "Record language"
+  },
+  "其他语言版本：": {
+    "ja": "他の言語版：",
+    "en": "Other language versions: "
+  },
+  "，切换界面语言即可查看。": {
+    "ja": "。表示言語を切り替えると閲覧できます。",
+    "en": ". Switch the interface language to view them."
+  },
+  "把下方地址填入助手的 MCP 设置，不需要填写令牌。": {
+    "ja": "アシスタントの MCP 設定に下のアドレスを入力します。トークンの入力は不要です。",
+    "en": "Paste the address below into your assistant's MCP settings. No token is needed."
+  },
+  "助手会打开授权页面；登录后勾选权限并同意，助手自动获得访问令牌。": {
+    "ja": "アシスタントが許可ページを開きます。ログインして権限を選び同意すると、アシスタントが自動でアクセストークンを受け取ります。",
+    "en": "The assistant opens an authorization page; sign in, pick the permissions and approve, and it receives an access token automatically."
+  },
+  "本机启动时地址只在本机可用；远程助手需要隧道或公开部署的地址。已授权的助手可在下方访问设置里撤销。": {
+    "ja": "ローカル起動時のアドレスはこの PC 内でのみ有効です。リモートのアシスタントにはトンネルまたは公開デプロイのアドレスが必要です。許可済みのアシスタントは下のアクセス設定で失効できます。",
+    "en": "When started locally the address only works on this machine; remote assistants need a tunnel or a public deployment. Authorized assistants can be revoked in the access settings below."
+  },
+  "已授权的 AI 助手": {
+    "ja": "許可済みの AI アシスタント",
+    "en": "Authorized AI assistants"
+  },
+  "助手在浏览器里完成登录与同意后才会出现在这里。每个授权只能访问你的工作区，可随时撤销。": {
+    "ja": "アシスタントはブラウザーでログインと同意を済ませるとここに表示されます。各許可はあなたのワークスペースだけにアクセスでき、いつでも失効できます。",
+    "en": "Assistants appear here after signing in and approving in the browser. Each grant can only reach your workspace and can be revoked at any time."
+  },
+  "暂无已授权的助手": {
+    "ja": "許可済みのアシスタントはありません",
+    "en": "No authorized assistants yet"
+  },
+  "在助手里添加上面的 MCP 地址并完成授权后，会显示在这里。": {
+    "ja": "アシスタントに上の MCP アドレスを追加して許可を完了すると、ここに表示されます。",
+    "en": "Add the MCP address above in your assistant and complete the authorization; it will show up here."
+  },
+  "最近使用 {0}": {
+    "ja": "最終利用 {0}",
+    "en": "Last used {0}"
+  },
+  "缺少 client_id，请从 AI 助手重新发起授权。": {
+    "ja": "client_id がありません。AI アシスタントから許可をやり直してください。",
+    "en": "client_id is missing; start the authorization again from your AI assistant."
+  },
+  "无法识别这个助手": {
+    "ja": "このアシスタントを識別できません",
+    "en": "This assistant could not be identified"
+  },
+  "授权失败，请重试。": {
+    "ja": "許可に失敗しました。もう一度お試しください。",
+    "en": "Authorization failed. Please try again."
+  },
+  "授权 AI 助手访问就职手帖": {
+    "ja": "AI アシスタントに就職手帖へのアクセスを許可",
+    "en": "Authorize an AI assistant to access Career Note"
+  },
+  "授权后将返回：{0}": {
+    "ja": "許可後の戻り先：{0}",
+    "en": "Returns to: {0}"
+  },
+  "正在读取助手信息…": {
+    "ja": "アシスタント情報を読み込み中…",
+    "en": "Loading assistant details…"
+  },
+  "正在返回助手…": {
+    "ja": "アシスタントに戻っています…",
+    "en": "Returning to the assistant…"
+  },
+  "如果没有自动跳转，请点击这里。": {
+    "ja": "自動で移動しない場合はここをクリックしてください。",
+    "en": "Click here if you are not redirected automatically."
+  },
+  "本机模式：将以本机工作区身份授权，任何能访问这台电脑的程序都能使用该授权。": {
+    "ja": "ローカルモード：この PC のワークスペースとして許可します。この PC にアクセスできるプログラムはすべてこの許可を利用できます。",
+    "en": "Local mode: the grant is made as the local workspace; any program that can reach this computer can use it."
+  },
+  "当前登录：{0}": {
+    "ja": "ログイン中：{0}",
+    "en": "Signed in as {0}"
+  },
+  "请先用 Google 登录，助手只能访问你自己的工作区。": {
+    "ja": "まず Google でログインしてください。アシスタントはあなた自身のワークスペースにのみアクセスできます。",
+    "en": "Sign in with Google first; the assistant can only access your own workspace."
+  },
+  "允许助手做什么": {
+    "ja": "アシスタントに許可する操作",
+    "en": "What the assistant may do"
+  },
+  "读取你的工作区": {
+    "ja": "ワークスペースを読む",
+    "en": "Read your workspace"
+  },
+  "履历、求人、资料、任务和练习记录。": {
+    "ja": "プロフィール、求人、資料、タスク、練習記録。",
+    "en": "Profile, jobs, materials, tasks and practice records."
+  },
+  "保存研究与资料": {
+    "ja": "調査と資料を保存する",
+    "en": "Save research and materials"
+  },
+  "保存研究报告、资料版本、问题集和点评，排队准备任务。": {
+    "ja": "調査レポート、資料の版、質問集、講評を保存し、準備タスクを登録します。",
+    "en": "Save research reports, material versions, question sets and reviews, and queue preparation tasks."
+  },
+  "更新履历摘要": {
+    "ja": "プロフィール要約を更新する",
+    "en": "Update the profile summary"
+  },
+  "只在你要求时修改履历摘要。研究类技能不需要这项权限。": {
+    "ja": "あなたが求めたときだけプロフィール要約を変更します。調査系スキルには不要です。",
+    "en": "Changes the profile summary only when you ask. Research skills do not need this."
+  },
+  "同意并返回助手": {
+    "ja": "同意してアシスタントに戻る",
+    "en": "Approve and return"
+  },
+  "拒绝": {
+    "ja": "拒否",
+    "en": "Deny"
+  },
+  "技能库": {
+    "ja": "スキルライブラリ",
+    "en": "Skill library"
+  },
+  "定时任务": {
+    "ja": "定期タスク",
+    "en": "Scheduled tasks"
+  },
+  "浏览并安装求职技能，把指令交给助手执行。": {
+    "ja": "就活スキルを閲覧・インストールし、指示をアシスタントに渡します。",
+    "en": "Browse and install job-hunting skills, then hand the instructions to your assistant."
+  },
+  "配置来源与频率，生成定时收集的任务指令。": {
+    "ja": "情報源と頻度を設定し、定期収集のタスク指示を生成します。",
+    "en": "Configure sources and cadence to generate scheduled-collection instructions."
+  },
+  "返回 {0}": {
+    "ja": "{0} に戻る",
+    "en": "Back to {0}"
+  },
+  "个有效": {
+    "ja": "件有効",
+    "en": "active"
+  },
+  "把下方地址填进任意支持 MCP 的助手，首次连接时在浏览器里登录并同意，助手会自动拿到令牌，不需要手动复制。": {
+    "ja": "下のアドレスを MCP 対応のアシスタントに登録してください。初回接続時にブラウザーでログインして同意すると、トークンは自動で発行されます。手動でコピーする必要はありません。",
+    "en": "Add the address below to any MCP-capable assistant. On first connection, sign in and approve in the browser; the assistant receives its token automatically — nothing to copy by hand."
+  },
+  "已复制": {
+    "ja": "コピーしました",
+    "en": "Copied"
+  },
+  "复制": {
+    "ja": "コピー",
+    "en": "Copy"
+  },
+  "这是本机地址，只有本机运行的助手能访问。托管服务需要先运行 npm run dev:tunnel，再把打印的 Public MCP endpoint 粘贴到上方。": {
+    "ja": "これはローカルアドレスで、この端末で動くアシスタントだけが使えます。ホスト型サービスは先に npm run dev:tunnel を実行し、表示された Public MCP endpoint を上に貼り付けてください。",
+    "en": "This is a local address; only assistants running on this machine can reach it. For hosted services, run npm run dev:tunnel first and paste the printed Public MCP endpoint above."
+  },
+  "公开地址：本机与托管的助手都可以使用。": {
+    "ja": "公開アドレス：ローカルとホスト型のどちらのアシスタントでも使えます。",
+    "en": "Public address: works for both local and hosted assistants."
+  },
+  "本机命令行": {
+    "ja": "ローカル CLI",
+    "en": "Local CLI"
+  },
+  "编辑器": {
+    "ja": "エディター",
+    "en": "Editor"
+  },
+  "托管服务": {
+    "ja": "ホスト型サービス",
+    "en": "Hosted service"
+  },
+  "添加后用 login 子命令完成浏览器授权。": {
+    "ja": "追加後に login サブコマンドでブラウザー認可を行います。",
+    "en": "Add it, then run the login subcommand to authorize in the browser."
+  },
+  "写入 mcp.json，在 MCP 设置里点击登录。": {
+    "ja": "mcp.json に書き込み、MCP 設定でログインをクリックします。",
+    "en": "Write mcp.json, then click Login in the MCP settings."
+  },
+  "用 code --add-mcp 或 .vscode/mcp.json 添加。": {
+    "ja": "code --add-mcp または .vscode/mcp.json で追加します。",
+    "en": "Add via code --add-mcp or .vscode/mcp.json."
+  },
+  "添加 http 传输后在会话里执行 /mcp auth。": {
+    "ja": "http トランスポートで追加し、セッション内で /mcp auth を実行します。",
+    "en": "Add with the http transport, then run /mcp auth in the session."
+  },
+  "开启开发者模式后创建连接器，认证方式选 OAuth。": {
+    "ja": "Developer mode を有効にしてコネクターを作成し、認証に OAuth を選びます。",
+    "en": "Enable Developer mode, create a connector and choose OAuth for authentication."
+  },
+  "终端里一条命令添加，随后在会话内授权；本机地址可用。": {
+    "ja": "ターミナルで 1 コマンド追加し、セッション内で認可します。ローカルアドレスで使えます。",
+    "en": "Add with one terminal command, then authorize inside the session; works with the local address."
+  },
+  "全程在界面里操作：添加自定义连接器并点击 Connect，桌面应用的 Code 会话也会自动拿到它。": {
+    "ja": "すべて画面操作：カスタムコネクターを追加して Connect を押すだけ。デスクトップアプリの Code セッションでも自動的に使えます。",
+    "en": "Entirely in the UI: add a custom connector and click Connect; Code sessions in the desktop app pick it up automatically."
+  },
+  "{0} 通过云端访问 MCP，无法使用本机地址。先在终端运行下面的命令，把打印的 Public MCP endpoint 粘贴到上方地址栏，再按步骤操作。": {
+    "ja": "{0} はクラウド経由で MCP にアクセスするため、ローカルアドレスは使えません。先にターミナルで次のコマンドを実行し、表示された Public MCP endpoint を上のアドレス欄に貼り付けてから手順を進めてください。",
+    "en": "{0} reaches MCP from the cloud, so a local address will not work. Run the command below in a terminal first, paste the printed Public MCP endpoint into the address field above, then follow the steps."
+  },
+  "Claude 桌面应用 / claude.ai": {
+    "ja": "Claude デスクトップ / claude.ai",
+    "en": "Claude Desktop / claude.ai"
+  },
+  "Claude Code（终端）": {
+    "ja": "Claude Code（ターミナル）",
+    "en": "Claude Code (terminal)"
+  },
+  "助手应调用 career_get_contract 并返回工作区约定；如果它说找不到工具或未授权，请看下方排查。": {
+    "ja": "アシスタントが career_get_contract を呼び出し、ワークスペースの約束事を返すはずです。ツールが見つからない・未認可と言われた場合は下の対処法を確認してください。",
+    "en": "The assistant should call career_get_contract and return the workspace contract. If it says the tool is missing or unauthorized, see the troubleshooting below."
+  },
+  "打开连接器管理": {
+    "ja": "コネクター管理を開く",
+    "en": "Open connector management"
+  },
+  "在 Claude 桌面应用里点击输入框旁的 + → Connectors → Manage connectors；或者直接打开 Settings → Connectors。claude.ai 网页版路径相同。": {
+    "ja": "Claude デスクトップアプリで入力欄横の + → Connectors → Manage connectors を開くか、Settings → Connectors を直接開きます。claude.ai の Web 版も同じ経路です。",
+    "en": "In the Claude desktop app click + next to the prompt box → Connectors → Manage connectors, or open Settings → Connectors directly. The path is the same on claude.ai."
+  },
+  "Claude 桌面应用输入框旁的 + 菜单，展开 Connectors": {
+    "ja": "Claude デスクトップアプリの入力欄横の + メニューで Connectors を展開",
+    "en": "The + menu next to the Claude desktop prompt box with Connectors expanded"
+  },
+  "添加自定义连接器": {
+    "ja": "カスタムコネクターを追加",
+    "en": "Add a custom connector"
+  },
+  "点击 Add custom connector，名称填 Career Note，Remote MCP server URL 填下面的地址。client ID / secret 留空。": {
+    "ja": "Add custom connector をクリックし、名前に Career Note、Remote MCP server URL に下のアドレスを入力します。client ID / secret は空のままにします。",
+    "en": "Click Add custom connector, name it Career Note and enter the address below as Remote MCP server URL. Leave client ID / secret empty."
+  },
+  "Add custom connector 对话框": {
+    "ja": "Add custom connector ダイアログ",
+    "en": "The Add custom connector dialog"
+  },
+  "连接并授权": {
+    "ja": "接続して認可",
+    "en": "Connect and authorize"
+  },
+  "点击 Add，再在 Career Note 上点击 Connect。浏览器会打开 Career Note 的授权页，登录并勾选权限后点同意。": {
+    "ja": "Add をクリックし、Career Note の Connect をクリックします。ブラウザーで Career Note の認可ページが開くので、ログインして権限を選び同意します。",
+    "en": "Click Add, then Connect on Career Note. The browser opens the Career Note consent page; sign in, pick the permissions and approve."
+  },
+  "Career Note 授权页": {
+    "ja": "Career Note の認可ページ",
+    "en": "The Career Note consent page"
+  },
+  "在会话里启用": {
+    "ja": "セッションで有効化",
+    "en": "Enable it in a session"
+  },
+  "回到 Code 标签页，点击 + → Connectors，勾选 Career Note。claude.ai 对话的工具菜单里也会出现它。": {
+    "ja": "Code タブに戻り、+ → Connectors で Career Note にチェックを入れます。claude.ai のチャットのツールメニューにも表示されます。",
+    "en": "Back in the Code tab click + → Connectors and tick Career Note. It also appears in the tools menu of claude.ai chats."
+  },
+  "Connectors 菜单中勾选 Career Note": {
+    "ja": "Connectors メニューで Career Note にチェック",
+    "en": "Career Note ticked in the Connectors menu"
+  },
+  "调用 Career Note 的 career_get_contract，告诉我这个工作区的约定。": {
+    "ja": "Career Note の career_get_contract を呼び出して、このワークスペースの約束事を教えてください。",
+    "en": "Call career_get_contract from Career Note and tell me this workspace’s contract."
+  },
+  "添加时提示 URL 无法访问": {
+    "ja": "追加時に URL にアクセスできないと表示される",
+    "en": "Adding fails because the URL is unreachable"
+  },
+  "地址必须是公网 https。运行 npm run dev:tunnel 后把打印的 Public MCP endpoint 填进去；.dev.vars 里 CAREER_AUTH_MODE 需为 strict。": {
+    "ja": "アドレスは公開 https である必要があります。npm run dev:tunnel を実行して表示された Public MCP endpoint を入力し、.dev.vars の CAREER_AUTH_MODE を strict にしてください。",
+    "en": "The address must be public https. Run npm run dev:tunnel and use the printed Public MCP endpoint; CAREER_AUTH_MODE in .dev.vars must be strict."
+  },
+  "Connect 后浏览器没有打开授权页": {
+    "ja": "Connect の後にブラウザーで認可ページが開かない",
+    "en": "The consent page does not open after Connect"
+  },
+  "检查桌面应用是否允许打开外部链接；也可以在 claude.ai 网页版完成 Connect，桌面应用会同步。": {
+    "ja": "デスクトップアプリが外部リンクを開けるか確認してください。claude.ai の Web 版で Connect を完了すれば、デスクトップアプリにも同期されます。",
+    "en": "Check that the desktop app may open external links; you can also complete Connect on claude.ai and the desktop app will sync."
+  },
+  "Code 会话里看不到 Career Note": {
+    "ja": "Code セッションに Career Note が表示されない",
+    "en": "Career Note is missing in a Code session"
+  },
+  "连接器只在本机与 SSH 会话可用，云端会话没有 + 按钮。重新开一个本机会话再看 + → Connectors。": {
+    "ja": "コネクターはローカルと SSH セッションでのみ使え、クラウドセッションには + ボタンがありません。ローカルセッションを新しく開いて + → Connectors を確認してください。",
+    "en": "Connectors work only in local and SSH sessions; cloud sessions have no + button. Open a new local session and check + → Connectors."
+  },
+  "在任意终端执行：": {
+    "ja": "任意のターミナルで実行：",
+    "en": "Run in any terminal:"
+  },
+  "在会话里授权": {
+    "ja": "セッション内で認可",
+    "en": "Authorize inside the session"
+  },
+  "启动 claude，输入 /mcp，选择 career-note → Authenticate。浏览器会打开授权页，登录并同意。": {
+    "ja": "claude を起動して /mcp と入力し、career-note → Authenticate を選びます。ブラウザーで認可ページが開くので、ログインして同意します。",
+    "en": "Start claude, type /mcp and choose career-note → Authenticate. The browser opens the consent page; sign in and approve."
+  },
+  "Claude Code 的 /mcp 面板": {
+    "ja": "Claude Code の /mcp パネル",
+    "en": "The /mcp panel in Claude Code"
+  },
+  "再次输入 /mcp，career-note 应显示 connected，并列出 career_ 开头的工具。": {
+    "ja": "もう一度 /mcp と入力すると、career-note が connected と表示され、career_ で始まるツールが一覧されます。",
+    "en": "Type /mcp again: career-note should show connected and list tools starting with career_."
+  },
+  "调用 career-note 的 career_get_contract，告诉我这个工作区的约定。": {
+    "ja": "career-note の career_get_contract を呼び出して、このワークスペースの約束事を教えてください。",
+    "en": "Call career_get_contract from career-note and tell me this workspace’s contract."
+  },
+  "/mcp 里显示 failed": {
+    "ja": "/mcp に failed と表示される",
+    "en": "/mcp shows failed"
+  },
+  "确认 npm run dev 正在运行，并且地址与终端里打印的一致；用 claude mcp list 查看已注册地址。": {
+    "ja": "npm run dev が動いていて、アドレスがターミナルに表示されたものと一致するか確認してください。claude mcp list で登録済みアドレスを確認できます。",
+    "en": "Make sure npm run dev is running and the address matches what the terminal printed; claude mcp list shows the registered address."
+  },
+  "授权页打不开": {
+    "ja": "認可ページが開かない",
+    "en": "The consent page does not open"
+  },
+  "手动复制终端里打印的 URL 到浏览器；授权成功后会自动回调到 localhost。": {
+    "ja": "ターミナルに表示された URL を手動でブラウザーに貼り付けてください。認可が成功すると localhost に自動でコールバックされます。",
+    "en": "Copy the URL printed in the terminal into a browser manually; after approval it calls back to localhost automatically."
+  },
+  "想删除重来": {
+    "ja": "削除してやり直したい",
+    "en": "Remove and start over"
+  },
+  "执行 claude mcp remove career-note，然后重新添加。": {
+    "ja": "claude mcp remove career-note を実行してから再度追加します。",
+    "en": "Run claude mcp remove career-note, then add it again."
+  },
+  "添加 Streamable HTTP 服务": {
+    "ja": "Streamable HTTP サーバーを追加",
+    "en": "Add the Streamable HTTP server"
+  },
+  "触发 OAuth 授权": {
+    "ja": "OAuth 認可を開始",
+    "en": "Start OAuth authorization"
+  },
+  "浏览器会打开授权页，登录并同意：": {
+    "ja": "ブラウザーで認可ページが開くので、ログインして同意します：",
+    "en": "The browser opens the consent page; sign in and approve:"
+  },
+  "career-note 的 Auth 列应显示 Logged in：": {
+    "ja": "career-note の Auth 列に Logged in と表示されるはずです：",
+    "en": "The Auth column for career-note should read Logged in:"
+  },
+  "codex mcp add 不认识 --url": {
+    "ja": "codex mcp add が --url を認識しない",
+    "en": "codex mcp add does not accept --url"
+  },
+  "升级 Codex CLI 到支持 Streamable HTTP 的版本：npm i -g @openai/codex@latest。": {
+    "ja": "Streamable HTTP に対応した Codex CLI に更新してください：npm i -g @openai/codex@latest。",
+    "en": "Upgrade Codex CLI to a version with Streamable HTTP support: npm i -g @openai/codex@latest."
+  },
+  "login 后仍显示未登录": {
+    "ja": "login の後も未ログインと表示される",
+    "en": "Still shows logged out after login"
+  },
+  "删除后重新添加：codex mcp remove career-note，再执行添加与 login。": {
+    "ja": "一度削除して再追加します：codex mcp remove career-note の後、追加と login をやり直します。",
+    "en": "Remove and re-add: codex mcp remove career-note, then add and login again."
+  },
+  "写入 mcp.json": {
+    "ja": "mcp.json に書き込む",
+    "en": "Write mcp.json"
+  },
+  "在设置里登录": {
+    "ja": "設定でログイン",
+    "en": "Log in from settings"
+  },
+  "打开 Cursor Settings → MCP，在 career-note 上点击 Needs Login。浏览器授权后会通过 cursor:// 链接跳回。": {
+    "ja": "Cursor Settings → MCP を開き、career-note の Needs Login をクリックします。ブラウザーで認可すると cursor:// リンクで戻ります。",
+    "en": "Open Cursor Settings → MCP and click Needs Login on career-note. After approving in the browser it returns via a cursor:// link."
+  },
+  "Cursor 设置中的 MCP 服务器列表": {
+    "ja": "Cursor 設定の MCP サーバー一覧",
+    "en": "The MCP server list in Cursor settings"
+  },
+  "career-note 前的圆点变绿，并展开显示 career_ 开头的工具。": {
+    "ja": "career-note の前の丸が緑になり、展開すると career_ で始まるツールが表示されます。",
+    "en": "The dot before career-note turns green and expands to show tools starting with career_."
+  },
+  "用 career-note 的 career_get_contract 工具，告诉我这个工作区的约定。": {
+    "ja": "career-note の career_get_contract ツールで、このワークスペースの約束事を教えてください。",
+    "en": "Use the career_get_contract tool from career-note and tell me this workspace’s contract."
+  },
+  "授权后没有跳回 Cursor": {
+    "ja": "認可後に Cursor に戻らない",
+    "en": "Does not return to Cursor after approval"
+  },
+  "浏览器会弹出\"打开 Cursor\"确认框，点允许；没有弹出时手动切回 Cursor 并刷新 MCP 列表。": {
+    "ja": "ブラウザーに「Cursor を開く」確認が出るので許可します。出ない場合は手動で Cursor に戻り、MCP 一覧を更新してください。",
+    "en": "The browser asks to open Cursor — allow it; if nothing appears, switch back to Cursor manually and refresh the MCP list."
+  },
+  "圆点一直是红色": {
+    "ja": "丸がずっと赤いまま",
+    "en": "The dot stays red"
+  },
+  "确认 npm run dev 在运行；在 MCP 设置里关闭再打开 career-note 重新连接。": {
+    "ja": "npm run dev が動いているか確認し、MCP 設定で career-note をオフ→オンにして再接続します。",
+    "en": "Make sure npm run dev is running; toggle career-note off and on in the MCP settings to reconnect."
+  },
+  "终端一次性添加：": {
+    "ja": "ターミナルで一度に追加：",
+    "en": "Add in one go from the terminal:"
+  },
+  "或手动写入配置": {
+    "ja": "または設定を手動で書く",
+    "en": "Or write the config manually"
+  },
+  "项目的 .vscode/mcp.json：": {
+    "ja": "プロジェクトの .vscode/mcp.json：",
+    "en": "The project .vscode/mcp.json:"
+  },
+  "启动并授权": {
+    "ja": "起動して認可",
+    "en": "Start and authorize"
+  },
+  "命令面板运行 MCP: List Servers → career-note → Start。出现授权提示时选择 Allow，在浏览器里完成登录与同意。": {
+    "ja": "コマンドパレットで MCP: List Servers → career-note → Start を実行します。認可の確認が出たら Allow を選び、ブラウザーでログインと同意を行います。",
+    "en": "Run MCP: List Servers → career-note → Start from the Command Palette. Choose Allow when prompted and complete sign-in and consent in the browser."
+  },
+  "VS Code 的 MCP: List Servers 面板": {
+    "ja": "VS Code の MCP: List Servers パネル",
+    "en": "The MCP: List Servers panel in VS Code"
+  },
+  "打开 Chat 视图（Agent 模式），点击工具图标，列表里应出现 career-note 及其工具。": {
+    "ja": "Chat ビュー（Agent モード）を開いてツールアイコンをクリックすると、一覧に career-note とそのツールが表示されます。",
+    "en": "Open the Chat view (Agent mode) and click the tools icon; career-note and its tools should be listed."
+  },
+  "使用 career-note 的 career_get_contract 工具，告诉我这个工作区的约定。": {
+    "ja": "career-note の career_get_contract ツールを使って、このワークスペースの約束事を教えてください。",
+    "en": "Use the career_get_contract tool from career-note and tell me this workspace’s contract."
+  },
+  "没有 MCP: List Servers 命令": {
+    "ja": "MCP: List Servers コマンドがない",
+    "en": "No MCP: List Servers command"
+  },
+  "需要 VS Code 1.102 及以上，并确认 chat.mcp.enabled 未被关闭。": {
+    "ja": "VS Code 1.102 以上が必要で、chat.mcp.enabled が無効になっていないか確認してください。",
+    "en": "Requires VS Code 1.102 or later; make sure chat.mcp.enabled is not turned off."
+  },
+  "Start 后提示认证失败": {
+    "ja": "Start の後に認証エラーになる",
+    "en": "Authentication fails after Start"
+  },
+  "命令面板运行 MCP: Reset Trust 或在服务器上选择 Sign out，再重新 Start。": {
+    "ja": "コマンドパレットで MCP: Reset Trust を実行するか、サーバーで Sign out を選んでから再度 Start します。",
+    "en": "Run MCP: Reset Trust from the Command Palette or choose Sign out on the server, then Start again."
+  },
+  "启动 gemini 后输入以下命令，浏览器会打开授权页：": {
+    "ja": "gemini を起動して次のコマンドを入力すると、ブラウザーで認可ページが開きます：",
+    "en": "Start gemini and enter the following; the browser opens the consent page:"
+  },
+  "输入 /mcp，career-note 应显示为 Ready 并列出工具。": {
+    "ja": "/mcp と入力すると、career-note が Ready と表示されツールが一覧されます。",
+    "en": "Type /mcp: career-note should show Ready and list its tools."
+  },
+  "/mcp 显示 Disconnected": {
+    "ja": "/mcp に Disconnected と表示される",
+    "en": "/mcp shows Disconnected"
+  },
+  "检查 ~/.gemini/settings.json 里 career-note 的 httpUrl 是否正确；确认 npm run dev 在运行。": {
+    "ja": "~/.gemini/settings.json の career-note の httpUrl が正しいか確認し、npm run dev が動いているか確認してください。",
+    "en": "Check the httpUrl for career-note in ~/.gemini/settings.json and make sure npm run dev is running."
+  },
+  "开启开发者模式": {
+    "ja": "Developer mode を有効化",
+    "en": "Turn on Developer mode"
+  },
+  "Settings → Connectors → Advanced settings，打开 Developer mode。": {
+    "ja": "Settings → Connectors → Advanced settings で Developer mode をオンにします。",
+    "en": "Settings → Connectors → Advanced settings, then turn on Developer mode."
+  },
+  "ChatGPT 连接器高级设置": {
+    "ja": "ChatGPT コネクターの詳細設定",
+    "en": "ChatGPT connector advanced settings"
+  },
+  "创建连接器": {
+    "ja": "コネクターを作成",
+    "en": "Create the connector"
+  },
+  "ChatGPT 新建连接器对话框": {
+    "ja": "ChatGPT の新規コネクター作成ダイアログ",
+    "en": "The ChatGPT create-connector dialog"
+  },
+  "选择 OAuth 并授权": {
+    "ja": "OAuth を選んで認可",
+    "en": "Choose OAuth and authorize"
+  },
+  "Authentication 选择 OAuth，点击 Create。浏览器会打开授权页，登录并同意。": {
+    "ja": "Authentication で OAuth を選んで Create をクリックします。ブラウザーで認可ページが開くので、ログインして同意します。",
+    "en": "Choose OAuth for Authentication and click Create. The browser opens the consent page; sign in and approve."
+  },
+  "在对话里启用": {
+    "ja": "チャットで有効化",
+    "en": "Enable it in a chat"
+  },
+  "新建对话，在 + → Developer mode 里勾选 Career Note。": {
+    "ja": "新しいチャットを開き、+ → Developer mode で Career Note にチェックを入れます。",
+    "en": "Start a new chat and tick Career Note under + → Developer mode."
+  },
+  "看不到 Developer mode": {
+    "ja": "Developer mode が見当たらない",
+    "en": "Developer mode is not shown"
+  },
+  "需要 Plus / Pro / Business 计划，并在 Advanced settings 里打开。": {
+    "ja": "Plus / Pro / Business プランが必要で、Advanced settings で有効にします。",
+    "en": "Requires a Plus / Pro / Business plan and must be enabled under Advanced settings."
+  },
+  "创建时提示无法连接": {
+    "ja": "作成時に接続できないと表示される",
+    "en": "Creation fails with a connection error"
+  },
+  "地址必须是公网 https。运行 npm run dev:tunnel 并使用打印的 Public MCP endpoint；随机的 trycloudflare 地址每次重启都会变。": {
+    "ja": "アドレスは公開 https である必要があります。npm run dev:tunnel を実行して表示された Public MCP endpoint を使ってください。ランダムな trycloudflare アドレスは再起動のたびに変わります。",
+    "en": "The address must be public https. Run npm run dev:tunnel and use the printed Public MCP endpoint; a random trycloudflare address changes on every restart."
+  },
+  "操作步骤": {
+    "ja": "手順",
+    "en": "Steps"
+  },
+  "步": {
+    "ja": "ステップ",
+    "en": "steps"
+  },
+  "验证连接": {
+    "ja": "接続を確認",
+    "en": "Verify the connection"
+  },
+  "检查授权状态": {
+    "ja": "認可状態を確認",
+    "en": "Check authorization"
+  },
+  "已收到 {0} 的授权": {
+    "ja": "{0} からの認可を受け取りました",
+    "en": "Authorization received from {0}"
+  },
+  "尚未调用过工具": {
+    "ja": "まだツールは呼び出されていません",
+    "en": "No tool calls yet"
+  },
+  "还没有收到来自 {0} 的授权": {
+    "ja": "{0} からの認可はまだありません",
+    "en": "No authorization from {0} yet"
+  },
+  "尚未检测到授权": {
+    "ja": "認可はまだ検出されていません",
+    "en": "No authorization detected yet"
+  },
+  "完成上面的步骤并在浏览器里同意后，点击\"检查授权状态\"。": {
+    "ja": "上の手順を終えてブラウザーで同意したら、「認可状態を確認」をクリックしてください。",
+    "en": "After finishing the steps above and approving in the browser, click \"Check authorization\"."
+  },
+  "在助手里确认工具可用": {
+    "ja": "アシスタントでツールを確認",
+    "en": "Confirm the tools in your assistant"
+  },
+  "把下面这句话发给助手：": {
+    "ja": "次の文をアシスタントに送ってください：",
+    "en": "Send this to your assistant:"
+  },
+  "常见问题": {
+    "ja": "よくある問題",
+    "en": "Troubleshooting"
+  },
+  "选择你使用的 AI 客户端": {
+    "ja": "使用する AI クライアントを選択",
+    "en": "Choose the AI client you use"
+  },
+  "已授权": {
+    "ja": "認可済み",
+    "en": "Authorized"
+  },
+  "需要公开地址": {
+    "ja": "公開アドレスが必要",
+    "en": "Needs a public URL"
+  },
+  "当前账号：{0}。授权页登录的是哪个 Google 账号，授权就归哪个账号；用其他账号授权的助手不会显示在这里。": {
+    "ja": "現在のアカウント：{0}。許可ページでログインした Google アカウントに許可が紐づきます。別のアカウントで許可したアシスタントはここに表示されません。",
+    "en": "Current account: {0}. A grant belongs to whichever Google account was signed in on the consent page; assistants authorized with another account are not listed here."
+  },
+  "已过期": {
+    "ja": "期限切れ",
+    "en": "Expired"
+  },
+  "操作记录": {
+    "ja": "操作履歴",
+    "en": "Activity"
+  },
+  "收起记录": {
+    "ja": "履歴を閉じる",
+    "en": "Hide activity"
+  },
+  "还没有操作记录。": {
+    "ja": "操作履歴はまだありません。",
+    "en": "No activity yet."
+  },
+  "已撤销 / 已过期（{0}）": {
+    "ja": "失効 / 期限切れ（{0}）",
+    "en": "Revoked / expired ({0})"
+  },
+  "已撤销 / 已过期的授权": {
+    "ja": "失効・期限切れの許可",
+    "en": "Revoked or expired grants"
+  },
+  "归档保留 180 天的操作记录，用于事后核对；记录不含具体内容，只有工具名和条数。": {
+    "ja": "アーカイブは操作履歴を 180 日保持し、事後確認に使えます。履歴には内容は含まれず、ツール名と件数のみです。",
+    "en": "The archive keeps 180 days of activity for later review; entries hold tool names and counts, never content."
+  },
+  "完成授权": {
+    "ja": "許可を完了",
+    "en": "Authorized"
+  },
+  "刷新令牌": {
+    "ja": "トークンを更新",
+    "en": "Token refreshed"
+  },
+  "撤销授权": {
+    "ja": "許可を失効",
+    "en": "Revoked"
+  },
+  "读取工作区": {
+    "ja": "ワークスペースを読取",
+    "en": "Read workspace"
+  },
+  "写入履历条目": {
+    "ja": "履歴項目を保存",
+    "en": "Saved resume entry"
+  },
+  "写入个性化简历": {
+    "ja": "個別履歴書を保存",
+    "en": "Saved personalized resume"
+  },
+  "预览导入": {
+    "ja": "取込をプレビュー",
+    "en": "Previewed import"
+  },
+  "导入数据": {
+    "ja": "データを取込",
+    "en": "Imported data"
+  },
+  "排队任务": {
+    "ja": "タスクを登録",
+    "en": "Queued task"
+  },
+  "读取履历历史": {
+    "ja": "履歴の版を読取",
+    "en": "Read resume history"
+  },
+  "读取个性化简历": {
+    "ja": "個別履歴書を読取",
+    "en": "Read personalized resumes"
+  },
+  "失败": {
+    "ja": "失敗",
+    "en": "failed"
+  },
+  "添加 AI 助手": {
+    "ja": "AI アシスタントを追加",
+    "en": "Add an AI assistant"
+  },
+  "选择客户端 → 复制地址并配置 → 验证授权": {
+    "ja": "クライアントを選ぶ → アドレスをコピーして設定 → 認可を確認",
+    "en": "Pick a client → copy the address and configure → verify authorization"
+  },
+  "选择助手": {
+    "ja": "アシスタントを選ぶ",
+    "en": "Pick assistant"
+  },
+  "复制地址并配置": {
+    "ja": "アドレスをコピーして設定",
+    "en": "Copy address & configure"
+  },
+  "验证授权": {
+    "ja": "認可を確認",
+    "en": "Verify authorization"
+  },
+  "添加进度": {
+    "ja": "追加の進捗",
+    "en": "Setup progress"
+  },
+  "选择后会看到该客户端的配置步骤；首次连接时在浏览器里登录并同意，助手会自动拿到令牌。": {
+    "ja": "選択するとそのクライアントの設定手順が表示されます。初回接続時にブラウザでログインして同意すると、アシスタントが自動的にトークンを受け取ります。",
+    "en": "Pick one to see its setup steps. On first connection, sign in and consent in the browser and the assistant receives a token automatically."
+  },
+  "重新选择助手": {
+    "ja": "アシスタントを選び直す",
+    "en": "Choose another assistant"
+  },
+  "下一步：验证授权": {
+    "ja": "次へ：認可を確認",
+    "en": "Next: verify authorization"
+  },
+  "上一步": {
+    "ja": "戻る",
+    "en": "Back"
+  },
+  "完成": {
+    "ja": "完了",
+    "en": "Done"
+  },
+  "收起导航栏": {
+    "ja": "ナビゲーションをたたむ",
+    "en": "Collapse sidebar"
+  },
+  "展开导航栏": {
+    "ja": "ナビゲーションを開く",
+    "en": "Expand sidebar"
+  },
+  "{0} 想要访问你的就职手帖": {
+    "ja": "{0} が就職手帖へのアクセスを求めています",
+    "en": "{0} wants to access your Career Note"
+  },
+  "授权后将返回": {
+    "ja": "承認後の戻り先",
+    "en": "After approval you will return to"
+  },
+  "AI 助手": {
+    "ja": "AI アシスタント",
+    "en": "AI assistant"
+  },
+  "正在返回 {0}…": {
+    "ja": "{0} に戻っています…",
+    "en": "Returning to {0}…"
+  },
+  "本机工作区": {
+    "ja": "ローカルワークスペース",
+    "en": "Local workspace"
+  },
+  "任何能访问这台电脑的程序都能使用该授权。": {
+    "ja": "このパソコンにアクセスできるプログラムはすべてこの認可を利用できます。",
+    "en": "Any program that can reach this computer can use this authorization."
+  },
+  "助手只能访问这个账号的工作区": {
+    "ja": "アシスタントはこのアカウントのワークスペースにのみアクセスできます",
+    "en": "The assistant can only access this account's workspace"
+  },
+  "切换账号": {
+    "ja": "アカウントを切り替え",
+    "en": "Switch account"
+  },
+  "请先登录，助手只能访问你自己的工作区。": {
+    "ja": "先にログインしてください。アシスタントはあなた自身のワークスペースにのみアクセスできます。",
+    "en": "Sign in first — the assistant can only access your own workspace."
+  },
+  "使用 Google 登录以继续": {
+    "ja": "Google でログインして続行",
+    "en": "Sign in with Google to continue"
+  },
+  "这将允许 {0}：": {
+    "ja": "{0} に次を許可します：",
+    "en": "This will allow {0} to:"
+  },
+  "必需": {
+    "ja": "必須",
+    "en": "Required"
+  },
+  "请确认你信任 {0}。你可以随时在「Agent 协作」页撤销这次授权。": {
+    "ja": "{0} を信頼できることを確認してください。この認可は「Agent 連携」ページでいつでも取り消せます。",
+    "en": "Make sure you trust {0}. You can revoke this authorization at any time on the Agent collaboration page."
+  },
+  "允许": {
+    "ja": "許可",
+    "en": "Allow"
+  },
+  "正在处理…": {
+    "ja": "処理中…",
+    "en": "Working…"
+  }
+}

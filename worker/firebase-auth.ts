@@ -14,7 +14,3 @@ export async function verifyFirebaseToken(token: string, projectId: string, keys
   if (firebase?.sign_in_provider !== 'google.com' || payload.email_verified !== true || typeof payload.email !== 'string') throw new Error('Verified Google account required');
   return payload;
 }
-export function allowedAccount(payload: {sub?: string; email?: unknown}, uids = '', emails = '') {
-  const values = (raw: string) => raw.split(',').map(value => value.trim()).filter(Boolean);
-  return values(uids).includes(payload.sub || '') || values(emails).map(value => value.toLowerCase()).includes((typeof payload.email === 'string' ? payload.email.toLowerCase() : ''));
-}

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 const [command, file] = process.argv.slice(2);
 try {
   if (!['state', 'preview', 'import'].includes(command) || (command !== 'state' && !file)) throw new Error('Usage: node scripts/career-data.mjs state | preview FILE | import FILE');
-  const base = process.env.CAREER_API_URL || 'http://127.0.0.1:4319';
+  const base = process.env.CAREER_API_URL || 'http://127.0.0.1:4211';
   const headers = {};
   if (process.env.CAREER_API_TOKEN) headers.Authorization = `Bearer ${process.env.CAREER_API_TOKEN}`;
   const path = command === 'state' ? 'state' : command === 'preview' ? 'import/preview' : 'import';

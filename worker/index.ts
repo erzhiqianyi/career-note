@@ -1,4 +1,9 @@
-import { verifyFirebaseToken, allowedAccount } from './firebase-auth';
+import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
+import { ensureResumeSchema, readResume, writeResume, resumeHistory } from './resume';
+import { createAgentGateway, GatewayError, type AgentGateway, type Origins, type ToolContext } from '@erzhiqian/agent-gateway';
+import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools';
+import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } from './activity';
+import { verifyFirebaseToken } from './firebase-auth';
 import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-platforms';
 import type { ExportedHandler } from '@cloudflare/workers-types';
 
@@ -17,9 +22,10 @@ type Env = {
   FIREBASE_API_KEY?: string;
   FIREBASE_AUTH_DOMAIN?: string;
   FIREBASE_APP_ID?: string;
-  CAREER_ALLOWED_UIDS?: string;
-  CAREER_ALLOWED_EMAILS?: string;
   MCP_TOKEN_TTL_DAYS?: string;
+  CAREER_PUBLIC_ORIGIN?: string;
+  CAREER_WEB_ORIGIN?: string;
+  CAREER_OAUTH_REFRESH_DAYS?: string;
 };
 
 type AuthContext = {
@@ -29,19 +35,6 @@ type AuthContext = {
   claims: FirebaseClaim;
   tokenType: 'firebase' | 'mcp';
   scopes: McpScope[];
-};
-
-type McpTokenRow = {
-  id: string;
-  token_hash: string;
-  token_prefix: string;
-  name: string;
-  owner_uid: string;
-  scopes: string;
-  created_at: string;
-  expires_at: string | null;
-  last_used_at: string | null;
-  revoked: number;
 };
 
 class AppError extends Error {
@@ -69,7 +62,6 @@ const REVIEW_FIELDS = [
   'sourceNotes',
 ] as const;
 
-const MCP_TOKEN_PREFIX = 'mcp_';
 
 function now() {
   return new Date().toISOString();
@@ -86,10 +78,6 @@ function ensureMode(env: Env): 'off' | 'on' | 'strict' {
   const mode = (env.CAREER_AUTH_MODE || (env.FIREBASE_PROJECT_ID ? 'strict' : 'off')).toLowerCase();
   if (!['off', 'on', 'strict'].includes(mode)) throw new AppError(503, 'Invalid CAREER_AUTH_MODE');
   return mode === 'on' || mode === 'strict' ? (mode as 'on' | 'strict') : 'off';
-}
-
-function randomTokenString() {
-  return `${MCP_TOKEN_PREFIX}${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`;
 }
 
 function adminUidSet(env: Env): Set<string> {
@@ -130,51 +118,46 @@ function ensureDb(env: Env): D1Database {
   return env.CAREER_DB;
 }
 
-async function ensureSchema(db: D1Database): Promise<void> {
+async function ensureSchema(db: D1Database, gateway: AgentGateway): Promise<void> {
   await db.exec(
     `CREATE TABLE IF NOT EXISTS records (kind TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (kind,id));`,
   );
   await db.exec(`CREATE TABLE IF NOT EXISTS meta (id TEXT PRIMARY KEY, body TEXT NOT NULL);`);
-  await db.prepare(`
-    CREATE TABLE IF NOT EXISTS mcp_tokens (
-      id TEXT PRIMARY KEY,
-      token_hash TEXT NOT NULL UNIQUE,
-      token_prefix TEXT NOT NULL,
-      name TEXT NOT NULL,
-      owner_uid TEXT NOT NULL,
-      scopes TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      expires_at TEXT,
-      revoked INTEGER NOT NULL DEFAULT 0,
-      last_used_at TEXT
-    );
-  `).run();
+  await gateway.ensureSchema();
+  await ensureActivitySchema(db);
 }
 
-async function records(db: D1Database, kind: string): Promise<Record<string, unknown>[]> {
-  const result = await db
+// Request-local scope derived only from the verified identity, never from input.
+// Legacy local data keeps its original keys and is not assigned to a new login.
+type Workspace = { connection: D1Database; namespace: string };
+function workspaceKey(db: Workspace, key: string) {
+  return db.namespace ? JSON.stringify([db.namespace, key]) : key;
+}
+
+async function records(db: Workspace, kind: string): Promise<Record<string, unknown>[]> {
+  const result = await db.connection
     .prepare('SELECT body FROM records WHERE kind = ?1 ORDER BY rowid DESC')
-    .bind(kind)
+    .bind(workspaceKey(db, kind))
     .all<{ body: string }>();
   return (result.results || []).map((row) => JSON.parse(row.body));
 }
 
-async function getRecord(db: D1Database, kind: string, id: string) {
-  const result = await db
+async function getRecord(db: Workspace, kind: string, id: string) {
+  const result = await db.connection
     .prepare('SELECT body FROM records WHERE kind=?1 AND id=?2')
-    .bind(kind, id)
+    .bind(workspaceKey(db, kind), id)
     .first<{ body: string }>();
   return result ? JSON.parse(result.body) : null;
 }
 
-async function putRecord(db: D1Database, kind: string, item: Record<string, unknown>) {
+async function putRecord(db: Workspace, kind: string, item: Record<string, unknown>) {
   const id = String(item.id || '');
   if (!id) throw new AppError(400, '缺少 id');
-  await db
+  await db.connection
     .prepare(
       'INSERT INTO records(kind,id,body) VALUES (?1, ?2, ?3) ON CONFLICT(kind,id) DO UPDATE SET body=excluded.body',
     )
-    .bind(kind, id, JSON.stringify(item))
+    .bind(workspaceKey(db, kind), id, JSON.stringify(item))
     .run();
 }
 
@@ -192,33 +175,35 @@ function defaultProfile() {
   };
 }
 
-async function getMeta(db: D1Database) {
-  const row = await db
-    .prepare("SELECT body FROM meta WHERE id='profile'")
+async function getMeta(db: Workspace) {
+  const row = await db.connection
+    .prepare("SELECT body FROM meta WHERE id=?1")
+    .bind(workspaceKey(db, "profile"))
     .first<{ body: string }>();
   if (row?.body) return JSON.parse(row.body);
   return null;
 }
 
-async function putMeta(db: D1Database, id: string, body: Record<string, unknown>) {
-  await db
+async function putMeta(db: Workspace, id: string, body: Record<string, unknown>) {
+  await db.connection
     .prepare(
       'INSERT INTO meta VALUES (?1, ?2) ON CONFLICT(id) DO UPDATE SET body=excluded.body',
     )
-    .bind(id, JSON.stringify(body))
+    .bind(workspaceKey(db, id), JSON.stringify(body))
     .run();
 }
 
-async function getProfile(db: D1Database) {
-  return (await getMeta(db)) || defaultProfile();
+async function getProfile(db: Workspace) {
+  return { ...defaultProfile(), ...((await getMeta(db)) || {}) };
 }
 
-async function state(db: D1Database, uid = 'local') {
+async function state(db: Workspace, uid = 'local') {
   const profile = await getProfile(db);
   return {
     platforms: mergePlatforms(await records(db, 'platforms:' + uid) as JobPlatform[]),
     jobs: await records(db, 'jobs'),
     profile,
+    resume: await readResume(db.connection, db.namespace),
     materials: await records(db, 'materials'),
     reports: await records(db, 'reports'),
     tasks: await records(db, 'tasks'),
@@ -233,7 +218,7 @@ function validateTaskKind(kind: string): kind is TaskKind {
   return ['每日分析', '公司准备', '职位研究', '回答点评'].includes(kind);
 }
 
-async function saveProfile(db: D1Database, data: Record<string, unknown>) {
+async function saveProfile(db: Workspace, data: Record<string, unknown>) {
   const old = (await state(db)).profile;
   if (data.revision !== old.revision) throw new AppError(400, '资料已更新，请刷新后重新编辑');
   const result = {
@@ -283,7 +268,7 @@ function validateResearch(data: Record<string, unknown>) {
   return result;
 }
 
-async function saveJob(db: D1Database, data: Record<string, unknown>, researchOnly = false) {
+async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnly = false) {
   const key = data.id ? validateString(data.id, 'id', { required: true, max: 120 }) : toId();
   const old = await getRecord(db, 'jobs', key);
   if (old && !researchOnly && data.revision !== old.revision) {
@@ -349,7 +334,7 @@ async function saveJob(db: D1Database, data: Record<string, unknown>, researchOn
   return base;
 }
 
-async function requestTask(db: D1Database, data: Record<string, unknown>) {
+async function requestTask(db: Workspace, data: Record<string, unknown>) {
   const kind = validateString(data.kind, 'kind', { required: true, max: 20 });
   if (!validateTaskKind(kind)) throw new AppError(400, '任务类型不正确');
   const jobId = validateString(data.jobId, 'jobId', { max: 120 });
@@ -444,7 +429,7 @@ function parseQuestionSetQuestions(questions: unknown[]) {
   return parsed;
 }
 
-async function importQuestionSet(db: D1Database, data: Record<string, unknown>) {
+async function importQuestionSet(db: Workspace, data: Record<string, unknown>) {
   const key = validateString(data.id, 'id', { required: true, max: 120 });
   if (await getRecord(db, 'questionSets', key)) throw new AppError(400, '题组已存在，请使用新的版本 id');
   const jobId = validateString(data.jobId, 'jobId', { required: true, max: 120 });
@@ -465,7 +450,7 @@ async function importQuestionSet(db: D1Database, data: Record<string, unknown>) 
   return result;
 }
 
-async function importReview(db: D1Database, data: Record<string, unknown>) {
+async function importReview(db: Workspace, data: Record<string, unknown>) {
   const key = validateString(data.id, 'id', { required: true, max: 120 });
   if (await getRecord(db, 'reviews', key)) throw new AppError(400, '点评 id 已存在，请保留历史并使用新版本');
   const attemptId = validateString(data.attemptId, 'attemptId', { required: true, max: 120 });
@@ -491,7 +476,7 @@ async function importReview(db: D1Database, data: Record<string, unknown>) {
   return result;
 }
 
-async function saveAttempt(db: D1Database, data: Record<string, unknown>) {
+async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
   const questionSetId = validateString(data.questionSetId, 'questionSetId', { required: true, max: 120 });
   const questionId = validateString(data.questionId, 'questionId', { required: true, max: 120 });
   const attemptPack = await getRecord(db, 'questionSets', questionSetId);
@@ -567,52 +552,17 @@ function assertFirebaseClaims(payload: FirebaseClaim, env: Env) {
   return { uid, admin, claims: payload };
 }
 
-async function sha256Hex(raw: string): Promise<string> {
-  const value = new TextEncoder().encode(raw);
-  const hashed = await crypto.subtle.digest('SHA-256', value);
-  return [...new Uint8Array(hashed)]
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function parseScopes(raw: string): McpScope[] {
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((value): value is McpScope => typeof value === 'string' && value.includes(':') as boolean);
-    }
-  } catch {}
-  return [];
-}
-
-async function verifyMcpToken(db: D1Database, token: string): Promise<AuthContext> {
-  const hashed = await sha256Hex(token);
-  const row = await db
-    .prepare('SELECT * FROM mcp_tokens WHERE token_hash = ?1')
-    .bind(hashed)
-    .first<McpTokenRow>();
-  if (!row) throw new AppError(401, 'Invalid MCP token');
-  if (row.revoked === 1) throw new AppError(401, 'MCP token revoked');
-  if (row.expires_at && row.expires_at < now()) throw new AppError(401, 'MCP token expired');
-
-  const scopes = parseScopes(row.scopes);
-  await db
-    .prepare('UPDATE mcp_tokens SET last_used_at = ?1 WHERE id = ?2')
-    .bind(now(), row.id)
-    .run();
-
-  return {
-    uid: row.owner_uid,
-    admin: scopes.includes('admin'),
-    mode: 'on',
-    claims: { mcp: true, tokenId: row.id },
-    tokenType: 'mcp',
-    scopes,
-  };
-}
-
-async function getAuthContext(request: Request, env: Env, db: D1Database): Promise<AuthContext> {
+async function getAuthContext(request: Request, env: Env, gateway: AgentGateway): Promise<AuthContext> {
   const mode = ensureMode(env);
+  if (gateway.carriesToken(request)) {
+    let grant;
+    try { grant = await gateway.authenticate(request); }
+    catch (error) { throw error instanceof GatewayError ? new AppError(error.status, error.message) : error; }
+    if (!grant) throw new AppError(401, 'Invalid MCP token');
+    if (mode === 'off' && grant.ownerId !== 'local') throw new AppError(401, 'MCP token belongs to a signed-in workspace');
+    if (mode !== 'off' && grant.ownerId === 'local') throw new AppError(401, 'MCP token belongs to the local workspace');
+    return { uid: grant.ownerId, admin: false, mode, claims: { mcp: true, tokenId: grant.grantId }, tokenType: 'mcp', scopes: grant.scopes as McpScope[] };
+  }
   if (mode === 'off') {
     return {
       uid: 'local',
@@ -630,17 +580,10 @@ async function getAuthContext(request: Request, env: Env, db: D1Database): Promi
   }
 
   const token = header.slice('Bearer '.length).trim();
-  if (token.startsWith(MCP_TOKEN_PREFIX)) {
-    return await verifyMcpToken(db, token);
-  }
-
   if (!env.FIREBASE_PROJECT_ID) throw new AppError(503, '请配置 FIREBASE_PROJECT_ID');
   let payload;
   try { payload = await verifyFirebaseToken(token, env.FIREBASE_PROJECT_ID); }
   catch { throw new AppError(401, 'Google 登录已失效，请重新登录'); }
-  if (!allowedAccount(payload, env.CAREER_ALLOWED_UIDS, env.CAREER_ALLOWED_EMAILS)) {
-    throw new AppError(403, '此 Google 账号未获工作区访问权限，请配置允许的账号');
-  }
   const result = assertFirebaseClaims(payload, env);
   if (!result || !result.uid) throw new AppError(401, 'Token missing uid');
   return {
@@ -653,45 +596,8 @@ async function getAuthContext(request: Request, env: Env, db: D1Database): Promi
   };
 }
 
-function isExpiredAt(raw: string | null) {
-  if (!raw) return false;
-  return raw < now();
-}
-
-async function listMcpTokens(db: D1Database, context: AuthContext) {
-  const result =
-    context.admin
-      ? await db.prepare('SELECT * FROM mcp_tokens ORDER BY created_at DESC').all<McpTokenRow>()
-      : await db
-          .prepare('SELECT * FROM mcp_tokens WHERE owner_uid = ?1 ORDER BY created_at DESC')
-          .bind(context.uid)
-          .all<McpTokenRow>();
-
-  const rows = result.results || [];
-
-  return rows
-    .filter((row) => !isExpiredAt(row.expires_at))
-    .map((row) => ({
-      id: row.id,
-      name: row.name,
-      ownerUid: row.owner_uid,
-      scopes: parseScopes(row.scopes),
-      createdAt: row.created_at,
-      expiresAt: row.expires_at || '',
-      lastUsedAt: row.last_used_at || '',
-      revoked: row.revoked === 1,
-      prefix: row.token_prefix,
-    }));
-}
-
 function toId() {
   return crypto.randomUUID();
-}
-
-function envDays(env: Env): number {
-  const parsed = Number(env.MCP_TOKEN_TTL_DAYS);
-  if (Number.isFinite(parsed) && parsed > 0 && parsed <= 365) return parsed;
-  return 30;
 }
 
 function ensureScopes(context: AuthContext, required: readonly string[]) {
@@ -704,56 +610,7 @@ function ensureScopes(context: AuthContext, required: readonly string[]) {
   }
 }
 
-async function createMcpToken(db: D1Database, env: Env, context: AuthContext, payload: Record<string, unknown>) {
-  const name = validateString(payload.name, 'name', { required: true, max: 200 }) || 'MCP Token';
-  const days = Number(payload.expiresInDays || envDays(env));
-  if (!Number.isInteger(days) || days < 1 || days > 365) throw new AppError(400, 'expiresInDays 需要 1-365');
-  const raw = randomTokenString();
-  const tokenHash = await sha256Hex(raw);
-  const scopeRaw = payload.scopes;
-  const scopes =
-    Array.isArray(scopeRaw) && scopeRaw.length > 0
-      ? scopeRaw.filter((value): value is string => typeof value === 'string')
-      : ['career:read', 'career:write', 'agent:write'];
-
-  const createdAt = now();
-  const expiresAt = new Date(Date.now() + days * 86400 * 1000).toISOString();
-  const id = toId();
-  const prefix = raw.slice(0, 8);
-
-  await db
-    .prepare(
-      'INSERT INTO mcp_tokens(id, token_hash, token_prefix, name, owner_uid, scopes, created_at, expires_at, revoked, last_used_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0, NULL)',
-    )
-    .bind(id, tokenHash, prefix, name, context.uid, JSON.stringify(scopes), createdAt, expiresAt)
-    .run();
-
-  return {
-    token: raw,
-    record: {
-      id,
-      name,
-      ownerUid: context.uid,
-      scopes,
-      createdAt,
-      expiresAt,
-      revoked: false,
-      prefix,
-    },
-  };
-}
-
-async function revokeMcpToken(db: D1Database, id: string) {
-  const row = await db
-    .prepare('SELECT id FROM mcp_tokens WHERE id = ?1')
-    .bind(id)
-    .first<{ id: string }>();
-  if (!row) throw new AppError(400, '未找到 token');
-  await db.prepare('UPDATE mcp_tokens SET revoked = 1 WHERE id = ?1').bind(id).run();
-  return true;
-}
-
-async function importBundle(db: D1Database, data: Record<string, unknown>, preview = false) {
+async function importBundle(db: Workspace, data: Record<string, unknown>, preview = false) {
   if (Number(data.schemaVersion) !== 1) throw new AppError(400, '需要 schemaVersion: 1 的 JSON 数据包');
 
   for (const key of Object.keys(data)) {
@@ -921,35 +778,112 @@ function jsonResponse(payload: unknown, init: ResponseInit = {}) {
   });
 }
 
+function normalizeOrigin(value: string | undefined): string {
+  const text = (value || '').trim();
+  if (!text) return '';
+  try { return new URL(text).origin; }
+  catch { throw new AppError(503, 'Invalid origin configuration'); }
+}
+
+function resolveOrigins(request: Request, env: Env): Origins {
+  const publicOrigin = normalizeOrigin(env.CAREER_PUBLIC_ORIGIN) || new URL(request.url).origin;
+  return { publicOrigin, webOrigin: normalizeOrigin(env.CAREER_WEB_ORIGIN) || publicOrigin };
+}
+
+function envDays(raw: string | undefined, fallback: number) {
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 && parsed <= 365 ? parsed : fallback;
+}
+
+// The gateway owns OAuth, agent tokens and the MCP transport; Career Note supplies identity,
+// tools and the audit log. Tool calls re-enter the REST handler with the agent's own token so
+// scope and tenancy checks are never duplicated.
+function createGateway(env: Env, db: D1Database): AgentGateway {
+  const invoke = async (ctx: ToolContext, path: string, body?: Record<string, unknown>) => {
+    const response = await handler(new Request(new URL('/api/career/' + path, ctx.request.url), {
+      method: body ? 'POST' : 'GET', headers: { authorization: ctx.request.headers.get('authorization') || '', 'content-type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    }) as Request<unknown, IncomingRequestCfProperties<unknown>>, env);
+    // Every tool call is attributed to the grant that made it; payloads are never stored.
+    const summary = body !== undefined ? summarizeToolResult(path.replace(/\?.*$/, ''), body, response.ok ? await response.clone().json().catch(() => null) : null) : null;
+    await logActivity(db, { ownerUid: ctx.ownerId, tokenId: ctx.grantId, clientId: ctx.clientId || null, clientName: ctx.clientName || 'agent', event: 'tool:' + path.replace(/\?.*$/, ''), ok: response.ok, detail: summary });
+    return response;
+  };
+  const gateway: AgentGateway = createAgentGateway({
+    name: 'career-note',
+    basePath: '/api/career',
+    scopes: CAREER_SCOPES,
+    contract: CAREER_CONTRACT,
+    tools: createCareerTools(invoke),
+    storage: db,
+    origins: (request) => resolveOrigins(request, env),
+    tokenPrefix: 'mcp_',
+    accessTokenDays: envDays(env.MCP_TOKEN_TTL_DAYS, 30),
+    refreshTokenDays: envDays(env.CAREER_OAUTH_REFRESH_DAYS, 90),
+    // Existing deployments already hold these tables.
+    tables: { clients: 'oauth_clients', codes: 'oauth_codes', refreshTokens: 'oauth_refresh_tokens', accessTokens: 'mcp_tokens' },
+    identity: {
+      // Consent is approved with the same credential the web app uses (Firebase ID token, or the local workspace).
+      async resolve(request) {
+        let user: AuthContext;
+        try { user = await getAuthContext(request, env, gateway); }
+        catch (error) { throw error instanceof AppError ? new GatewayError(error.code, error.message, 'invalid_token') : error; }
+        if (user.tokenType !== 'firebase') throw new GatewayError(403, 'Sign in to approve an agent', 'access_denied');
+        return { id: user.uid, email: typeof user.claims.email === 'string' ? user.claims.email : undefined };
+      },
+    },
+    onEvent: async (event) => {
+      if (event.type === 'tool') return; // invoke() above records tool calls with a REST-level summary
+      await logActivity(db, { ownerUid: event.ownerId, tokenId: event.grantId, clientId: event.clientId || null, clientName: event.clientName, event: event.type, ok: true, detail: event.scopes ? { scopes: event.scopes } : null });
+    },
+  });
+  return gateway;
+}
+
 const handler = async (
   request: Request<unknown, IncomingRequestCfProperties<unknown>>,
   env: Env,
-) => {
+): Promise<Response> => {
   if (new URL(request.url).pathname === '/api/career/auth/config' && request.method === 'GET') {
     const firebase = env.FIREBASE_API_KEY && env.FIREBASE_AUTH_DOMAIN && env.FIREBASE_PROJECT_ID && env.FIREBASE_APP_ID
       ? {apiKey: env.FIREBASE_API_KEY, authDomain: env.FIREBASE_AUTH_DOMAIN, projectId: env.FIREBASE_PROJECT_ID, appId: env.FIREBASE_APP_ID}
       : null;
     return jsonResponse({mode: ensureMode(env), firebase});
   }
-  const db = ensureDb(env);
-  await ensureSchema(db);
+  const rawDb = ensureDb(env);
+  const gateway = createGateway(env, rawDb);
+  await ensureSchema(rawDb, gateway);
+  await ensureResumeSchema(rawDb);
+  await ensurePersonalizedSchema(rawDb);
+  const publicMatch = new URL(request.url).pathname.match(/^\/api\/career\/public-resumes\/([a-f0-9-]{36})$/);
+  if (publicMatch && request.method === 'GET') return publicResumeResponse(rawDb, publicMatch[1]);
 
   const url = new URL(request.url);
   const pathname = url.pathname;
+  const method = request.method.toUpperCase();
+
+  // Auth mode off trusts every caller, so it must never be served through a tunnel or Cloudflare edge.
+  if (ensureMode(env) === 'off' && request.headers.get('cf-ray'))
+    return jsonResponse({ error: 'Local mode is not available over a public address; set CAREER_AUTH_MODE=strict' }, { status: 403 });
+  // Discovery, OAuth grant endpoints and the MCP transport belong to the gateway and need no user session.
+  if (ensureMode(env) === 'off' && pathname.startsWith('/api/career/oauth/') && resolveOrigins(request, env).publicOrigin.startsWith('https://'))
+    return jsonResponse({ error: 'server_error', error_description: 'Auth mode off is only allowed for local use; set CAREER_AUTH_MODE=strict' }, { status: 503 });
+  const gatewayResponse = await gateway.fetch(request);
+  if (gatewayResponse) return gatewayResponse;
   if (!pathname.startsWith('/api/career')) {
     return jsonResponse({ error: '接口不存在' }, { status: 404 });
   }
 
-  const method = request.method.toUpperCase();
   let context: AuthContext;
   try {
-    context = await getAuthContext(request, env, db);
+    context = await getAuthContext(request, env, gateway);
   } catch (error) {
-    if (error instanceof AppError) {
-      return jsonResponse({ error: error.message }, { status: error.code });
-    }
-    return jsonResponse({ error: '未授权' }, { status: 401 });
+    const message = error instanceof AppError ? error.message : '未授权';
+    const status = error instanceof AppError ? error.code : 401;
+    return jsonResponse({ error: message }, { status });
   }
+
+  const db: Workspace = { connection: rawDb, namespace: context.mode === 'off' ? '' : JSON.stringify([env.FIREBASE_PROJECT_ID, context.uid]) };
 
   if (pathname === '/api/career/auth/me' && method === 'GET') {
     return jsonResponse(context);
@@ -960,24 +894,40 @@ const handler = async (
     return jsonResponse(await state(db, context.uid));
   }
 
-  if (method === 'GET' && pathname === '/api/career/mcp/tokens') {
-    if (!context.admin) return jsonResponse({ error: '管理员才能查看 MCP token' }, { status: 403 });
-    return jsonResponse({ tokens: await listMcpTokens(db, context) });
+  if (method === 'GET' && pathname === '/api/career/personalized-resumes') {
+    ensureScopes(context, ['career:read']);
+    return jsonResponse(await listPersonalized(rawDb, db.namespace));
   }
 
-  if (method === 'POST' && pathname === '/api/career/mcp/tokens') {
-    if (!context.admin) return jsonResponse({ error: '管理员才能创建 MCP token' }, { status: 403 });
-    ensureScopes(context, ['admin']);
-    const payload = (await request.json()) as Record<string, unknown>;
-    return jsonResponse(await createMcpToken(db, env, context, payload));
+  if (method === 'GET' && pathname === '/api/career/resume') {
+    ensureScopes(context, ['career:read']);
+    return jsonResponse({ entries: await readResume(rawDb, db.namespace) });
   }
+  if (method === 'GET' && pathname === '/api/career/resume/history') {
+    ensureScopes(context, ['career:read']);
+    return jsonResponse({ entries: await resumeHistory(rawDb, db.namespace, url.searchParams.get('id') || '') });
+  }
+
+  // Agent access is granted only through OAuth; the owner can list and revoke it here.
+  if (method === 'GET' && pathname === '/api/career/mcp/tokens') {
+    if (context.tokenType !== 'firebase') throw new AppError(403, 'Agents cannot manage access tokens');
+    return jsonResponse({ tokens: (await gateway.listGrants(context.uid)).map(({ ownerId, ...grant }) => ({ ...grant, ownerUid: ownerId })) });
+  }
+
+  if (method === 'GET' && pathname === '/api/career/mcp/activity') {
+    if (context.tokenType !== 'firebase') throw new AppError(403, 'Agents cannot read the audit trail');
+    const tokenId = url.searchParams.get('tokenId') || null;
+    return jsonResponse({ activity: await listActivity(rawDb, context.uid, tokenId, Number(url.searchParams.get('limit') || 50)) });
+  }
+
+  if (method === 'POST' && pathname === '/api/career/mcp/tokens') throw new AppError(404, '接口不存在');
 
   if (method === 'POST' && pathname === '/api/career/mcp/tokens/revoke') {
-    if (!context.admin) return jsonResponse({ error: '管理员才能撤销 MCP token' }, { status: 403 });
-    ensureScopes(context, ['admin']);
+    if (context.tokenType !== 'firebase') throw new AppError(403, 'Agents cannot manage access tokens');
     const payload = (await request.json()) as Record<string, unknown>;
     const id = validateString(payload.id, 'id', { required: true, max: 120 });
-    await revokeMcpToken(db, id);
+    try { await gateway.revokeGrant(context.uid, id); }
+    catch (error) { throw error instanceof GatewayError ? new AppError(400, '未找到 token') : error; }
     return jsonResponse({ ok: true });
   }
 
@@ -990,6 +940,14 @@ const handler = async (
 
   let result: unknown;
   switch (pathname) {
+    case '/api/career/personalized-resumes':
+      ensureScopes(context, ['career:write']);
+      return savePersonalized(rawDb, db.namespace, payload);
+    case '/api/career/resume-publications':
+    case '/api/career/resume-publications/revoke':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中预览并管理公开链接');
+      return pathname.endsWith('/revoke') ? revokePublication(rawDb, db.namespace, payload.id) : publishResume(rawDb, db.namespace, payload);
     case '/api/career/platforms': {
       ensureScopes(context, ['career:write']);
       const kind = 'platforms:' + context.uid;
@@ -999,13 +957,18 @@ const handler = async (
       let platform: JobPlatform;
       try { platform = validatePlatform(payload, old); }
       catch (error) { return jsonResponse({ error: error instanceof Error ? error.message : '平台数据无效' }, { status: 400 }); }
-      const write = await db.prepare(`INSERT INTO records(kind,id,body) VALUES (?1,?2,?3)
+      const write = await db.connection.prepare(`INSERT INTO records(kind,id,body) VALUES (?1,?2,?3)
         ON CONFLICT(kind,id) DO UPDATE SET body=excluded.body
         WHERE json_extract(records.body, '$.revision') = ?4`)
-        .bind(kind, platform.id, JSON.stringify(platform), old?.revision ?? 0).run();
+        .bind(workspaceKey(db, kind), platform.id, JSON.stringify(platform), old?.revision ?? 0).run();
       if (!write.meta.changes) return jsonResponse({ error: '平台已更新，请刷新后重新编辑' }, { status: 409 });
       result = platform;
       break;
+    }
+    case '/api/career/resume': {
+      ensureScopes(context, ['career:write']);
+      const saved = await writeResume(rawDb, db.namespace, workspaceKey(db, 'profile'), payload);
+      return jsonResponse(saved.value, { status: saved.status });
     }
     case '/api/career/profile':
       ensureScopes(context, ['career:write']);

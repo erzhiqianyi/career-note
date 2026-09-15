@@ -1,33 +1,26 @@
-# 项目技能档案
+# 求职技能与 MCP
 
-网站入口：**Agent 协作 → 技能档案**。可以查看技能说明和参考文档、复制调用指令，并下载当前或历史 ZIP 备份。
+技能决定如何分析与生成；MCP 提供当前用户的数据协议、读取、预览、写入和读回。技能无需源码仓库、网站 API Key 或其他技能即可单独使用。
 
-## 当前技能
+|技能|用途|入口|
+|---|---|---|
+|完整求职准备|按请求串联各阶段|[career-job-prep](../.agents/skills/career-job-prep/SKILL.md)|
+|履历收集与分析|整理用户提供的简历、项目经历和求职方向，形成有依据的履历摘要并按请求同步；不寻找公司或代写投递结果。|[career-profile-intake](../.agents/skills/career-profile-intake/SKILL.md)|
+|岗位收集与匹配|根据已有履历和求职条件核验日本招聘岗位，比较匹配点与缺口并保存研究；不生成全套申请材料或提交申请。|[career-job-research](../.agents/skills/career-job-research/SKILL.md)|
+|公司专属申请材料|围绕指定公司与岗位生成有事实依据的履歴書、職務経歴書、志望动机与研究材料，保存新版本；不自动发送申请。|[career-application-materials](../.agents/skills/career-application-materials/SKILL.md)|
+|面试练习与回答复盘|按岗位生成面试练习题组，或基于用户真实回答逐项点评并保存；不把参考答案当作用户回答。|[career-interview-coach](../.agents/skills/career-interview-coach/SKILL.md)|
+|投递结果与行动复盘|分析已有投递历史、面试记录和准备材料，找出阶段性瓶颈并保存复盘报告；不推断未记录的结果或代改状态。|[career-outcome-review](../.agents/skills/career-outcome-review/SKILL.md)|
+|MCP 数据同步|将已有求职研究、材料、题组和点评同步到用户配置的 Career Note MCP，执行协议检查、预览、写入与读回；不生成新的求职结论。|[career-workspace-sync](../.agents/skills/career-workspace-sync/SKILL.md)|
+|来源收集与状态核对|检查指定网站/邮件中的简历变化及投递事件，保存待确认报告|[career-source-sync](../.agents/skills/career-source-sync/SKILL.md)|
 
-| 技能 | 用途 | 主文件 |
-| --- | --- | --- |
-| 日本求职准备 `career-job-prep` | 根据履历寻找公司，生成公司专属简历与日中面试资料 | [SKILL.md](../.agents/skills/career-job-prep/SKILL.md) |
+## 定时任务
 
-本页提供项目导航；网站目录由脚本扫描 `.agents/skills/` 自动生成，以当前源文件为准。
+见 [定时来源同步配置](scheduled-sync.md)。Agent 协作页可以生成配置草稿；调度器、来源连接与 Career Note MCP 分别配置。当前支持核对报告，尚不自动改写投递状态。
 
-## 存放与更新
+## 使用
 
-- `.agents/skills/<技能名>/`：唯一维护来源，包含 `SKILL.md`、界面元数据及参考文件。
-- `lib/skill-archive.generated.json`：网站使用的技能目录与文档快照，不手动编辑。
-- `public/skill-archive/`：按内容摘要命名的完整项目技能 ZIP 快照；内容未变时复用备份，内容变化时追加，不覆盖历史。
+在 Agent 协作下载单个技能包并安装到所用助手的技能目录。配置 Streamable HTTP MCP：`http://localhost:4210/api/career/mcp`（端口跟随当前网站），不填写令牌；客户端首次连接会打开浏览器授权页，登录并同意后自动获得令牌。服务仅在本机监听，远程助手需要 `npm run dev:tunnel` 或公开部署得到的地址；不能直接访问此 localhost。
 
-新增或修改技能后运行：
+工具：`career_get_contract`、`career_get_context`、`career_preview_import`、`career_import`、`career_update_profile`、`career_create_task`。列出的工具按授权时勾选的 scope 限定；没有自动投递或修改结果的工具。
 
-```sh
-npm run skills:archive
-```
-
-`npm run dev`、`npm start` 和 `npm run build` 也会在启动前更新档案。已经运行的网站中修改技能后，执行一次上述命令即可更新目录。新增技能可以直接被扫描收录，无需修改网页代码；本页的简短清单可以同时补充。
-
-## 备份与恢复
-
-每个 ZIP 包含项目技能源文件、项目指令、Agent 数据工作流、本页说明、归档脚本及 `manifest.json`。清单记录各文件路径、SHA-256 和完整档案版本摘要，便于核对完整性。生成目录不递归进入备份。
-
-这是求职项目的技能备份，不是整站源码或个人数据库备份。恢复时先解压到临时目录，核对清单，再与当前项目逐项比较、合并所需文件。不要直接覆盖现有修改。数据 CLI、网页及 Worker API仍由项目源码提供。
-
-归档只扫描本项目 `.agents/skills/` 及明确列出的项目说明文件；拒绝符号链接。个人履历、投递数据、生成材料、API密钥和其他项目/全局插件不纳入备份。不要将真实个人资料写入技能源码或归档目录。
+每个包包含完整技能目录，不依赖仓库路径。下载包不包含账号、令牌或个人数据。修改后执行 `npm run skills:archive`，生成单技能 ZIP、完整备份与网站目录；历史备份按内容版本保留。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "面试练习与回答复盘"
+  short_description: "面试练习与回答复盘，通过配置好的 MCP 同步"
+  default_prompt: "使用 $career-interview-coach，读取 Career Note 中目标岗位、履历、已有题组和真实回答。若我指定了回答或待点评任务，精确关联 attemptId，给出引用原文的点评、参考改写和重练动作；否则为明确的目标岗位生成模拟题组、回答结构及追问。目标不唯一时先确认，辅助语言遵从我的选择。通过已配置的 MCP 保存题组或点评的新版本并读回；尚未保存的聊天回答先给点评草稿，不虚构 attemptId。"

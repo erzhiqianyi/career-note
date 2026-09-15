@@ -17,6 +17,8 @@ function fixture(t) {
 void test('archives round-trip; repeat keeps version; updates preserve history; excludes personal data',t=>{
  const root=fixture(t);const first=build(root);assert.deepEqual(build(root),first);
  const path=join(root,'public',first.archiveUrl);const old=readFileSync(path);
+ const single=unzipSync(readFileSync(join(root,'public',first.skills[0].downloadUrl)));
+ assert.ok(single['sample/SKILL.md']);assert.equal(single['AGENTS.md'],undefined);assert.equal(single['private.sqlite3'],undefined);
  const zip=unzipSync(old);assert.equal(zip['private.sqlite3'],undefined);
  for(const item of JSON.parse(strFromU8(zip['manifest.json'])).files) assert.deepEqual(Buffer.from(zip[item.path]),readFileSync(join(root,item.path)));
  writeFileSync(join(root,'.agents/skills/sample/SKILL.md'),'---\nname: sample\ndescription: Updated\n---\n# Test\n');

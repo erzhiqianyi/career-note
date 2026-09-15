@@ -100,15 +100,24 @@ export type MpcTokenRecord = {
   expiresAt: string;
   lastUsedAt?: string;
   revoked: boolean;
+  expired?: boolean;
   prefix: string;
+  clientId?: string;
 };
 
-export type MpcTokenResponse = {
-  token: string;
-  record: MpcTokenRecord;
+export type AgentActivity = {
+  id: string;
+  tokenId: string;
+  clientId: string;
+  clientName: string;
+  event: string;
+  ok: boolean;
+  detail: Record<string, unknown> | null;
+  at: string;
 };
 
 export type State = {
+  resume: import('./resume').ResumeEntry[];
   platforms: import('./job-platforms').JobPlatform[];
   jobs: Job[];
   profile: Profile;

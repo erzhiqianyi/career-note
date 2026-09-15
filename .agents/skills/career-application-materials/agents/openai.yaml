@@ -1,0 +1,4 @@
+interface:
+  display_name: "公司专属申请材料"
+  short_description: "公司专属申请材料，通过配置好的 MCP 同步"
+  default_prompt: "使用 $career-application-materials，为我指定的公司和具体岗位准备有针对性的申请材料。先从 Career Note 确认 jobId、履历和历史版本；目标不唯一时先让我选择。默认交付公司研究、履歴書、職務経歴書和志望動機，正文日语、待确认说明使用当前对话语言；我指定类型或语言时优先遵守。逐项保留个人事实与招聘来源，缺失事实留待填写。通过已配置的 MCP 保存新版本并读回，不覆盖母版或发送申请。"

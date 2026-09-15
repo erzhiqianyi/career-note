@@ -1,0 +1,22 @@
+{
+  "name": "@erzhiqian/agent-gateway",
+  "version": "0.1.0",
+  "description": "Expose an existing app's users and data to external AI agents over standard MCP + OAuth 2.1. Bring your own identity.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.tsx"
+  },
+  "files": ["src", "README.md"],
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "jose": "^6.0.0",
+    "react": ">=18",
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "jose": { "optional": true },
+    "react": { "optional": true }
+  }
+}
