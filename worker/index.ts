@@ -1,6 +1,7 @@
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
 import { ensureResumeSchema, readResume, writeResume, resumeHistory } from './resume';
-import { createAgentGateway, GatewayError, type AgentGateway, type Origins, type ToolContext } from '@erzhiqian/agent-gateway';
+import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
+import { sqlStore } from '@ninomae/mcp-app-server/sql';
 import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools';
 import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } from './activity';
 import { verifyFirebaseToken } from './firebase-auth';
@@ -118,7 +119,7 @@ function ensureDb(env: Env): D1Database {
   return env.CAREER_DB;
 }
 
-async function ensureSchema(db: D1Database, gateway: AgentGateway): Promise<void> {
+async function ensureSchema(db: D1Database, gateway: McpAppServer): Promise<void> {
   await db.exec(
     `CREATE TABLE IF NOT EXISTS records (kind TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (kind,id));`,
   );
@@ -552,12 +553,12 @@ function assertFirebaseClaims(payload: FirebaseClaim, env: Env) {
   return { uid, admin, claims: payload };
 }
 
-async function getAuthContext(request: Request, env: Env, gateway: AgentGateway): Promise<AuthContext> {
+async function getAuthContext(request: Request, env: Env, gateway: McpAppServer): Promise<AuthContext> {
   const mode = ensureMode(env);
   if (gateway.carriesToken(request)) {
     let grant;
     try { grant = await gateway.authenticate(request); }
-    catch (error) { throw error instanceof GatewayError ? new AppError(error.status, error.message) : error; }
+    catch (error) { throw error instanceof AppServerError ? new AppError(error.status, error.message) : error; }
     if (!grant) throw new AppError(401, 'Invalid MCP token');
     if (mode === 'off' && grant.ownerId !== 'local') throw new AppError(401, 'MCP token belongs to a signed-in workspace');
     if (mode !== 'off' && grant.ownerId === 'local') throw new AppError(401, 'MCP token belongs to the local workspace');
@@ -798,7 +799,7 @@ function envDays(raw: string | undefined, fallback: number) {
 // The gateway owns OAuth, agent tokens and the MCP transport; Career Note supplies identity,
 // tools and the audit log. Tool calls re-enter the REST handler with the agent's own token so
 // scope and tenancy checks are never duplicated.
-function createGateway(env: Env, db: D1Database): AgentGateway {
+function createGateway(env: Env, db: D1Database): McpAppServer {
   const invoke = async (ctx: ToolContext, path: string, body?: Record<string, unknown>) => {
     const response = await handler(new Request(new URL('/api/career/' + path, ctx.request.url), {
       method: body ? 'POST' : 'GET', headers: { authorization: ctx.request.headers.get('authorization') || '', 'content-type': 'application/json' },
@@ -809,26 +810,25 @@ function createGateway(env: Env, db: D1Database): AgentGateway {
     await logActivity(db, { ownerUid: ctx.ownerId, tokenId: ctx.grantId, clientId: ctx.clientId || null, clientName: ctx.clientName || 'agent', event: 'tool:' + path.replace(/\?.*$/, ''), ok: response.ok, detail: summary });
     return response;
   };
-  const gateway: AgentGateway = createAgentGateway({
+  const gateway: McpAppServer = createMcpAppServer({
     name: 'career-note',
     basePath: '/api/career',
     scopes: CAREER_SCOPES,
     contract: CAREER_CONTRACT,
     tools: createCareerTools(invoke),
-    storage: db,
+    // Existing deployments already hold these tables; column layout is unchanged.
+    storage: sqlStore(db, { clients: 'oauth_clients', codes: 'oauth_codes', refreshTokens: 'oauth_refresh_tokens', accessTokens: 'mcp_tokens' }),
     origins: (request) => resolveOrigins(request, env),
     tokenPrefix: 'mcp_',
     accessTokenDays: envDays(env.MCP_TOKEN_TTL_DAYS, 30),
     refreshTokenDays: envDays(env.CAREER_OAUTH_REFRESH_DAYS, 90),
-    // Existing deployments already hold these tables.
-    tables: { clients: 'oauth_clients', codes: 'oauth_codes', refreshTokens: 'oauth_refresh_tokens', accessTokens: 'mcp_tokens' },
     identity: {
       // Consent is approved with the same credential the web app uses (Firebase ID token, or the local workspace).
       async resolve(request) {
         let user: AuthContext;
         try { user = await getAuthContext(request, env, gateway); }
-        catch (error) { throw error instanceof AppError ? new GatewayError(error.code, error.message, 'invalid_token') : error; }
-        if (user.tokenType !== 'firebase') throw new GatewayError(403, 'Sign in to approve an agent', 'access_denied');
+        catch (error) { throw error instanceof AppError ? new AppServerError(error.code, error.message, 'invalid_token') : error; }
+        if (user.tokenType !== 'firebase') throw new AppServerError(403, 'Sign in to approve an agent', 'access_denied');
         return { id: user.uid, email: typeof user.claims.email === 'string' ? user.claims.email : undefined };
       },
     },
@@ -838,6 +838,13 @@ function createGateway(env: Env, db: D1Database): AgentGateway {
     },
   });
   return gateway;
+}
+
+let schemaReady: Promise<void> | undefined;
+async function ensureAllSchemas(db: D1Database, gateway: McpAppServer): Promise<void> {
+  await ensureSchema(db, gateway);
+  await ensureResumeSchema(db);
+  await ensurePersonalizedSchema(db);
 }
 
 const handler = async (
@@ -852,9 +859,9 @@ const handler = async (
   }
   const rawDb = ensureDb(env);
   const gateway = createGateway(env, rawDb);
-  await ensureSchema(rawDb, gateway);
-  await ensureResumeSchema(rawDb);
-  await ensurePersonalizedSchema(rawDb);
+  // CREATE TABLE IF NOT EXISTS once per isolate, not once per request; a failed attempt is retried next time.
+  schemaReady ??= ensureAllSchemas(rawDb, gateway).catch((error) => { schemaReady = undefined; throw error; });
+  await schemaReady;
   const publicMatch = new URL(request.url).pathname.match(/^\/api\/career\/public-resumes\/([a-f0-9-]{36})$/);
   if (publicMatch && request.method === 'GET') return publicResumeResponse(rawDb, publicMatch[1]);
 
@@ -927,7 +934,7 @@ const handler = async (
     const payload = (await request.json()) as Record<string, unknown>;
     const id = validateString(payload.id, 'id', { required: true, max: 120 });
     try { await gateway.revokeGrant(context.uid, id); }
-    catch (error) { throw error instanceof GatewayError ? new AppError(400, '未找到 token') : error; }
+    catch (error) { throw error instanceof AppServerError ? new AppError(400, '未找到 token') : error; }
     return jsonResponse({ ok: true });
   }
 

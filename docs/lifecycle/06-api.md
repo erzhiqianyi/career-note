@@ -27,7 +27,7 @@
 | GET `/.well-known/oauth-protected-resource`、`/.well-known/oauth-authorization-server` | OAuth ディスカバリー（`/api/career` 外） | 未認証可 |
 | POST `/mcp` | Streamable HTTP MCP | OAuth で発行された Bearer token |
 
-MCP・OAuth・Agent トークンの実装は `packages/agent-gateway`（`@erzhiqian/agent-gateway`）に切り出し、Career Note は `worker/agent-tools.ts` のツール表と Firebase 身元だけを供給する（[README](../../packages/agent-gateway/README.md)）。標準 MCP の接続先は `/api/career/mcp`。初期化、ツール一覧、ツール呼出しに対応する。`career_get_contract`、`career_get_context`、`career_preview_import`、`career_import`、`career_create_task`、`career_update_profile` を scope に応じて公開し、トークン所有者のワークスペースだけを操作する。ブラウザーの任意 WebMCP と HTTP データ CLI は別の経路。
+MCP・OAuth・Agent トークンの実装は npm パッケージ [`@ninomae/mcp-app-server`](https://github.com/erzhiqianyi/mcp-app-server) に切り出し、Career Note は `worker/agent-tools.ts` のツール表と Firebase 身元だけを供給する（[移行記録](../mcp-app-server-migration.md)）。標準 MCP の接続先は `/api/career/mcp`。初期化、ツール一覧、ツール呼出しに対応する。`career_get_contract`、`career_get_context`、`career_preview_import`、`career_import`、`career_create_task`、`career_update_profile` を scope に応じて公開し、トークン所有者のワークスペースだけを操作する。ブラウザーの任意 WebMCP と HTTP データ CLI は別の経路。
 
 `GET /api/career/mcp/schema` は認証なしで読める公開スキーマ。サーバー名、エンドポイント、OAuth の resource metadata と scope 一覧、全ツールの名前・必要 scope・説明・入力 JSON Schema・annotations、データ契約本文を返す（ユーザーデータは含まない）。また `/api/career/mcp` への Authorization なしの `initialize`・`ping`・`tools/list` は全 scope 分のツール一覧を返し（レジストリーやクライアントが認可前に確認できる）、`tools/call` を含む要求は 401 チャレンジになる。
 

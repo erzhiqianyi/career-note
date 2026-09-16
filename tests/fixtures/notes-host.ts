@@ -1,7 +1,8 @@
 // Minimal host app for the gateway tests: a cookie session, one table of notes, two tools.
 // Nothing here is Career Note specific; it is the shape any of the other projects would take.
 import { z } from 'zod';
-import { createAgentGateway, sessionIdentity } from '@erzhiqian/agent-gateway';
+import { createMcpAppServer, sessionIdentity } from '@ninomae/mcp-app-server';
+import { sqlStore } from '@ninomae/mcp-app-server/sql';
 
 type Env = { NOTES_DB: D1Database };
 
@@ -9,7 +10,7 @@ export default {
   async fetch(request: Request, env: Env) {
     const db = env.NOTES_DB;
     await db.exec('CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, owner TEXT NOT NULL, text TEXT NOT NULL, summary TEXT);');
-    const gateway = createAgentGateway({
+    const gateway = createMcpAppServer({
       name: 'notes',
       basePath: '/api/notes',
       scopes: {
@@ -21,7 +22,7 @@ export default {
         const match = /session=([a-z0-9]+)/.exec(req.headers.get('cookie') || '');
         return match ? { id: 'user-' + match[1] } : null;
       }),
-      storage: db,
+      storage: sqlStore(db),
       origins: { publicOrigin: 'http://notes.local', webOrigin: 'http://notes.local' },
       tools: [
         {

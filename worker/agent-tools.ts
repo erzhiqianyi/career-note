@@ -1,7 +1,7 @@
 // Career Note's MCP tool table. Every tool is a thin wrapper over the authenticated REST API,
 // so scope checks, tenancy and validation stay in one place; the gateway only routes and audits.
 import { z } from 'zod';
-import type { AgentTool, ToolContext, ToolResult } from '@erzhiqian/agent-gateway';
+import type { AgentTool, ToolContext, ToolResult } from '@ninomae/mcp-app-server';
 import { personalizedResumeSchema } from '../lib/personalized-resume';
 import { resumeWriteSchema, resumeSections } from '../lib/resume';
 import protocol from '../lib/career-protocol.generated.json';

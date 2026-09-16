@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { AlertCircle, Bot, Check, Link2, RefreshCw, ShieldCheck } from 'lucide-react';
-import { useAgentConsent } from '@erzhiqian/agent-gateway/react';
+import { useAgentConsent } from '@ninomae/mcp-app-server/react';
 import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
 import { getAuthToken, setAuthToken } from '@/lib/career';
 import {
