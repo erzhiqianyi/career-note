@@ -1,0 +1,78 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - worker/**
+      - lib/**
+      - wrangler.toml
+      - scripts/render-wrangler-config.mjs
+      - package.json
+      - package-lock.json
+      - .github/workflows/api-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test and deploy API Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # Repository variables (Settings > Secrets and variables > Actions > Variables); see docs/deployment.md.
+      CAREER_API_HOST: ${{ vars.CAREER_API_HOST }}
+      CAREER_D1_NAME: ${{ vars.CAREER_D1_NAME || 'career-note' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Cloudflare settings
+        run: |
+          set -euo pipefail
+          missing=0
+          [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || { echo "::error::Missing GitHub secret CLOUDFLARE_ACCOUNT_ID"; missing=1; }
+          [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || { echo "::error::Missing GitHub secret CLOUDFLARE_API_TOKEN"; missing=1; }
+          [ -n "${CAREER_API_HOST:-}" ] || { echo "::error::Missing GitHub variable CAREER_API_HOST (e.g. career-api.example.com)"; missing=1; }
+          [ "$missing" -eq 0 ]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+
+      # wrangler.toml is generic; the hostname and the D1 id of this account are rendered into wrangler.deploy.toml.
+      - name: Render deploy config
+        run: npm run wrangler:config
+
+      # Tables are created on first request (CREATE TABLE IF NOT EXISTS), so there is no migration step.
+      # Secrets (Firebase, CAREER_WEB_ORIGIN, CAREER_PUBLIC_ORIGIN, ...) live on the Worker; see docs/deployment.md.
+      - name: Deploy Worker
+        run: npx wrangler deploy --config wrangler.deploy.toml
+
+      - name: Smoke check API
+        run: |
+          set -euo pipefail
+          base="https://$CAREER_API_HOST"
+          for attempt in 1 2 3 4 5; do
+            status="$(curl --silent --output response.json --write-out '%{http_code}' --max-time 20 "$base/api/career/auth/config" || echo 000)"
+            if [ "$status" = "200" ] && grep -q '"mode":"strict"' response.json; then
+              echo "API smoke check passed: $base (auth mode strict)."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::API smoke check failed with HTTP $status (expected 200 and auth mode strict)"
+          cat response.json || true
+          exit 1

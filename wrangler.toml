@@ -1,9 +1,17 @@
-name = "career-note"
+# API Worker only. The web app is a static export (dist/client) hosted on Cloudflare Pages; see docs/deployment.md.
+# This file is deliberately generic: it carries no hostname and no account-specific id, so forks run it as is.
+name = "career-note-api"
 main = "worker/index.ts"
 compatibility_date = "2026-05-22"
 compatibility_flags = ["nodejs_compat"]
 
-# 本地开发：使用 wrangler dev 时，CAREER_DB 会映射到本地临时 SQLite；部署前替换为真实 D1 database_id。
+[observability]
+enabled = true
+
+# 本地开发：wrangler dev 把 CAREER_DB 映射到本地 SQLite，不看 database_id。
+# 部署时不要手改这里：`node scripts/render-wrangler-config.mjs` 会读取环境变量 CAREER_API_HOST /
+# CAREER_D1_NAME，向 Cloudflare 查询真实的 database_id，生成 gitignored 的 wrangler.deploy.toml
+# （含 routes 与 database_id），再 `wrangler deploy --config wrangler.deploy.toml`。
 [[d1_databases]]
 binding = "CAREER_DB"
 database_name = "career-note"
@@ -13,3 +21,5 @@ database_id = "00000000-0000-4000-8000-000000000000"
 # .dev.vars に Firebase Web 設定と CAREER_ALLOWED_EMAILS / CAREER_ALLOWED_UIDS を設定。
 # FIREBASE_PROJECT_ID がある場合、認証は既定で strict。
 # CAREER_ADMIN_UIDS は管理者権限用。アクセス許可リストも別途必要。
+# 本番の secrets（Firebase、CAREER_WEB_ORIGIN、CAREER_PUBLIC_ORIGIN、CAREER_CORS_ORIGINS など）は
+# `wrangler secret put` で登録する。[vars] に置くとローカルの off モードまで変わってしまう。

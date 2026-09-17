@@ -11,3 +11,8 @@ CAREER_ADMIN_UIDS=
 # The public address is NOT set here: `npm run dev` stays local, and `npm run dev:tunnel`
 # takes CAREER_TUNNEL / CAREER_PUBLIC_ORIGIN from .env (see .env.example).
 # CAREER_OAUTH_REFRESH_DAYS=90
+
+# Hosted deployment only (set with `wrangler secret put`, see docs/deployment.md):
+# CAREER_WEB_ORIGIN=https://career.example.com        # the Pages site; allowed for CORS, hosts the consent page
+# CAREER_PUBLIC_ORIGIN=https://career-api.example.com  # this Worker's own address, announced in OAuth metadata
+# CAREER_CORS_ORIGINS=https://another-client.example.com  # extra browser origins, comma separated

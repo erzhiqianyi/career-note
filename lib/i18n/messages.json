@@ -3534,5 +3534,233 @@
   "正在处理…": {
     "ja": "処理中…",
     "en": "Working…"
+  },
+  "资料": {
+    "ja": "資料",
+    "en": "Materials"
+  },
+  "个性化简历": {
+    "ja": "個別履歴書",
+    "en": "Personalized resumes"
+  },
+  "打开菜单": {
+    "ja": "メニューを開く",
+    "en": "Open menu"
+  },
+  "菜单": {
+    "ja": "メニュー",
+    "en": "Menu"
+  },
+  "页面": {
+    "ja": "ページ",
+    "en": "Pages"
+  },
+  "设置": {
+    "ja": "設定",
+    "en": "Settings"
+  },
+  "目标": {
+    "ja": "目標",
+    "en": "Goal"
+  },
+  "希望在这一天之前找到工作": {
+    "ja": "この日までに仕事を決めたい",
+    "en": "Find a job by this date"
+  },
+  "保存": {
+    "ja": "保存",
+    "en": "Save"
+  },
+  "距离目标还有 {0} 天": {
+    "ja": "目標まであと {0} 日",
+    "en": "{0} days to go"
+  },
+  "目标日期就是今天": {
+    "ja": "目標日は今日です",
+    "en": "The target date is today"
+  },
+  "目标日期已过 {0} 天，可以重新设定": {
+    "ja": "目標日から {0} 日が過ぎました。設定し直せます",
+    "en": "{0} days past the target; set a new one"
+  },
+  "修改目标": {
+    "ja": "目標を変更",
+    "en": "Change goal"
+  },
+  "给自己定一个找到工作的日期，每天在这里看到倒计时。": {
+    "ja": "仕事を決める日を決めておくと、毎日ここでカウントダウンが見られます。",
+    "en": "Pick a date to land a job and see the countdown here every day."
+  },
+  "设定目标日期": {
+    "ja": "目標日を設定",
+    "en": "Set a target date"
+  },
+  "目标已保存": {
+    "ja": "目標を保存しました",
+    "en": "Goal saved"
+  },
+  "{0}，今天是 {1}": {
+    "ja": "{0}、今日は {1}",
+    "en": "{0}, today is {1}"
+  },
+  "待跟进": {
+    "ja": "フォロー予定",
+    "en": "Follow-up due"
+  },
+  "目标日期": {
+    "ja": "目標日",
+    "en": "Target date"
+  },
+  "面试日": {
+    "ja": "面接日",
+    "en": "Interview"
+  },
+  "上个月": {
+    "ja": "前の月",
+    "en": "Previous month"
+  },
+  "下个月": {
+    "ja": "次の月",
+    "en": "Next month"
+  },
+  "新增公司": {
+    "ja": "企業を追加",
+    "en": "Companies added"
+  },
+  "投递": {
+    "ja": "応募",
+    "en": "Applied"
+  },
+  "进展": {
+    "ja": "進展",
+    "en": "Progress"
+  },
+  "练习": {
+    "ja": "練習",
+    "en": "Practice"
+  },
+  "本月": {
+    "ja": "今月",
+    "en": "This month"
+  },
+  "今天": {
+    "ja": "今日",
+    "en": "Today"
+  },
+  "这一天没有记录。": {
+    "ja": "この日の記録はありません。",
+    "en": "Nothing recorded on this day."
+  },
+  "通用题库（不限公司）": {
+    "ja": "共通質問集（企業を問わず）",
+    "en": "General question bank (any company)"
+  },
+  "题组": {
+    "ja": "質問セット",
+    "en": "Question set"
+  },
+  "这组题在考察什么": {
+    "ja": "この質問セットで見られること",
+    "en": "What this set is testing"
+  },
+  "题库内置，适用于大多数公司；针对某家公司的追问，请在该公司下请求「公司准备」。": {
+    "ja": "内蔵の質問集で、ほとんどの企業に当てはまります。特定企業向けの深掘りは、その企業で「企業準備」を依頼してください。",
+    "en": "Built-in bank that applies to most companies; for company-specific follow-ups, request “Company preparation” under that company."
+  },
+  "结合你的实际情况补充": {
+    "ja": "自分の状況に合わせて補う",
+    "en": "Adapt to your own situation"
+  },
+  "履历 · ": {
+    "ja": "プロフィール · ",
+    "en": "Profile · "
+  },
+  "（尚未填写）": {
+    "ja": "（未入力）",
+    "en": " (not filled in yet)"
+  },
+  "在「我的履历」里补充后，这里会显示可引用的内容。": {
+    "ja": "「マイプロフィール」に記入すると、ここに引用できる内容が表示されます。",
+    "en": "Fill this in under “My profile” and the text you can draw on will appear here."
+  },
+  "个人概要": {
+    "ja": "概要",
+    "en": "Summary"
+  },
+  "经历": {
+    "ja": "経験",
+    "en": "Experience"
+  },
+  "条件": {
+    "ja": "条件",
+    "en": "Conditions"
+  },
+  "自我介绍": {
+    "ja": "自己紹介",
+    "en": "Self-introduction"
+  },
+  "志望动机": {
+    "ja": "志望動機",
+    "en": "Motivation"
+  },
+  "性格与协作": {
+    "ja": "人柄・協調性",
+    "en": "Personality & teamwork"
+  },
+  "职业规划": {
+    "ja": "キャリアプラン",
+    "en": "Career plan"
+  },
+  "求职状况": {
+    "ja": "就職活動の状況",
+    "en": "Job search status"
+  },
+  "逆向提问": {
+    "ja": "逆質問",
+    "en": "Questions for the interviewer"
+  },
+  "留学生背景": {
+    "ja": "留学生としての背景",
+    "en": "International student background"
+  },
+  "日语与沟通": {
+    "ja": "日本語とコミュニケーション",
+    "en": "Japanese & communication"
+  },
+  "工作条件": {
+    "ja": "勤務条件",
+    "en": "Working conditions"
+  },
+  "基本问题（几乎每家公司都会问）": {
+    "ja": "基本質問（ほぼ全社で聞かれる）",
+    "en": "Basics (asked almost everywhere)"
+  },
+  "外国留学生常被问到的问题": {
+    "ja": "外国人留学生がよく聞かれる質問",
+    "en": "Questions international students often get"
+  },
+  "工作条件与入社后的问题": {
+    "ja": "勤務条件・入社後の質問",
+    "en": "Conditions and after joining"
+  },
+  "已注册": {
+    "ja": "登録済み",
+    "en": "Registered"
+  },
+  "未注册": {
+    "ja": "未登録",
+    "en": "Not registered"
+  },
+  "已在该平台注册账号": {
+    "ja": "このサービスにアカウント登録済み",
+    "en": "Account registered on this platform"
+  },
+  "登录邮箱": {
+    "ja": "ログイン用メール",
+    "en": "Login email"
+  },
+  "登录邮箱格式不正确": {
+    "ja": "ログイン用メールの形式が正しくありません",
+    "en": "Login email is not a valid address"
   }
 }

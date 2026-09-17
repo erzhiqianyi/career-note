@@ -135,6 +135,7 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
         japanese: z.string(),
         conditions: z.string(),
         sourcePath: z.string().optional(),
+        targetDate: z.string().optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
       handler: (payload, ctx) => api(ctx, 'profile', payload),

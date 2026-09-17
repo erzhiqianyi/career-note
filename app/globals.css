@@ -111,10 +111,10 @@
   overflow-wrap: anywhere;
 }
 :root {
-  /* Text scale — all AA on white: ink 15:1, ink-2 9:1, ink-3 6:1, ink-4 4.6:1 */
-  --ink: #1c2534;
-  --ink-2: #3d4a5e;
-  --ink-3: #5b6778;
+  /* Neutral reading colors; blue is reserved for interactive emphasis. */
+  --ink: #202733;
+  --ink-2: #303640;
+  --ink-3: #606a78;
   --ink-4: #6f7b8c;
   --accent: #2d4f91;
   --line: #d9e0ea;
@@ -126,7 +126,7 @@
     'Microsoft YaHei',
     sans-serif;
   color: var(--ink);
-  background: #f5f7fa;
+  background: #f6f7f9;
   font-synthesis: none;
 }
 * {
@@ -178,6 +178,9 @@ button:hover {
   font-weight: 700;
   margin: 0 8px 43px;
 }
+.header-brand {
+  display: none;
+}
 .brand > span {
   width: 40px;
   height: 43px;
@@ -222,7 +225,7 @@ main {
   margin-left: 230px;
   flex: 1;
   min-width: 0;
-  background: #fff;
+  background: #f6f7f9;
 }
 header {
   height: 78px;
@@ -1130,6 +1133,19 @@ dialog::backdrop {
 .field textarea {
   resize: vertical;
 }
+.field.checkbox {
+  flex-direction: row;
+  align-items: center;
+  align-self: end;
+  padding-bottom: 12px;
+}
+.field.checkbox input {
+  width: auto;
+}
+.platform-account {
+  font-size: 13px;
+  word-break: break-all;
+}
 .field input:focus,
 .field textarea:focus,
 .json-input:focus {
@@ -1665,34 +1681,6 @@ button:disabled {
 .first-report > button {
   margin-top: 25px;
 }
-.progress-note {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  background: #edf3f0;
-  border: 1px solid #dce7e1;
-  border-radius: 10px;
-}
-.progress-mark {
-  display: grid;
-  place-items: center;
-  flex: 0 0 36px;
-  height: 36px;
-  color: var(--ink-3);
-  background: #dfece4;
-  border-radius: 50%;
-}
-.progress-note h2 {
-  font-size: 16px;
-  line-height: 1.7;
-  color: #385b4b;
-}
-.progress-note p {
-  margin-top: 3px;
-  color: var(--ink-3);
-}
 .stats .is-zero strong {
   color: var(--ink-3);
   font-weight: 400;
@@ -1908,29 +1896,89 @@ button:disabled {
   font-size: 13px;
   margin: 0;
 }
-.more-pages {
+/* Phone drawer: opened from the brand, lists occasional pages and settings. Desktop never shows it. */
+dialog.drawer {
+  margin: 0;
+  inset: 0 auto 0 0;
+  width: min(320px, 86vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border: 0;
+  border-radius: 0 14px 14px 0;
+  padding: 0 0 calc(20px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  animation: drawer-in 0.18s ease-out;
+}
+@keyframes drawer-in {
+  from { transform: translateX(-24px); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 14px 16px 20px;
+  border-bottom: 1px solid #e3e8ef;
+}
+.drawer-head .brand {
+  margin: 0;
+  font-size: 18px;
+}
+.drawer-head .brand > span {
+  width: 31px;
+  height: 34px;
+  font-size: 21px;
+}
+.drawer-section {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  padding: 14px 12px 6px;
 }
-dialog:has(.more-pages) {
-  width: min(400px, calc(100% - 32px));
+.drawer-section + .drawer-section {
+  border-top: 1px solid #edf1f6;
 }
-.more-pages button {
+.drawer-section h3 {
+  margin: 0 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.drawer-section button {
   display: flex;
   align-items: center;
   gap: 14px;
   border: 0;
-  background: #f3f6fb;
-  color: #405e89;
-  padding: 17px;
-  border-radius: 7px;
+  background: none;
+  color: var(--ink-1);
+  padding: 13px 10px;
+  border-radius: 8px;
   text-align: left;
+  font-size: 15px;
 }
-.more-pages button span {
+.drawer-section button span:not(.nav-count) {
   flex: 1;
 }
-.more-pages button[aria-current='page'] {
+.drawer-section button svg:first-child {
+  color: #405e89;
+}
+.drawer-section button[aria-current='page'] {
   background: #e7eefb;
+  color: #253e72;
+}
+.drawer-field {
+  padding: 4px 10px 8px;
+}
+.drawer-field .language-switcher {
+  max-width: 100%;
+}
+.drawer-account p {
+  margin: 4px 10px 6px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
 }
 @media (max-width: 1000px) {
   .opportunity-body,
@@ -1964,9 +2012,100 @@ dialog:has(.more-pages) {
     height: 34px;
     font-size: 21px;
   }
+  /* Phones read and make light updates; data entry, imports, exports and manual refresh stay on desktop. */
+  .phone-hidden {
+    display: none !important;
+  }
+  /* Explanatory captions under headings: the screen is for content, the manual lives in docs/. */
+  .page-note {
+    display: none !important;
+  }
+  /* One card level: panels dissolve into the page so records and empty states are not boxes inside boxes. */
+  .page {
+    padding: 8px 16px;
+  }
+  .panel {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 14px 0 18px;
+  }
+  .panel + .panel,
+  .panel + div > .panel {
+    border-top: 1px solid var(--list-border);
+  }
+  .empty {
+    padding: 44px 10px;
+  }
+  /* Drilled-in views keep only the top bar with "back": no tab bar, no menu glyph, no bottom gap. */
+  .shell.sub-page .mobile-nav,
+  .shell.sub-page .header-brand {
+    display: none;
+  }
+  .shell.sub-page .page {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  /* Platform list: plain rows on the page instead of a boxed list; filters stack in one column. */
+  .platform-filters {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .platform-grid {
+    border: 0 !important;
+    border-radius: 0;
+    padding: 0 !important;
+    background: transparent;
+  }
+  .platform-grid .platform-card {
+    grid-template-columns: 1fr;
+    padding: 16px 0;
+  }
+  .platform-card > p {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .platform-card > .platform-notes,
+  .platform-card > details {
+    grid-column: 1;
+  }
+  .platform-card .platform-actions {
+    justify-content: flex-start;
+    padding-top: 8px;
+  }
+  /* One top bar on phones: the sidebar (brand strip) is gone, the header carries the menu trigger. */
+  .sidebar {
+    display: none;
+  }
+  .header-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink-3);
+  }
+  .header-brand > span {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 32px;
+    background: #253e72;
+    color: #fff;
+    border-radius: 7px;
+    font-family: serif;
+    font-size: 19px;
+  }
+  .shell > main > header .header-tools > .language-switcher,
+  .shell > main > header .header-tools > .text-button,
+  .shell > main > header .header-tools > .muted {
+    display: none;
+  }
   .mobile-nav {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     position: fixed;
     inset: auto 0 0;
     z-index: 30;
@@ -1995,21 +2134,6 @@ dialog:has(.more-pages) {
   .page-actions {
     flex-wrap: wrap;
     margin-bottom: 18px;
-  }
-  .progress-note {
-    padding: 17px;
-    align-items: start;
-    gap: 12px;
-  }
-  .progress-mark {
-    flex-basis: 29px;
-    height: 29px;
-  }
-  .progress-note h2 {
-    font-size: 15px;
-  }
-  .progress-note p {
-    font-size: 13px;
   }
   .home-main {
     gap: 18px;
@@ -2374,7 +2498,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .resume-profile-text { flex: 1; min-width: 0; }
 .resume-profile-text .eyebrow { margin-bottom: 4px; }
 .resume-profile-text h2 { font-size: 24px; font-weight: 650; letter-spacing: -0.5px; }
-.resume-profile-text > p { margin-top: 6px; }
+.resume-profile-text > p { margin-top: 6px; color: var(--ink-2); }
 .resume-reading { font-size: 13px; color: var(--ink-3); margin-top: 2px !important; }
 .resume-profile-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font-size: 13px; color: var(--ink-3); }
 .resume-profile-meta span, .resume-profile-meta a { display: inline-flex; align-items: center; gap: 5px; color: inherit; text-decoration: none; }
@@ -2382,7 +2506,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .resume-profile-actions { flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .resume-summary { border-top: 1px solid #edf1f6; padding-top: 16px; }
 .resume-summary > summary { color: var(--ink-3); font-size: 14px; cursor: pointer; }
-.resume-summary p { max-width: 80ch; line-height: 1.9; white-space: pre-wrap; margin-top: 10px; }
+.resume-summary p { max-width: 80ch; font-size: 16px; color: var(--ink-2); line-height: 1.85; white-space: pre-wrap; margin-top: 10px; }
 
 /* 数据健康度 */
 .resume-health {
@@ -2390,7 +2514,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
   background: #f5f8fc; border: 1px solid #e4eaf3; border-radius: 8px; padding: 14px 20px;
 }
 .resume-health > div { display: flex; flex-direction: column; gap: 2px; }
-.resume-health span { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.resume-health span { font-size: 13px; color: var(--ink-3); white-space: nowrap; }
 .resume-health strong { font-size: 22px; white-space: nowrap; font-weight: 600; color: #2c3e5c; line-height: 1.2; }
 .resume-health strong.is-pending { color: #a8651f; }
 .resume-health strong.is-lang { font-size: 16px; padding-top: 5px; }
@@ -2418,7 +2542,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .resume-section { min-width: 0; }
 .resume-section-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 8px; }
 .resume-section-head h2 svg { color: var(--ink-3); }
-.resume-section-head p { margin-top: 6px; font-size: 13px; max-width: 56ch; }
+.resume-section-head p { margin-top: 6px; font-size: 14px; max-width: 56ch; }
 .resume-section-head select { padding: 9px 12px; }
 .resume-error { color: #b42318; white-space: pre-wrap; margin: 10px 0; }
 
@@ -2433,7 +2557,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .resume-record-main { min-width: 0; display: grid; gap: 12px; }
 .resume-record-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
 .resume-record-head > div { min-width: 0; }
-.resume-record-head h3 { font-size: 16px; font-weight: 600; margin: 0; color: #253652; line-height: 1.5; }
+.resume-record-head h3 { font-size: 17px; font-weight: 600; margin: 0; color: var(--ink); line-height: 1.5; }
 .resume-record-head p { margin: 3px 0 0; font-size: 14px; color: var(--ink-3); }
 .resume-record-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px !important; }
 .resume-record-meta span, .resume-record-meta a { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-3); text-decoration: none; }
@@ -2443,8 +2567,8 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .resume-actions .icon-button:hover { background: #eef2f8; color: #2d4f91; }
 
 .resume-details { margin: 0; display: grid; gap: 12px; }
-.resume-details dt { color: var(--ink-3); font-size: 12px; margin-bottom: 4px; }
-.resume-details dd { margin: 0; font-size: 14px; color: #3d5170; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 88ch; }
+.resume-details dt { color: var(--ink-3); font-size: 13px; margin-bottom: 4px; }
+.resume-details dd { margin: 0; font-size: 16px; color: var(--ink-2); line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 88ch; }
 .resume-details ul { margin: 0; padding-left: 18px; white-space: normal; list-style: disc; }
 .resume-details li { padding-left: 2px; }
 .resume-details li + li { margin-top: 4px; }
@@ -2472,7 +2596,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 }
 .resume-compact-row:first-child { border-top: 0; }
 .resume-compact-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.resume-compact-main strong { font-size: 14px; font-weight: 550; color: #253652; }
+.resume-compact-main strong { font-size: 16px; font-weight: 550; color: var(--ink); }
 .resume-compact-main span { font-size: 13px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .resume-compact-meta { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 0; }
 .resume-compact-link .text-button { padding: 0; font-size: 13px; max-width: 100%; }
@@ -2498,7 +2622,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 
 .resume-document > summary { cursor: pointer; color: var(--ink-3); font-size: 14px; }
 .resume-document .secondary { margin-top: 12px; }
-.resume-markdown { font-size: 14px; line-height: 1.85; overflow-wrap: anywhere; overflow-x: auto; margin-top: 12px; }
+.resume-markdown { font-size: 16px; color: var(--ink-2); line-height: 1.85; overflow-wrap: anywhere; overflow-x: auto; margin-top: 12px; }
 .resume-markdown table { display: block; overflow-x: auto; border-collapse: collapse; }
 .resume-markdown td, .resume-markdown th { border: 1px solid #e2e8f0; padding: 0.6rem; min-width: 8rem; }
 
@@ -2589,3 +2713,201 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .agent-trail { list-style: none; margin: 10px 0 0; padding: 10px 12px; display: grid; gap: 6px; background: #f8fafc; border: 1px solid var(--list-border, #e2e8f0); border-radius: 8px; font-size: 12px; }
 .agent-trail li { display: flex; gap: 12px; }
 .agent-trail time { color: var(--list-muted, #64748b); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Home: month calendar with today's date beside the personal target for landing a job. */
+.today-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 26px;
+}
+.calendar,
+.goal {
+  background: #fff;
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  padding: 20px 22px;
+}
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.calendar-title {
+  font-weight: 600;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px 0;
+  text-align: center;
+}
+.calendar-weekday {
+  font-size: 11px;
+  color: var(--ink-3);
+  padding-bottom: 4px;
+}
+.calendar-day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.calendar-day.has-activity {
+  background: #eef2f9;
+  font-weight: 600;
+}
+.calendar-day.is-selected {
+  box-shadow: inset 0 0 0 2px #253e72;
+}
+.calendar-day.is-today {
+  background: #253e72;
+  color: #fff;
+  font-weight: 600;
+}
+.calendar-day.has-due::after,
+.calendar-day.has-interview::after,
+.calendar-day.has-target::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #c08a2e;
+}
+.calendar-day.has-interview::after {
+  background: #2f6fd6;
+}
+.calendar-day.has-target {
+  box-shadow: inset 0 0 0 2px #2f8f5b;
+}
+.calendar-day.has-target::after {
+  background: #2f8f5b;
+}
+.calendar-day.is-today::after {
+  background: #fff;
+}
+.calendar-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.calendar-totals span {
+  color: var(--ink-2);
+}
+.calendar-log {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--list-border);
+}
+.calendar-log h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.calendar-log h3 small {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #253e72;
+  color: #fff;
+}
+.calendar-log p {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.calendar-log p b {
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.calendar-log p span {
+  overflow-wrap: anywhere;
+}
+.goal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.goal h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin: 0;
+}
+.goal-date {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #253e72;
+  margin: 4px 0 0;
+}
+.goal-count {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.7;
+}
+.goal .text-button,
+.goal .secondary {
+  align-self: flex-start;
+}
+.goal-form {
+  display: grid;
+  gap: 12px;
+}
+.goal-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+@media (max-width: 640px) {
+  .today-hero {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: 8px;
+  }
+  .calendar,
+  .goal {
+    border: 0;
+    border-radius: 0;
+    padding: 14px 0 18px;
+    background: transparent;
+  }
+  .goal {
+    border-top: 1px solid var(--list-border);
+  }
+  .calendar-day {
+    height: 40px;
+    font-size: 14px;
+  }
+}
+
+.personalize-hint details {
+  margin-top: 0.5rem;
+}
+.personalize-hint summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+}

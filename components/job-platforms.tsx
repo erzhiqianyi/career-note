@@ -39,8 +39,10 @@ export default function JobPlatforms({ platforms, reload }: Props) {
         (filter !== '使用中' || p.enabled) &&
         (filter !== '已停用' || !p.enabled) &&
         (filter !== '收藏' || p.favorite) &&
+        (filter !== '已注册' || p.registered) &&
+        (filter !== '未注册' || !p.registered) &&
         (category === '全部类别' || p.category === category) &&
-        `${p.name} ${p.description} ${platformText(p, 'description')} ${p.notes}`
+        `${p.name} ${p.description} ${platformText(p, 'description')} ${p.notes} ${p.accountEmail ?? ''}`
           .toLowerCase()
           .includes(query.toLowerCase()),
     )
@@ -73,13 +75,16 @@ export default function JobPlatforms({ platforms, reload }: Props) {
         revision: 0,
         ...edit,
         ...fields,
+        // An unchecked checkbox is absent from FormData, so derive it explicitly.
+        registered: fields.registered === 'on',
       },
       '平台已保存',
     );
   }
   return (
     <div className="platforms-page">
-      <div className="platform-intro">
+      {/* Phones only browse and star platforms; editing the list is desktop work (CSS hides these). */}
+      <div className="platform-intro phone-hidden">
         <p>
           {tr(
             '选择你想使用的求职入口，记录搜索方向和使用心得。收藏的平台会排在前面。',
@@ -96,7 +101,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
           {tr('添加平台')}
         </button>
       </div>
-      <p className="muted">
+      <p className="muted page-note">
         {tr(
           '内置平台提供求职入口；具体岗位的日语、经验和在留资格支持仍需逐项确认。这里不会自动采集职位。',
         )}
@@ -131,7 +136,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
         <label className="field">
           <span>{tr('显示范围')}</span>
           <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            {['使用中', '全部', '收藏', '已停用', '已删除'].map((c) => (
+            {['使用中', '全部', '收藏', '已注册', '未注册', '已停用', '已删除'].map((c) => (
               <option key={c} value={c}>
                 {tr(c)}
               </option>
@@ -180,6 +185,20 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                 {!p.enabled ? ' · 已停用' : ''}
               </span>
             </div>
+            <div className="row">
+              {p.registered ? (
+                <>
+                  <span className="badge green">{tr('已注册')}</span>
+                  {p.accountEmail && (
+                    <span className="muted platform-account">
+                      {p.accountEmail}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="badge">{tr('未注册')}</span>
+              )}
+            </div>
             <p>{platformText(p, 'description') || tr('还没有平台说明。')}</p>
             {p.notes && (
               <p className="platform-notes">
@@ -223,6 +242,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                     <ExternalLink size={15} />
                   </a>
                   <button
+                    className="phone-hidden"
                     disabled={busy}
                     onClick={() => {
                       setError('');
@@ -232,6 +252,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                     {tr('编辑')}
                   </button>
                   <button
+                    className="phone-hidden"
                     disabled={busy}
                     onClick={() =>
                       void save(
@@ -243,6 +264,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                     {p.enabled ? tr('停用') : tr('启用')}
                   </button>
                   <button
+                    className="phone-hidden"
                     disabled={busy}
                     onClick={() =>
                       void save(
@@ -336,6 +358,24 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                   rows={3}
                   maxLength={2000}
                   defaultValue={edit.description}
+                />
+              </label>
+              <label className="field checkbox">
+                <input
+                  name="registered"
+                  type="checkbox"
+                  defaultChecked={edit.registered}
+                />
+                <span>{tr('已在该平台注册账号')}</span>
+              </label>
+              <label className="field">
+                <span>{tr('登录邮箱')}</span>
+                <input
+                  name="accountEmail"
+                  type="email"
+                  maxLength={254}
+                  placeholder="you@example.com"
+                  defaultValue={edit.accountEmail}
                 />
               </label>
               <label className="field wide">

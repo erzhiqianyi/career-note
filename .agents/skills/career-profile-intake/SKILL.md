@@ -9,7 +9,7 @@ description: 整理用户提供的简历、项目经历和求职方向，形成�
 
 - 读取现有 profile 和用户提供的简历/经历片段。提取任职时间、角色、项目行动、结果、技能和求职条件；雇主与客户、团队与个人、商业工作与个人项目分别记录。
 - 产出事实清单及对应来源位置。重复转载不算独立证明；冲突保留来源，不按日期擅自覆盖。只问影响职业方向或事实准确性的关键缺口，不要求与求职无关的身份信息。
-- 形成 summary、skills、experience、targetRoles、japanese、conditions。保留未明确要求更改的字段和原始母版；sourcePath 仅在用户要求关联本机文件时填写，远程 MCP 不可假定能读这个路径。
+- 形成 summary、skills、experience、targetRoles、japanese、conditions。保留未明确要求更改的字段和原始母版；sourcePath 仅在用户要求关联本机文件时填写，远程 MCP 不可假定能读这个路径。targetDate（希望找到工作的日期，YYYY-MM-DD）由用户在网页首页设定；未明确要求时不要传入，省略即保留现值。
 - 用户要求整理并保存时，以读到的 revision 调用 career_update_profile。版本冲突先重新读取并比较，不能用旧快照覆盖新修改。仅分析则交付建议，不写摘要。
 - 保存后核对摘要、revision 和未变字段。详细事实证据可留在 experience 字段，来源原文仍保留在用户提供的位置。
 

@@ -42,6 +42,16 @@ const authMode=(process.env.CAREER_AUTH_MODE||devVars.CAREER_AUTH_MODE||(devVars
 function cloudflared(args){const run=spawnSync('cloudflared',args,{encoding:'utf8'});if(run.error){console.error(installHint);process.exit(1);}return run;}
 // Verifies the user's locally managed tunnel before relying on it: ingress must route our hostname to the API port,
 // and at least one connector must be online. Config edits need every connector restarted; we cannot do that for them.
+// A connector already running on this machine (launchd service or another project's dev:tunnel) is reused as-is:
+// a second `cloudflared tunnel run` for the same tunnel fights the first one for edge connections.
+function localConnector(name){
+ const pgrep=spawnSync('pgrep',['-fl',`cloudflared .*tunnel .*run ${name}( |$)`],{encoding:'utf8'});
+ const line=(pgrep.stdout||'').trim().split('\n').filter(Boolean)[0];
+ if(!line)return '';
+ const launchd=spawnSync('launchctl',['list'],{encoding:'utf8'}).stdout||'';
+ const service=launchd.split('\n').find(l=>/cloudflared/.test(l)&&l.startsWith(line.split(/\s+/)[0]+'\t'));
+ return service?`launchd service ${service.split('\t')[2]}`:`pid ${line.split(/\s+/)[0]}`;
+}
 function checkNamedTunnel(name,origin){
  const host=new URL(origin).host;
  const rule=cloudflared(['tunnel','ingress','rule',`${origin}/api/career/mcp`]);
@@ -56,10 +66,12 @@ function checkNamedTunnel(name,origin){
   process.exit(1);
  }
  tunnelServesWeb=target===String(webPort);
+ const local=localConnector(name);
+ if(local){console.log(`Tunnel ${name}: already running on this machine (${local}); reusing it. Ingress for ${host} -> ${service} OK.`);return true;}
  const info=cloudflared(['tunnel','info',name]);
  const connectors=[...(info.stdout+info.stderr).matchAll(/^[0-9a-f-]{36}\s+(\S+)/gm)].map(m=>m[1]);
  if(!connectors.length)return false;
- console.log(`Tunnel ${name}: ${connectors.length} connector(s) online (started ${connectors.join(', ')}). Ingress for ${host} -> ${service} OK.`);
+ console.log(`Tunnel ${name}: ${connectors.length} connector(s) online elsewhere (started ${connectors.join(', ')}). Ingress for ${host} -> ${service} OK.`);
  return true;
 }
 async function probePublic(origin){

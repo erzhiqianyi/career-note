@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { useLocale } from '@/components/locale-provider';
+import { apiUrl } from '@/lib/api-base';
 import { localEndpoint } from '@/lib/mcp-clients';
 
 const storageKey = 'career-note.mcp-endpoint';
@@ -11,7 +12,8 @@ export function useMcpEndpoint() {
   const [url, setUrl] = useState('');
   const [defaultUrl, setDefaultUrl] = useState('');
   useEffect(() => {
-    const href = new URL('/api/career/mcp', window.location.origin).href;
+    // Same-origin during local dev; the API Worker's own hostname when the site is hosted separately.
+    const href = new URL(apiUrl('mcp'), window.location.origin).href;
     setDefaultUrl(href);
     let saved = '';
     try {
@@ -109,7 +111,7 @@ export function EndpointField({
           {copied === 'url' ? t('已复制') : t('复制地址')}
         </button>
       </div>
-      <p className="agent-note">
+      <p className="agent-note page-note">
         {endpoint.isLocal
           ? t(
               '这是本机地址，只有本机运行的助手能访问。托管服务需要先运行 npm run dev:tunnel，再把打印的 Public MCP endpoint 粘贴到上方。',

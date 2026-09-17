@@ -4,6 +4,12 @@ import { LocaleProvider } from '@/components/locale-provider';
 export const metadata: Metadata = {
   title: '就职手帖 · 日本求职准备',
   description: '公司研究、投递跟进、履历资料与每日求职准备。',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 export default function RootLayout({
   children,

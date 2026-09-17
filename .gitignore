@@ -56,3 +56,7 @@ __pycache__/
 *service-account*.json
 /imports/
 /backups/
+
+# Deploy-time Wrangler config carries one account's hostname and D1 id; see docs/deployment.md
+wrangler.deploy.toml
+wrangler.local.toml

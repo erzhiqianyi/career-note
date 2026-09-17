@@ -82,7 +82,7 @@ function ClientPicker({
         <h2>{t('选择你使用的 AI 客户端')}</h2>
         <span className="tag">MCP · Streamable HTTP · OAuth 2.1</span>
       </div>
-      <p className="agent-lead">
+      <p className="agent-lead page-note">
         {t('选择后会看到该客户端的配置步骤；首次连接时在浏览器里登录并同意，助手会自动拿到令牌。')}
       </p>
       <div className="agent-client-grid">

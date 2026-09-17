@@ -1,3 +1,4 @@
+import { apiUrl } from './api-base';
 import { freshAuthToken } from './career-auth';
 export const statuses = [
   '关注中',
@@ -50,6 +51,7 @@ export type Profile = {
   japanese: string;
   conditions: string;
   sourcePath: string;
+  targetDate: string;
   updatedAt: string;
 };
 export type Material = {
@@ -146,7 +148,7 @@ export async function api<T = unknown>(path: string, data?: unknown) {
   if (typeof authToken === 'string' && authToken.length > 0) {
     headers.Authorization = `Bearer ${authToken}`;
   }
-  const response = await fetch('/api/career/' + path, {
+  const response = await fetch(apiUrl(path), {
     method: data === undefined ? 'GET' : 'POST',
     headers,
     body: data === undefined ? undefined : JSON.stringify(data),
@@ -183,6 +185,9 @@ export type Question = {
   targetSeconds: number;
   simpleQuestionJa?: string;
   vocabulary?: string;
+  // Built-in bank only: how to adapt the answer to the user's own situation.
+  personalize?: string;
+  profileFields?: string[];
 };
 export type QuestionSet = {
   candidateContext?: string;

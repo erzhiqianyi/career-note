@@ -1,6 +1,6 @@
 # Career Note: contributor and Agent instructions
 
-- This is a local-only personal workspace. Keep all services on loopback; do not deploy the web app publicly or register it with a hosting provider. Publishing this repository means publishing source code, not personal data or a running service.
+- This is a personal workspace that runs locally by default. `npm run dev` keeps every service on loopback. The only supported public deployment is the owner's own Cloudflare account following `docs/deployment.md` (static site on Pages, API Worker with strict Google login); never point a build at someone else's API, and never commit hostnames, ids or secrets beyond what that document lists. Publishing this repository means publishing source code, not personal data or a running service.
 - Store real profiles, application records, reports, materials and imports outside the repository. Preserve source profiles. Use an external `CAREER_DATA_DIR`; tests must use disposable data.
 - Read `docs/agent-workflow.md` for research and preparation. Use `node scripts/career-data.mjs` against the running Worker. Do not modify D1 directly or fabricate generation in the frontend.
 - Never submit applications, contact employers or alter application status without the user's explicit instruction. Keep source evidence and human review boundaries.

@@ -52,7 +52,7 @@ export default function SkillArchive() {
           {t('下载全部技能')}
         </a>
       </div>
-      <p className="muted">
+      <p className="muted page-note">
         {t('每个技能都可独立安装，通过已配置的 MCP 读取与同步你的资料。')}
       </p>
       <div className="collection-toolbar">

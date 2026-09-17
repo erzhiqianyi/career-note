@@ -13,6 +13,7 @@ import {
   mcpSetupPage,
 } from '@/lib/mcp-clients';
 import ScheduledSync from '@/components/scheduled-sync';
+import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
 import CareerWelcome from '@/components/career-welcome';
 import InterviewPractice from '@/components/interview-practice';
 import ResumeManager from '@/components/resume-manager';
@@ -40,8 +41,11 @@ import {
   Download,
   ExternalLink,
   FileText,
+  Flag,
   LayoutDashboard,
-  MoreHorizontal,
+  LogIn,
+  LogOut,
+  Menu,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -87,6 +91,16 @@ const nav = [
   { label: '每日分析', icon: Sparkles },
   { label: 'Agent 协作', icon: Workflow },
 ];
+// Phone layout: four tabs for what happens on the move; the rest lives in the drawer behind the brand.
+// Pages that are read or edited occasionally come first; anything that configures the workspace is "settings".
+const phoneTabs = [
+  { label: '今日准备', short: '今日', icon: LayoutDashboard },
+  { label: '公司与投递', short: '公司', icon: BriefcaseBusiness },
+  { label: '准备资料', short: '资料', icon: FileText },
+  { label: '面试练习', short: '面试', icon: CalendarDays },
+];
+const drawerPages = ['我的履历', '个性化简历', '每日分析'];
+const drawerSettings = ['求职平台', 'Agent 协作'];
 const subPages: Record<string, { parent: string; hash: string }> = {
   技能库: { parent: 'Agent 协作', hash: '#skills' },
   定时任务: { parent: 'Agent 协作', hash: '#schedule' },
@@ -240,6 +254,36 @@ function Modal({
     </dialog>
   );
 }
+// Left-hand sheet for the phone layout; the desktop sidebar makes it redundant there (hidden by CSS).
+function Drawer({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  const { t: tr } = useLocale();
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="drawer"
+      aria-label={tr('菜单')}
+      onCancel={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="drawer-head">
+        <div className="brand">
+          <span>{tr('就')}</span>
+          <div>{tr('就职手帖')}</div>
+        </div>
+        <button className="icon-button" aria-label={tr('关闭')} onClick={onClose}>
+          <X size={20} />
+        </button>
+      </div>
+      {children}
+    </dialog>
+  );
+}
 export default function Home() {
   const { t: tr } = useLocale();
   const [active, setActive] = useState('今日准备'),
@@ -254,7 +298,8 @@ export default function Home() {
     [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
     [doc, setDoc] = useState<Material | Report | null>(null);
   const [practiceJob, setPracticeJob] = useState('');
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [goalEdit, setGoalEdit] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(false);
   useEffect(() => {
     try {
@@ -501,7 +546,7 @@ export default function Home() {
             : (subPages[label]?.hash ?? window.location.pathname),
       );
     }
-    setMoreOpen(false);
+    setDrawerOpen(false);
     setSelected('');
     setFilter('全部');
     setQuery('');
@@ -572,6 +617,8 @@ export default function Home() {
       data?.jobs.filter(
         (j) => !['未通过', '已撤回', '内定'].includes(j.status),
       ) || [];
+  // A drilled-in view (company detail, agent sub-pages): the header shows "back", phones drop the tab bar.
+  const isSubPage = !!(subPages[active] || (active === '公司与投递' && job));
   const due = openJobs.filter(
       (j) => j.nextDate && j.nextDate <= (data?.today || ''),
     ),
@@ -605,7 +652,7 @@ export default function Home() {
     );
   }
   return (
-    <div className={navCollapsed ? 'shell nav-collapsed' : 'shell'}>
+    <div className={['shell', navCollapsed && 'nav-collapsed', isSubPage && 'sub-page'].filter(Boolean).join(' ')}>
       <aside className="sidebar">
         <div className="brand">
           <span>{tr('就')}</span>
@@ -644,75 +691,95 @@ export default function Home() {
         </button>
       </aside>
       <nav className="mobile-nav" aria-label={tr('手机导航')}>
-        {[
-          { label: '今日准备', short: '今日', icon: LayoutDashboard },
-          { label: '公司与投递', short: '公司', icon: BriefcaseBusiness },
-          { label: '面试练习', short: '面试', icon: CalendarDays },
-          { label: '我的履历', short: '履历', icon: UserRound },
-        ].map(({ label, short, icon: Icon }) => (
+        {phoneTabs.map(({ label, short, icon: Icon }) => (
           <button
             key={label}
-            className={active === label ? 'active' : ''}
+            className={activePage === label ? 'active' : ''}
             aria-label={tr(label)}
-            aria-current={active === label ? 'page' : undefined}
+            aria-current={activePage === label ? 'page' : undefined}
             onClick={() => go(label)}
           >
             <Icon size={21} />
             <span>{tr(short)}</span>
           </button>
         ))}
-        <button
-          className={
-            [
-              '求职平台',
-              '准备资料',
-              '每日分析',
-              'Agent 协作',
-              '管理后台',
-            ].includes(activePage) || moreOpen
-              ? 'active'
-              : ''
-          }
-          aria-label={tr('更多页面')}
-          aria-haspopup="dialog"
-          aria-expanded={moreOpen}
-          onClick={() => setMoreOpen(true)}
-        >
-          <MoreHorizontal size={22} />
-          <span>{tr('更多')}</span>
-        </button>
       </nav>
-      {moreOpen && (
-        <Modal title={tr('更多页面')} onClose={() => setMoreOpen(false)}>
-          <div className="more-pages">
+      {drawerOpen && (
+        <Drawer onClose={() => setDrawerOpen(false)}>
+          <div className="drawer-section">
+            <h3>{tr('页面')}</h3>
             {visibleNav
-              .filter((item) =>
-                [
-                  '求职平台',
-                  '准备资料',
-                  '每日分析',
-                  'Agent 协作',
-                  '管理后台',
-                ].includes(item.label),
-              )
+              .filter((item) => drawerPages.includes(item.label))
               .map(({ label, icon: Icon }) => (
                 <button
                   key={label}
                   aria-current={activePage === label ? 'page' : undefined}
                   onClick={() => go(label)}
                 >
-                  <Icon size={21} />
+                  <Icon size={20} />
                   <span>{tr(label)}</span>
                   <ChevronRight size={18} />
                 </button>
               ))}
           </div>
-        </Modal>
+          <div className="drawer-section">
+            <h3>{tr('设置')}</h3>
+            <div className="drawer-field">
+              <LanguageSwitcher />
+            </div>
+            {visibleNav
+              .filter((item) => drawerSettings.includes(item.label))
+              .map(({ label, icon: Icon }) => (
+                <button
+                  key={label}
+                  aria-current={activePage === label ? 'page' : undefined}
+                  onClick={() => go(label)}
+                >
+                  <Icon size={20} />
+                  <span>{tr(label)}</span>
+                  {label === 'Agent 协作' && pending.length > 0 && (
+                    <span className="nav-count">{pending.length}</span>
+                  )}
+                  <ChevronRight size={18} />
+                </button>
+              ))}
+          </div>
+          <div className="drawer-section drawer-account">
+            {!getCareerAuth() ? (
+              <p className="muted">{tr('本机模式 · Google 登录未启用')}</p>
+            ) : loggedIn ? (
+              <>
+                <p className="muted">{userName || userEmail || tr('已登录')}</p>
+                <button onClick={() => void logout()} disabled={busy}>
+                  <LogOut size={20} />
+                  <span>{tr('退出')}</span>
+                </button>
+              </>
+            ) : (
+              <button onClick={() => void login()} disabled={busy}>
+                <LogIn size={20} />
+                <span>{tr('Google 登录')}</span>
+              </button>
+            )}
+          </div>
+        </Drawer>
       )}
       <main>
         <header>
           <div className="header-nav">
-            {(subPages[active] || (active === '公司与投递' && job)) && (
+            {/* Phone only (CSS): the sidebar is hidden there, so the brand glyph doubles as the menu button. */}
+            <button
+              type="button"
+              className="header-brand"
+              aria-label={tr('打开菜单')}
+              aria-haspopup="dialog"
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <span>{tr('就')}</span>
+              <Menu size={16} aria-hidden="true" />
+            </button>
+            {isSubPage && (
               <button
                 className="icon-button header-back"
                 aria-label={tr('返回 {0}', [
@@ -729,7 +796,7 @@ export default function Home() {
             )}
             <span className="breadcrumb">
               {tr(activePage)}
-              {(subPages[active] || (active === '公司与投递' && job)) && (
+              {isSubPage && (
                 <span className="muted">
                   / {job ? job.company : tr(findMcpClient(active)?.name ?? active)}
                   {job?.role ? ' · ' + job.role : ''}
@@ -737,7 +804,7 @@ export default function Home() {
               )}
             </span>
           </div>
-          <div className="row">
+          <div className="row header-tools">
             <LanguageSwitcher />
             <span className="location">
               {tr('日本 ·')}
@@ -770,7 +837,7 @@ export default function Home() {
               </button>
             )}
             <button
-              className="icon-button"
+              className="icon-button phone-hidden"
               aria-label={tr('刷新资料')}
               onClick={() => void reload()}
             >
@@ -811,7 +878,7 @@ export default function Home() {
                 </button>
               ) : active === '公司与投递' || active === '今日准备' ? (
                 <button
-                  className="primary"
+                  className="primary phone-hidden"
                   disabled={!data}
                   onClick={() => setJobEdit({})}
                 >
@@ -845,74 +912,101 @@ export default function Home() {
               </div>
               {active === '今日准备' && (
                 <>
-                  {data.jobs.length <= 3 &&
-                  !openJobs.some((j) =>
-                    ['已投递', '书类选考', '面试中'].includes(j.status),
-                  ) ? (
-                    <section className="progress-note">
-                      <span className="progress-mark">
-                        <Check size={20} />
-                      </span>
-                      <div>
-                        <h2>
-                          {data.jobs.length
-                            ? tr('已整理 {0} 个职位{1}。', [
-                                data.jobs.length,
-                                data.materials.length
-                                  ? tr('，准备了 {0} 份材料', [
-                                      data.materials.length,
-                                    ])
-                                  : '',
-                              ])
-                            : tr('先找到一个想了解的职位。')}
-                        </h2>
-                        <p>
-                          {data.questionSets.length
-                            ? tr(
-                                '今天，先练好一道面试题。每次回答都会保留下来。',
-                              )
-                            : data.jobs.length
-                              ? tr(
-                                  '下一步，围绕这家公司的要求整理经历和准备材料。',
-                                )
-                              : tr(
-                                  '保存招聘来源，再一步步整理经历和准备材料。',
-                                )}
-                        </p>
-                      </div>
-                    </section>
-                  ) : (
-                    <div className="stats">
-                      {[
-                        ['关注职位', data.jobs.length, '全部保存的求职机会'],
-                        [
-                          '进行中的投递',
-                          openJobs.filter((j) =>
-                            ['已投递', '书类选考', '面试中'].includes(j.status),
-                          ).length,
-                          '等待回复或进入下一阶段',
-                        ],
-                        ['待准备面试', interviews.length, '把准备留在面试之前'],
-                        [
-                          '专属准备资料',
-                          data.materials.length,
-                          '按公司整理并保留版本',
-                        ],
-                      ].map(([title, count, sub]) => (
-                        <div
-                          key={title}
-                          className={count === 0 ? 'is-zero' : undefined}
-                        >
-                          <span>{tr(String(title))}</span>
-                          <strong>
-                            {count}
-                            <small>{tr('项')}</small>
-                          </strong>
-                          <p>{tr(String(sub))}</p>
+                  {(() => {
+                    // Calendar marks: follow-ups on their due day, interviews, and the personal target date.
+                    const marks: Record<string, CalendarMark> = {};
+                    for (const j of openJobs) if (j.nextDate) marks[j.nextDate.slice(0, 10)] = j.status === '面试中' ? 'interview' : 'due';
+                    const target = data.profile.targetDate;
+                    if (target) marks[target] = 'target';
+                    const daysLeft = target ? Math.round((Date.parse(target) - Date.parse(data.today)) / 86400000) : null;
+                    return (
+                      <section className="today-hero">
+                        <TodayCalendar today={data.today} marks={marks} activity={collectActivity(data.jobs, data.attempts, data.materials)} />
+                        <div className="goal">
+                          <h2>
+                            <Flag size={18} />
+                            {tr('目标')}
+                          </h2>
+                          {goalEdit ? (
+                            <form
+                              className="goal-form"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const targetDate = String(new FormData(e.currentTarget).get('targetDate') || '');
+                                void action(() => api('profile', { ...data.profile, targetDate }), '目标已保存').then((ok) => {
+                                  if (ok) setGoalEdit(false);
+                                });
+                              }}
+                            >
+                              <label>
+                                {tr('希望在这一天之前找到工作')}
+                                <input type="date" name="targetDate" defaultValue={target} min={data.today} />
+                              </label>
+                              <div className="row">
+                                <button className="primary" type="submit" disabled={busy}>
+                                  {tr('保存')}
+                                </button>
+                                <button className="text-button" type="button" onClick={() => setGoalEdit(false)}>
+                                  {tr('取消')}
+                                </button>
+                              </div>
+                            </form>
+                          ) : target && daysLeft !== null ? (
+                            <>
+                              <p className="goal-date">{day(target)}</p>
+                              <p className="goal-count">
+                                {daysLeft > 0
+                                  ? tr('距离目标还有 {0} 天', [daysLeft])
+                                  : daysLeft === 0
+                                    ? tr('目标日期就是今天')
+                                    : tr('目标日期已过 {0} 天，可以重新设定', [-daysLeft])}
+                              </p>
+                              <button className="text-button" onClick={() => setGoalEdit(true)}>
+                                {tr('修改目标')}
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="goal-count">{tr('给自己定一个找到工作的日期，每天在这里看到倒计时。')}</p>
+                              <button className="secondary" onClick={() => setGoalEdit(true)}>
+                                {tr('设定目标日期')}
+                              </button>
+                            </>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </section>
+                    );
+                  })()}
+                  <div className="stats">
+                    {[
+                      ['关注职位', data.jobs.length, '全部保存的求职机会'],
+                      [
+                        '进行中的投递',
+                        openJobs.filter((j) =>
+                          ['已投递', '书类选考', '面试中'].includes(j.status),
+                        ).length,
+                        '等待回复或进入下一阶段',
+                      ],
+                      ['待准备面试', interviews.length, '把准备留在面试之前'],
+                      [
+                        '专属准备资料',
+                        data.materials.length,
+                        '按公司整理并保留版本',
+                      ],
+                    ].map(([title, count, sub]) => (
+                      <div
+                        key={title}
+                        className={count === 0 ? 'is-zero' : undefined}
+                      >
+                        <span>{tr(String(title))}</span>
+                        <strong>
+                          {count}
+                          <small>{tr('项')}</small>
+                        </strong>
+                        <p>{tr(String(sub))}</p>
+                      </div>
+                    ))}
+                  </div>
                   <div className="dashboard-grid home-grid">
                     <div className="home-main">
                       <section className="panel">
@@ -1194,7 +1288,7 @@ export default function Home() {
                           <CalendarDays size={17} />
                           {tr('开始面试练习')}
                         </button>
-                        <p>
+                        <p className="page-note">
                           {tr('结合岗位特点与个人履历整理，完成后保存在这里。')}
                         </p>
                         <button
@@ -1265,7 +1359,7 @@ export default function Home() {
                         ))}
                       </select>
                       <button
-                        className="secondary"
+                        className="secondary phone-hidden"
                         onClick={() => {
                           setImportOpen(true);
                           setPreview(null);
@@ -1354,7 +1448,7 @@ export default function Home() {
                         </option>
                       ))}
                     </select>
-                    <span className="small muted">
+                    <span className="small muted page-note">
                       {data.materials.length &&
                       data.materials.every((m) => m.reviewStatus === '待核对')
                         ? tr('共 {0} 份 AI 草稿，使用前请核对事实与表达。', [
@@ -1448,7 +1542,7 @@ export default function Home() {
                       <Blocks size={22} />
                       <span>
                         <b>{tr('技能库')}</b>
-                        <small>
+                        <small className="page-note">
                           {tr('浏览并安装求职技能，把指令交给助手执行。')}
                         </small>
                       </span>
@@ -1458,7 +1552,7 @@ export default function Home() {
                       <CalendarClock size={22} />
                       <span>
                         <b>{tr('定时任务')}</b>
-                        <small>
+                        <small className="page-note">
                           {tr('配置来源与频率，生成定时收集的任务指令。')}
                         </small>
                       </span>
@@ -1476,9 +1570,9 @@ export default function Home() {
                         {tr('个有效')}
                       </span>
                     </div>
-                    <p>{tr('助手在浏览器里完成登录与同意后才会出现在这里。每个授权只能访问你的工作区，可随时撤销。')}</p>
+                    <p className="page-note">{tr('助手在浏览器里完成登录与同意后才会出现在这里。每个授权只能访问你的工作区，可随时撤销。')}</p>
                     {auth?.mode !== 'off' && userEmail && (
-                      <p className="small">{tr('当前账号：{0}。授权页登录的是哪个 Google 账号，授权就归哪个账号；用其他账号授权的助手不会显示在这里。', [userEmail])}</p>
+                      <p className="small page-note">{tr('当前账号：{0}。授权页登录的是哪个 Google 账号，授权就归哪个账号；用其他账号授权的助手不会显示在这里。', [userEmail])}</p>
                     )}
                     {(() => {
                       const active = mcpTokens.filter((item) => !item.revoked && !item.expired);
@@ -1509,7 +1603,7 @@ export default function Home() {
                           {archived.length > 0 && (
                             <details className="agent-archive">
                               <summary>{tr('已撤销 / 已过期（{0}）', [archived.length])}</summary>
-                              <p className="small">{tr('归档保留 180 天的操作记录，用于事后核对；记录不含具体内容，只有工具名和条数。')}</p>
+                              <p className="small page-note">{tr('归档保留 180 天的操作记录，用于事后核对；记录不含具体内容，只有工具名和条数。')}</p>
                               <RecordList label={tr('已撤销 / 已过期的授权')}>{archived.map(row)}</RecordList>
                             </details>
                           )}
@@ -1517,7 +1611,7 @@ export default function Home() {
                       );
                     })()}
                   </section>
-                  <div>
+                  <div className="phone-hidden">
                     <section className="panel">
                       <h2>{tr('资料导入与备份')}</h2>
                       <p>
@@ -1723,7 +1817,7 @@ export default function Home() {
               {tr('· AI 草稿，使用前请核对')}
             </span>
             <button
-              className="secondary"
+              className="secondary phone-hidden"
               onClick={() =>
                 download(
                   doc.title.replaceAll('/', '-') + '.md',

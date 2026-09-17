@@ -1,0 +1,93 @@
+name: Deploy Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - app/**
+      - components/**
+      - hooks/**
+      - lib/**
+      - public/**
+      - scripts/**
+      - next.config.ts
+      - vite.config.ts
+      - tsconfig.json
+      - package.json
+      - package-lock.json
+      - .github/workflows/web-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy static site to Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # Repository variables (Settings > Secrets and variables > Actions > Variables); see docs/deployment.md.
+      CAREER_API_HOST: ${{ vars.CAREER_API_HOST }}
+      CAREER_WEB_HOST: ${{ vars.CAREER_WEB_HOST }}
+      PAGES_PROJECT_NAME: ${{ vars.CAREER_PAGES_PROJECT || 'career-note' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Cloudflare settings
+        run: |
+          set -euo pipefail
+          missing=0
+          [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || { echo "::error::Missing GitHub secret CLOUDFLARE_ACCOUNT_ID"; missing=1; }
+          [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || { echo "::error::Missing GitHub secret CLOUDFLARE_API_TOKEN"; missing=1; }
+          [ -n "${CAREER_API_HOST:-}" ] || { echo "::error::Missing GitHub variable CAREER_API_HOST (e.g. career-api.example.com)"; missing=1; }
+          [ -n "${CAREER_WEB_HOST:-}" ] || { echo "::error::Missing GitHub variable CAREER_WEB_HOST (e.g. career.example.com)"; missing=1; }
+          [ "$missing" -eq 0 ]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run check:public
+      # output: 'export' in next.config.ts; the whole site lands in dist/client as static files.
+      # The API address is baked into the bundle (lib/api-base.ts), so it must be the Worker's hostname.
+      - name: Build static site
+        run: npm run build
+        env:
+          NEXT_PUBLIC_CAREER_API_URL: https://${{ vars.CAREER_API_HOST }}
+
+      - name: Deploy to Cloudflare Pages
+        run: |
+          npx wrangler pages deploy dist/client \
+            --project-name="$PAGES_PROJECT_NAME" \
+            --branch=main \
+            --commit-hash="$GITHUB_SHA"
+
+      - name: Smoke check site
+        run: |
+          set -euo pipefail
+          base="https://$CAREER_WEB_HOST"
+          for route in / /oauth/authorize; do
+            ok=0
+            for attempt in 1 2 3 4 5; do
+              status="$(curl --silent --location --output page.html --write-out '%{http_code}' --max-time 20 "$base$route" || echo 000)"
+              if [ "$status" = "200" ] && grep -q '<html' page.html; then ok=1; break; fi
+              sleep 5
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "::error::Web smoke check failed for $base$route with HTTP $status"
+              sed -n '1,20p' page.html || true
+              exit 1
+            fi
+            echo "Smoke check passed for $base$route."
+          done

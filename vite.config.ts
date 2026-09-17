@@ -75,6 +75,9 @@ export default defineConfig(async () => {
 
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
+    // Baked into the client bundle: a hosted static build calls the API Worker on its own hostname
+    // (docs/deployment.md). Unset keeps every request same-origin, which the dev proxy below serves.
+    define: { 'process.env.NEXT_PUBLIC_CAREER_API_URL': JSON.stringify(process.env.NEXT_PUBLIC_CAREER_API_URL || '') },
     server: {
       host: '127.0.0.1', // cloudflared and the API proxy dial 127.0.0.1; 'localhost' would bind only [::1] on macOS
       port: webPort,

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { AlertCircle, Bot, Check, Link2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useAgentConsent } from '@ninomae/mcp-app-server/react';
 import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
+import { API_BASE_PATH } from '@/lib/api-base';
 import { getAuthToken, setAuthToken } from '@/lib/career';
 import {
   configureCareerAuth,
@@ -23,7 +24,7 @@ const SCOPE_TEXT: Record<string, { label: string; detail: string }> = {
 export default function OauthConsent() {
   const { t } = useLocale();
   const consent = useAgentConsent({
-    basePath: '/api/career',
+    basePath: API_BASE_PATH,
     authHeaders: (): Record<string, string> => { const token = getAuthToken(); return token ? { authorization: 'Bearer ' + token } : {}; },
   });
   const { client, chosen, toggle, error, setError, redirect: redirecting, destination } = consent;

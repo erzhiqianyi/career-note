@@ -129,7 +129,7 @@ export default function ScheduledSync() {
         </form>
         {preview && (
           <div className="schedule-preview">
-            <p className="small">
+            <p className="small page-note">
               {t('先在助手中试跑，再创建任务。复制成功不代表已启用。')}
             </p>
             <textarea

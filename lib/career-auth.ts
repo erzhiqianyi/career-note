@@ -1,5 +1,6 @@
 import { GoogleAuthProvider, getAuth, onIdTokenChanged, signInWithPopup, signOut, type Auth, type User } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
+import { apiUrl } from './api-base';
 
 type FirebaseConfig = { apiKey: string; authDomain: string; projectId: string; appId: string };
 export type CareerAuthConfig = {mode: 'off' | 'on' | 'strict'; firebase: FirebaseConfig | null};
@@ -7,7 +8,7 @@ let auth: Auth | null = null;
 let currentUser: User | null = null;
 export function getCareerAuth(): Auth | null { return auth; }
 export async function configureCareerAuth(): Promise<CareerAuthConfig> {
-  const response = await fetch('/api/career/auth/config');
+  const response = await fetch(apiUrl('auth/config'));
   if (!response.ok) throw new Error('无法读取登录配置，请检查 Worker 服务');
   const config: CareerAuthConfig = await response.json();
   if (config.firebase && config.mode !== 'off') {

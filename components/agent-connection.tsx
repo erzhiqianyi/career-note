@@ -15,7 +15,7 @@ export default function AgentConnection({ onAdd }: { onAdd: () => void }) {
         </h2>
         <span className="tag">MCP · Streamable HTTP · OAuth 2.1</span>
       </div>
-      <p className="agent-lead">
+      <p className="agent-lead page-note">
         {t(
           '把下方地址填进任意支持 MCP 的助手，首次连接时在浏览器里登录并同意，助手会自动拿到令牌，不需要手动复制。',
         )}

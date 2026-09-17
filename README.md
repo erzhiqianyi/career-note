@@ -7,7 +7,7 @@
 > 求人を見つけるたびに、メモ・履歴書・面接の回答が別々の場所に増えていく。
 > Career Note は「どの企業に、どの資料で、次に何をするか」を一か所につなぎます。
 
-[ローカル導入](docs/local-setup.md) · [図解ガイド](docs/illustrated-guide.md) · [開発工程と文書一覧](docs/README.md) · [既知の制約](docs/limitations.md) · [変更履歴](CHANGELOG.md)
+[ローカル導入](docs/local-setup.md) · [Cloudflare デプロイ](docs/deployment.md) · [図解ガイド](docs/illustrated-guide.md) · [開発工程と文書一覧](docs/README.md) · [既知の制約](docs/limitations.md) · [変更履歴](CHANGELOG.md)
 
 ## 何ができる？
 
@@ -44,7 +44,7 @@ macOS / Linux / Windows の WSL2 を導入対象としています。OS 別手�
 
 ![PC 内の画面・Worker API・D1 と、外部の Google 認証・Agent の関係](docs/images/architecture.svg)
 
-画面は React / vinext、API は Cloudflare Workers、保存先は Wrangler が PC 上で動かすローカル D1 です。通常の起動で Cloudflare にデータをアップロードしません。Google ログインを使う場合は Firebase、外部 Agent に調査を頼む場合はその Agent のサービスと通信します。
+画面は React / vinext、API は Cloudflare Workers、保存先は Wrangler が PC 上で動かすローカル D1 です。通常の起動で Cloudflare にデータをアップロードしません。自分の Cloudflare アカウントに公開したい場合だけ[デプロイ手順](docs/deployment.md)に従います（ローカル利用には不要）。Google ログインを使う場合は Firebase、外部 Agent に調査を頼む場合はその Agent のサービスと通信します。
 
 Google ログインしたユーザーごとに、求人・履歴・資料・練習記録を独立したワークスペースに保存します。新規ユーザーは空の状態から始まり、他のユーザーや従来の本機モードの資料は閲覧できません。
 
@@ -80,6 +80,16 @@ npm run build
 `npm run doctor` で起動中の画面・API・プロキシを確認できます。`npm start` も開発構成の起動コマンドです。Google の実アカウントでのログインは各自の Firebase 設定後に検証してください。
 
 [CONTRIBUTING](CONTRIBUTING.md) に変更手順、[SECURITY](SECURITY.md) に認証境界と脆弱性報告方法を記載しています。
+
+## 自分の Cloudflare に公開する（任意）
+
+fork したリポジトリを、コードを書き換えずに自分の Cloudflare アカウントへ公開できます。画面は Pages、API は Worker + D1 で、Google ログイン必須（strict）になります。
+
+1. `npx wrangler d1 create career-note` で D1 を作り、`CAREER_API_HOST=career-api.example.com npm run wrangler:config && npx wrangler deploy --config wrangler.deploy.toml` で Worker を一度デプロイして `wrangler secret put` で Firebase 設定と `CAREER_WEB_ORIGIN` / `CAREER_PUBLIC_ORIGIN` を登録します。
+2. `npx wrangler pages project create career-note` で Pages プロジェクトを作り、カスタムドメインを付けます。
+3. GitHub リポジトリの Settings → Secrets and variables → Actions に、Secrets `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` と Variables `CAREER_API_HOST` / `CAREER_WEB_HOST` を設定します。
+
+以後は `main` への push で [api-deploy.yml](.github/workflows/api-deploy.yml) と [web-deploy.yml](.github/workflows/web-deploy.yml) が自動でデプロイします。リポジトリ内の `wrangler.toml` はホスト名や id を含まない汎用ファイルのままで、あなたの設定値は GitHub 側と Worker の secrets にだけ置かれます。詳細と secrets の一覧は[デプロイ手順](docs/deployment.md)を参照してください。
 
 ## 日本の開発工程を学ぶ
 

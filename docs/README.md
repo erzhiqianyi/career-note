@@ -30,6 +30,7 @@
 - [ローカル導入・Google ログイン](local-setup.md)
 - [図解：できること・データの流れ・人と Agent の役割](illustrated-guide.md)
 - [制約とロードマップ](limitations.md)
+- [Cloudflare へのデプロイ（Pages + Workers）](deployment.md)
 - [サンプルデータ](../examples/README.md)
 - [Agent ワークフロー（中国語）](agent-workflow.md) / [スキルアーカイブ（中国語）](skills.md)
 

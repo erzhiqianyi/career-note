@@ -915,7 +915,7 @@ export default function ResumeManager({
       {(profile.experience || profile.skills) && (
         <details className="panel">
           <summary>{t('旧版履历原文（保留）')}</summary>
-          <p>{t('原文保留用于核对；分类记录是当前简历管理入口。')}</p>
+          <p className="page-note">{t('原文保留用于核对；分类记录是当前简历管理入口。')}</p>
           <div className="resume-markdown">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {profile.experience || profile.summary}

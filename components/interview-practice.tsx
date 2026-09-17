@@ -12,7 +12,16 @@ import {
   Save,
   Sparkles,
 } from 'lucide-react';
-import { api, type Attempt, type State } from '@/lib/career';
+import { api, type Attempt, type Profile, type State } from '@/lib/career';
+import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
+const profileLabels: Record<string, string> = {
+  summary: '个人概要',
+  skills: '技能',
+  experience: '经历',
+  targetRoles: '目标岗位',
+  japanese: '日语',
+  conditions: '条件',
+};
 type Draft = {
   text: string;
   language: string;
@@ -37,7 +46,10 @@ export default function InterviewPractice({
   reload: () => Promise<void>;
 }) {
   const { t: tr, locale } = useLocale();
-  const jobId = initialJobId || data.jobs[0]?.id || '';
+  const jobId = initialJobId || BANK_JOB_ID;
+  const isBank = jobId === BANK_JOB_ID;
+  // Bank text is authored in Chinese and translatable; user/agent text is shown verbatim.
+  const bt = (text: string) => (isBank ? tr(text) : text);
   const [packId, setPackId] = useState(''),
     [questionId, setQuestionId] = useState(''),
     [drafts, setDrafts] = useState<Record<string, Draft>>({}),
@@ -61,9 +73,11 @@ export default function InterviewPractice({
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [drafts]);
-  const packs = (data.questionSets || [])
-    .filter((p) => p.jobId === jobId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const packs = isBank
+    ? builtinQuestionSets
+    : (data.questionSets || [])
+        .filter((p) => p.jobId === jobId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const pack = packs.find((p) => p.id === packId) || packs[0];
   const question =
     pack?.questions.find((q) => q.id === questionId) || pack?.questions[0];
@@ -165,6 +179,7 @@ export default function InterviewPractice({
               setError('');
             }}
           >
+            <option value={BANK_JOB_ID}>{tr('通用题库（不限公司）')}</option>
             {data.jobs.map((j) => (
               <option value={j.id} key={j.id}>
                 {j.company}
@@ -174,7 +189,7 @@ export default function InterviewPractice({
         </label>
         {packs.length > 1 && (
           <label className="practice-select">
-            {tr('题组版本')}
+            {tr(isBank ? '题组' : '题组版本')}
             <select
               value={pack?.id || ''}
               onChange={(e) => {
@@ -184,7 +199,7 @@ export default function InterviewPractice({
             >
               {packs.map((p) => (
                 <option value={p.id} key={p.id}>
-                  {p.title}
+                  {bt(p.title)}
                 </option>
               ))}
             </select>
@@ -213,6 +228,17 @@ export default function InterviewPractice({
         </section>
       ) : (
         <>
+          {isBank && pack.communicationGuide && (
+            <section className="panel candidate-context">
+              <h2>{tr('这组题在考察什么')}</h2>
+              <p>{bt(pack.communicationGuide)}</p>
+              <p className="small muted">
+                {tr(
+                  '题库内置，适用于大多数公司；针对某家公司的追问，请在该公司下请求「公司准备」。',
+                )}
+              </p>
+            </section>
+          )}
           {pack.candidateContext && (
             <section className="panel candidate-context">
               <h2>{tr('结合你的求职背景')}</h2>
@@ -230,7 +256,7 @@ export default function InterviewPractice({
           <section className="practice-intro">
             <div>
               <span className="eyebrow">INTERVIEW REHEARSAL</span>
-              <h2>{pack.scenario}</h2>
+              <h2>{bt(pack.scenario)}</h2>
               <p>
                 {tr(
                   '先独立回答 → 提交点评 → 根据追问再说一次。每次保留原回答。',
@@ -250,8 +276,10 @@ export default function InterviewPractice({
               <BookOpen size={18} />
               {tr('面试前要做什么')}
             </summary>
-            <p className="prewrap">{pack.plan}</p>
-            <p className="source-line">{pack.sourceNotes}</p>
+            <p className="prewrap">{bt(pack.plan)}</p>
+            <p className="source-line">
+              {bt(pack.sourceNotes)}
+            </p>
           </details>
           {notice && (
             <div className="inline-note" role="status">
@@ -290,7 +318,7 @@ export default function InterviewPractice({
                     )}
                   </span>
                   <span>
-                    <b>{q.title}</b>
+                    <b>{bt(q.title)}</b>
                     <small>
                       {tr(q.category)} · {q.targetSeconds}
                       {tr('秒')}
@@ -313,7 +341,7 @@ export default function InterviewPractice({
               <h2 className="japanese-question" lang="ja">
                 {question.questionJa}
               </h2>
-              <p>{question.meaning}</p>
+              <p>{bt(question.meaning)}</p>
               {(question.simpleQuestionJa || question.vocabulary) && (
                 <details className="language-support">
                   <summary>{tr('换个简单说法，理解这道题')}</summary>
@@ -327,12 +355,36 @@ export default function InterviewPractice({
               )}
               <div className="question-purpose">
                 <b>{tr('为什么提前练这题')}</b>
-                <p>{question.why}</p>
+                <p>{bt(question.why)}</p>
               </div>
               <details>
                 <summary>{tr('卡住时，看看回答思路')}</summary>
-                <p className="prewrap">{question.outline}</p>
+                <p className="prewrap">{bt(question.outline)}</p>
               </details>
+              {question.personalize && (
+                <div className="question-purpose personalize-hint">
+                  <b>{tr('结合你的实际情况补充')}</b>
+                  <p>{bt(question.personalize)}</p>
+                  {(question.profileFields || []).map((field) => {
+                    const value = String(
+                      data.profile?.[field as keyof Profile] || '',
+                    ).trim();
+                    return (
+                      <details key={field}>
+                        <summary>
+                          {tr('履历 · ')}
+                          {tr(profileLabels[field] || field)}
+                          {value ? '' : tr('（尚未填写）')}
+                        </summary>
+                        <p className="prewrap small">
+                          {value ||
+                            tr('在「我的履历」里补充后，这里会显示可引用的内容。')}
+                        </p>
+                      </details>
+                    );
+                  })}
+                </div>
+              )}
               <details>
                 <summary>{tr('面试官可能继续问')}</summary>
                 <p className="prewrap" lang="ja">

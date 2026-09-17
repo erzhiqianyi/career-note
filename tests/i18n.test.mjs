@@ -55,6 +55,8 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
       format: 'cjs',
       packages: 'external',
       write: false,
+      // vite.config.ts inlines the API address the same way; the vm sandbox has no `process`.
+      define: { 'process.env.NEXT_PUBLIC_CAREER_API_URL': '""' },
       plugins: [
         {
           name: 'test-locale',

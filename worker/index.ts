@@ -6,6 +6,7 @@ import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools
 import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } from './activity';
 import { verifyFirebaseToken } from './firebase-auth';
 import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-platforms';
+import { findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-bank';
 import type { ExportedHandler } from '@cloudflare/workers-types';
 
 type JobStatus = '关注中' | '准备投递' | '已投递' | '书类选考' | '面试中' | '内定' | '未通过' | '已撤回';
@@ -27,6 +28,7 @@ type Env = {
   CAREER_PUBLIC_ORIGIN?: string;
   CAREER_WEB_ORIGIN?: string;
   CAREER_OAUTH_REFRESH_DAYS?: string;
+  CAREER_CORS_ORIGINS?: string;
 };
 
 type AuthContext = {
@@ -114,6 +116,12 @@ function validateDate(value: string, field: string) {
   return value;
 }
 
+function validateDay(value: unknown, field: string) {
+  const text = validateString(value, field, { max: 10 });
+  if (text && !/^\d{4}-\d{2}-\d{2}$/.test(text)) throw new AppError(400, `日期不正确：${field}`);
+  return validateDate(text, field);
+}
+
 function ensureDb(env: Env): D1Database {
   if (!env.CAREER_DB) throw new AppError(500, 'CAREER_DB not bound');
   return env.CAREER_DB;
@@ -172,6 +180,8 @@ function defaultProfile() {
     japanese: '',
     conditions: '',
     sourcePath: '',
+    // Personal target for landing an offer (YYYY-MM-DD); shown on the home page, optional.
+    targetDate: '',
     updatedAt: '',
   };
 }
@@ -230,6 +240,8 @@ async function saveProfile(db: Workspace, data: Record<string, unknown>) {
     japanese: validateString(data.japanese, 'japanese', { max: 100000 }),
     conditions: validateString(data.conditions, 'conditions', { max: 100000 }),
     sourcePath: validateString(data.sourcePath, 'sourcePath', { max: 100000 }),
+    // Absent (older clients, agents that only know the text fields) keeps the current value.
+    targetDate: data.targetDate === undefined ? old.targetDate || '' : validateDay(data.targetDate, 'targetDate'),
     revision: Number(old.revision) + 1,
     updatedAt: now(),
   };
@@ -432,7 +444,8 @@ function parseQuestionSetQuestions(questions: unknown[]) {
 
 async function importQuestionSet(db: Workspace, data: Record<string, unknown>) {
   const key = validateString(data.id, 'id', { required: true, max: 120 });
-  if (await getRecord(db, 'questionSets', key)) throw new AppError(400, '题组已存在，请使用新的版本 id');
+  if (isBuiltinQuestionSet(key) || (await getRecord(db, 'questionSets', key)))
+    throw new AppError(400, '题组已存在，请使用新的版本 id');
   const jobId = validateString(data.jobId, 'jobId', { required: true, max: 120 });
   if (!(await getRecord(db, 'jobs', jobId))) throw new AppError(400, '题组关联的职位不存在');
   const result = {
@@ -480,7 +493,10 @@ async function importReview(db: Workspace, data: Record<string, unknown>) {
 async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
   const questionSetId = validateString(data.questionSetId, 'questionSetId', { required: true, max: 120 });
   const questionId = validateString(data.questionId, 'questionId', { required: true, max: 120 });
-  const attemptPack = await getRecord(db, 'questionSets', questionSetId);
+  // Built-in bank packs are not stored in D1; attempts against them carry an empty jobId.
+  const attemptPack =
+    (findBuiltinQuestionSet(questionSetId) as Record<string, unknown> | undefined) ??
+    (await getRecord(db, 'questionSets', questionSetId));
   if (!attemptPack) throw new AppError(400, '面试题组不存在');
 
   const question = ((attemptPack.questions || []) as Array<{ id: string }>).find(
@@ -502,7 +518,7 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
     questionSetId,
     questionId,
     question,
-    jobId: attemptPack.jobId,
+    jobId: isBuiltinQuestionSet(questionSetId) ? '' : attemptPack.jobId,
     answer: validateString(data.answer, 'answer', { required: true, max: 20000 }),
     language,
     durationSeconds: duration,
@@ -514,7 +530,7 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
   if (data.requestReview === true) {
     await requestTask(db, {
       kind: '回答点评',
-      jobId: attemptPack.jobId,
+      jobId: attempt.jobId,
       attemptId: attempt.id,
       instructions: '',
     });
@@ -1008,13 +1024,45 @@ const handler = async (
   return jsonResponse(result);
 };
 
+// Browser origins allowed to call the API: the web app's own origin (which may be a different
+// hostname when the static site and the Worker are hosted separately) plus any extra origins
+// listed in CAREER_CORS_ORIGINS. Non-browser clients (agents, CLIs, apps) are unaffected.
+function allowedCorsOrigin(request: Request, env: Env): string {
+  const origin = request.headers.get('origin');
+  if (!origin || origin === new URL(request.url).origin) return '';
+  let allowed: string[];
+  try {
+    allowed = [resolveOrigins(request, env).webOrigin, ...(env.CAREER_CORS_ORIGINS || '').split(',').map((item) => normalizeOrigin(item))];
+  } catch { return ''; }
+  return allowed.includes(origin) ? origin : '';
+}
+
+function withCors(response: Response, origin: string): Response {
+  if (!origin) return response;
+  const out = new Response(response.body, response);
+  out.headers.set('access-control-allow-origin', origin);
+  out.headers.append('vary', 'Origin');
+  return out;
+}
+
 const worker = {
   fetch: (
     request: Request<unknown, IncomingRequestCfProperties<unknown>>,
     env: Env,
-  ) => handler(request, env).catch((error: unknown) =>
-    jsonResponse({ error: error instanceof AppError ? error.message : '本机数据服务处理失败，请重试' },
-      { status: error instanceof AppError ? error.code : 500 })),
+  ) => {
+    const corsOrigin = allowedCorsOrigin(request, env);
+    if (request.method === 'OPTIONS' && request.headers.has('access-control-request-method')) {
+      if (!corsOrigin) return new Response(null, { status: 403 });
+      return withCors(new Response(null, { status: 204, headers: {
+        'access-control-allow-methods': 'GET, POST, OPTIONS',
+        'access-control-allow-headers': request.headers.get('access-control-request-headers') || 'authorization, content-type',
+        'access-control-max-age': '86400',
+      } }), corsOrigin);
+    }
+    return handler(request, env).catch((error: unknown) =>
+      jsonResponse({ error: error instanceof AppError ? error.message : '本机数据服务处理失败，请重试' },
+        { status: error instanceof AppError ? error.code : 500 })).then((response) => withCors(response, corsOrigin));
+  },
 } as unknown as ExportedHandler<Env>;
 
 export default worker;

@@ -50,6 +50,10 @@ export function validatePlatform(
   for (const key of ['enabled', 'favorite', 'deleted']) {
     if (typeof data[key] !== 'boolean') throw Error(`请检查平台字段：${key}`);
   }
+  const registered = data.registered === true;
+  const accountEmail = text('accountEmail', 254);
+  if (accountEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountEmail))
+    throw Error('登录邮箱格式不正确');
   return {
     id: old?.id ?? `custom-${crypto.randomUUID()}`,
     name: text('name', 120, true),
@@ -58,6 +62,8 @@ export function validatePlatform(
     description: text('description', 2000),
     cautions: old?.cautions ?? '',
     notes: text('notes', 5000),
+    registered,
+    accountEmail,
     enabled: data.enabled as boolean,
     favorite: data.favorite as boolean,
     deleted: data.deleted as boolean,

@@ -20,6 +20,17 @@ npm run dev
 
 `npm run dev` / `npm start` は両方とも開発構成を起動する。ビルド成果物の公開配信を自動設定するコマンドではない。データ保存先は Node.js のホームディレクトリ配下 `~/.local/share/career-note/worker-state/`。スキーマは初回 API アクセスで作成される。
 
+### ローカル起動で動いているもの
+
+`npm run dev` は 2 つのプロセスを起動する。
+
+| プロセス | ポート | 役割 |
+| --- | --- | --- |
+| `wrangler dev worker/index.ts` | 127.0.0.1:4211 | API と MCP。D1 は Wrangler がローカルに作る SQLite（`worker-state/`） |
+| `vinext dev` | 127.0.0.1:4210 | 画面。`/api/career` と `/.well-known` を 4211 へプロキシするので、ブラウザーからは同一オリジンに見える |
+
+`wrangler.toml` はホスト名や `database_id` を含まない汎用ファイルで、ローカル起動ではそのまま使う。公開ホスト名と D1 の id はデプロイ時に `npm run wrangler:config` が gitignore 済みの `wrangler.deploy.toml` に差し込む。`npm run build` は画面を静的ファイル（`dist/client`）として書き出すだけで、ローカル利用には不要。ローカルだけで使う場合、Cloudflare アカウント、`NEXT_PUBLIC_CAREER_API_URL`、`CAREER_WEB_ORIGIN` などの公開向け設定はいずれも設定しない。公開したい場合だけ [Cloudflare へのデプロイ](deployment.md) を参照する。
+
 ## ローカル設定
 
 既存ファイルがある場合は上書きせず編集する。
