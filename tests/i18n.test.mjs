@@ -36,8 +36,8 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
           import { translate, resolveLocale } from './lib/i18n';
           export { translate, resolveLocale };
           export const card = renderToStaticMarkup(React.createElement(OpportunityCard, {
-            job: {company:'公司名称',role:'Original role',status:'面试中',location:'Tokyo',japanese:'N2',matchNotes:'原文を保持',unknowns:'原始备注'},
-            materialCount:2,questionCount:3,onOpen(){},onPractice(){},onEdit(){}
+            job: {company:'公司名称',role:'Original role',status:'面试中',location:'Tokyo',japanese:'N2',matchLevel:'优先准备',nextAction:'原文を保持',nextDate:'2026-09-10',history:[{status:'关注中',at:'2026-09-01T00:00:00Z'}]},
+            today:'2026-09-12',day:(v)=>v.slice(0,10),materialCount:2,questionCount:3,onOpen(){},onPractice(){},onEdit(){}
           }));
           export const practice = renderToStaticMarkup(React.createElement(InterviewPractice, {
             initialJobId:'demo',onJobChange(){},async reload(){},
@@ -81,6 +81,9 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
     assert.match(output.card, /原文を保持/);
     assert.match(output.card, /badge blue/);
     assert.ok(output.card.includes(output.translate(locale, '面试中')));
+    assert.ok(output.card.includes(output.translate(locale, '优先准备')));
+    assert.match(output.card, /2026-09-01/); // Added date comes from the first status entry.
+    assert.ok(output.card.includes(output.translate(locale, '已逾期')));
     assert.match(output.practice, /自己紹介をお願いします。/);
     assert.match(output.practice, /value="日语" selected/);
     assert.match(output.practice, /value="中文构思"/);

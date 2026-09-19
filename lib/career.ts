@@ -10,6 +10,7 @@ export const statuses = [
   '未通过',
   '已撤回',
 ];
+export const matchLevels = ['优先准备', '先确认条件', '暂不匹配'];
 export const materialKinds = [
   '履歴書',
   '職務経歴書',
@@ -31,6 +32,7 @@ export type Job = {
   salary: string;
   location: string;
   sourceDate: string;
+  matchLevel: string;
   matchNotes: string;
   unknowns: string;
   status: string;

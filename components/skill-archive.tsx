@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Copy, Download, Search, X } from 'lucide-react';
+import { BookOpen, Copy, Download, Search, X } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useLocale } from '@/components/locale-provider';
-import { RecordList, RecordRow } from '@/components/record-list';
+import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import archive from '@/lib/skill-archive.generated.json';
 const order = [
   'career-profile-intake',
@@ -69,46 +69,42 @@ export default function SkillArchive() {
           {skills.length} / {archive.skills.length}
         </span>
       </div>
-      <RecordList label={t('技能列表')}>
-        {skills.map((skill) => (
-          <RecordRow
-            key={skill.name}
-            title={
-              <button
-                className="record-title-button"
-                onClick={() => {
-                  setSelected(skill);
-                  setDocument('');
-                }}
-              >
-                {t(skill.title)}
-              </button>
-            }
-            meta={<code>{skill.name}</code>}
-            description={t(skill.description)}
-            actions={
-              <>
-                <button
-                  className="text-button"
-                  onClick={() => void copy(skill.prompt)}
-                >
-                  <Copy size={15} />
-                  {t('复制指令')}
-                </button>
-                <a
-                  className="text-button"
-                  href={skill.downloadUrl}
-                  download
-                  aria-label={`${t('下载')} ${t(skill.title)}`}
-                >
-                  <Download size={15} />
-                  {t('下载')}
-                </a>
-              </>
-            }
-          />
-        ))}
-      </RecordList>
+      {skills.length > 0 && (
+        <DataTable
+          label={t('技能列表')}
+          columns={[
+            { key: 'skill', label: t('技能'), width: 'minmax(180px, 1fr)' },
+            { key: 'desc', label: t('用途'), width: 'minmax(200px, 1.6fr)', hide: 'phone' },
+            { key: 'ops', label: t('操作'), width: '108px', align: 'end' },
+          ]}
+        >
+          {skills.map((skill) => {
+            const open = () => {
+              setSelected(skill);
+              setDocument('');
+            };
+            return (
+              <DataRow key={skill.name}>
+                <DataTitle title={t(skill.title)} meta={<code>{skill.name}</code>} onClick={open} />
+                <DataCell hide="phone" className="ellipsis muted" title={t(skill.description)}>
+                  {t(skill.description)}
+                </DataCell>
+                <DataActions>
+                  <button className="icon-button" onClick={open} title={t('查看详情')} aria-label={`${t('查看详情')} ${t(skill.title)}`}>
+                    <BookOpen size={16} />
+                  </button>
+                  <button className="icon-button" onClick={() => void copy(skill.prompt)} title={t('复制指令')} aria-label={`${t('复制指令')} ${t(skill.title)}`}>
+                    <Copy size={16} />
+                  </button>
+                  <a className="icon-button" href={skill.downloadUrl} download title={t('下载')} aria-label={`${t('下载')} ${t(skill.title)}`}>
+                    <Download size={16} />
+                  </a>
+                </DataActions>
+              </DataRow>
+            );
+          })}
+        </DataTable>
+      )}
       {!skills.length && <p className="empty">{t('没有匹配的技能')}</p>}
       <output aria-live="polite" className="skill-copy-status">
         {message}
@@ -117,23 +113,30 @@ export default function SkillArchive() {
         <summary>
           {t('历史备份')} · {archive.history.length}
         </summary>
-        <RecordList label={t('历史备份')}>
+        <DataTable
+          label={t('历史备份')}
+          columns={[
+            { key: 'at', label: t('时间'), width: 'minmax(160px, 1fr)' },
+            { key: 'size', label: t('内容'), width: 'minmax(160px, 1fr)', hide: 'phone' },
+            { key: 'ops', label: t('操作'), width: '44px', align: 'end' },
+          ]}
+        >
           {archive.history.map((item) => (
-            <RecordRow
-              key={item.revision}
-              title={new Intl.DateTimeFormat(locale, {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              }).format(new Date(item.createdAt))}
-              meta={`${item.skillCount} skills · ${Math.ceil(item.bytes / 1024)} KB · ${item.revision.slice(0, 8)}`}
-              actions={
-                <a className="text-button" href={item.url} download>
-                  {t('下载')}
+            <DataRow key={item.revision}>
+              <DataCell className="num">
+                {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.createdAt))}
+              </DataCell>
+              <DataCell hide="phone" className="muted">
+                {`${item.skillCount} skills · ${Math.ceil(item.bytes / 1024)} KB · ${item.revision.slice(0, 8)}`}
+              </DataCell>
+              <DataActions>
+                <a className="icon-button" href={item.url} download title={t('下载')} aria-label={t('下载')}>
+                  <Download size={16} />
                 </a>
-              }
-            />
+              </DataActions>
+            </DataRow>
           ))}
-        </RecordList>
+        </DataTable>
       </details>
       <dialog
         ref={dialog}

@@ -1,7 +1,6 @@
 'use client';
 import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
 
-import { RecordList, RecordRow } from '@/components/record-list';
 import AgentConnection from '@/components/agent-connection';
 import AgentSetup from '@/components/agent-setup';
 import {
@@ -13,12 +12,25 @@ import {
   mcpSetupPage,
 } from '@/lib/mcp-clients';
 import ScheduledSync from '@/components/scheduled-sync';
+import ScheduledTemplates from '@/components/scheduled-templates';
 import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
 import CareerWelcome from '@/components/career-welcome';
 import InterviewPractice from '@/components/interview-practice';
 import ResumeManager from '@/components/resume-manager';
 import PersonalizedResumes from '@/components/personalized-resumes';
-import OpportunityCard from '@/components/opportunity-card';
+import OpportunityCard, {
+  MatchBadge,
+  OpportunityTable,
+  jobAddedAt,
+  type JobSortKey,
+} from '@/components/opportunity-card';
+import {
+  DataActions,
+  DataCell,
+  DataRow,
+  DataTable,
+  DataTitle,
+} from '@/components/data-table';
 import SkillArchive from '@/components/skill-archive';
 import JobPlatforms from '@/components/job-platforms';
 import {
@@ -27,6 +39,7 @@ import {
   useRef,
   useMemo,
   useState,
+  Fragment,
   type ReactNode,
 } from 'react';
 import {
@@ -52,7 +65,9 @@ import {
   RefreshCw,
   Search,
   Shield,
+  ScrollText,
   Sparkles,
+  Ban,
   Upload,
   UserRound,
   Workflow,
@@ -63,6 +78,7 @@ import {
   download,
   materialKinds,
   statuses,
+  matchLevels,
   type MpcTokenRecord,
   type AgentActivity,
   type AuthContext,
@@ -133,6 +149,7 @@ const researchFields = [
   ['japanese', '日语要求'],
   ['foreigner', '外国人招聘信息'],
   ['visa', '在留资格支持信息'],
+  ['matchLevel', '匹配评价'],
   ['matchNotes', '与我的匹配点'],
   ['unknowns', '待确认事项'],
 ];
@@ -295,6 +312,8 @@ export default function Home() {
   const [selected, setSelected] = useState(''),
     [query, setQuery] = useState(''),
     [filter, setFilter] = useState('全部'),
+    [matchFilter, setMatchFilter] = useState('全部'),
+    [sort, setSort] = useState<{ key: JobSortKey; desc: boolean }>({ key: 'updated', desc: true }),
     [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
     [doc, setDoc] = useState<Material | Report | null>(null);
   const [practiceJob, setPracticeJob] = useState('');
@@ -629,14 +648,53 @@ export default function Home() {
       (a, b) =>
         b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt),
     )[0];
-  const visible =
-    data?.jobs.filter(
-      (j) =>
-        (filter === '全部' || j.status === filter) &&
-        `${j.company} ${j.role} ${j.requirements}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-    ) || [];
+  const visible = useMemo(() => {
+    const rows =
+      data?.jobs.filter(
+        (j) =>
+          (filter === '全部' || j.status === filter) &&
+          (matchFilter === '全部' ||
+            (matchFilter === '待评估' ? !j.matchLevel : j.matchLevel === matchFilter)) &&
+          `${j.company} ${j.role} ${j.requirements}`
+            .toLowerCase()
+            .includes(query.toLowerCase()),
+      ) || [];
+    const rank = (list: string[], v: string) => {
+      const i = list.indexOf(v);
+      return i < 0 ? list.length : i;
+    };
+    const keyOf = (j: Job): string | number => {
+      switch (sort.key) {
+        case 'added':
+          return jobAddedAt(j);
+        case 'next':
+          return j.nextDate || (sort.desc ? '' : '9999');
+        case 'match':
+          return rank(matchLevels, j.matchLevel);
+        case 'title':
+          return j.company;
+        case 'status':
+          return rank(statuses, j.status);
+        default:
+          return j.updatedAt || '';
+      }
+    };
+    return rows.sort((a, b) => {
+      const x = keyOf(a), y = keyOf(b);
+      const c = x < y ? -1 : x > y ? 1 : 0;
+      return sort.desc ? -c : c;
+    });
+  }, [data, filter, matchFilter, query, sort]);
+  const visibleMaterials = useMemo(
+    () =>
+      (data?.materials || [])
+        .filter((m) => filter === '全部' || m.kind === filter)
+        .slice()
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [data, filter],
+  );
+  const toggleSort = (key: JobSortKey) =>
+    setSort((s) => ({ key, desc: s.key === key ? !s.desc : key !== 'match' && key !== 'status' }));
   const pending = data?.tasks.filter((t) => t.status === '待处理') || [];
   if (!authConfig || (authConfig.mode !== 'off' && !loggedIn)) {
     return (
@@ -876,7 +934,7 @@ export default function Home() {
                   <CalendarDays size={18} />
                   {tr('开始面试练习')}
                 </button>
-              ) : active === '公司与投递' || active === '今日准备' ? (
+              ) : active === '今日准备' ? (
                 <button
                   className="primary phone-hidden"
                   disabled={!data}
@@ -886,6 +944,87 @@ export default function Home() {
                   {tr('添加职位')}
                 </button>
               ) : null;
+            if (active === '公司与投递' && !job) {
+              // Filters and list actions live in the page header so the list panel holds only rows.
+              return (
+                <div className="page-actions list-toolbar">
+                  <label className="search">
+                    <Search size={17} />
+                    <input
+                      aria-label={tr('搜索公司或职位')}
+                      placeholder={tr('搜索公司、职位或技能…')}
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                  </label>
+                  <select
+                    aria-label={tr('筛选投递状态')}
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  >
+                    {['全部', ...statuses].map((s) => (
+                      <option key={s} value={s}>
+                        {s === '全部' ? tr('全部状态') : tr(s)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label={tr('筛选匹配评价')}
+                    value={matchFilter}
+                    onChange={(e) => setMatchFilter(e.target.value)}
+                  >
+                    {['全部', ...matchLevels, '待评估'].map((s) => (
+                      <option key={s} value={s}>
+                        {s === '全部' ? tr('全部匹配') : tr(s)}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="muted list-count">
+                    {tr('{0} / {1} 条', [String(visible.length), String(data?.jobs.length ?? 0)])}
+                  </span>
+                  <button
+                    className="secondary phone-hidden"
+                    disabled={!data}
+                    onClick={() => {
+                      setImportOpen(true);
+                      setPreview(null);
+                    }}
+                  >
+                    <Upload size={16} />
+                    {tr('导入')}
+                  </button>
+                  <button
+                    className="primary"
+                    disabled={!data}
+                    onClick={() => setJobEdit({})}
+                  >
+                    <Plus size={18} />
+                    {tr('添加职位')}
+                  </button>
+                </div>
+              );
+            }
+            if (active === '准备资料' && data) {
+              return (
+                <div className="page-actions list-toolbar">
+                  <select
+                    aria-label={tr('筛选准备资料类型')}
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  >
+                    {['全部', ...materialKinds].map((s) => (
+                      <option key={s} value={s}>
+                        {s === '全部' ? tr('全部类型') : tr(s)}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="small muted">{tr('AI 文稿使用前需核对事实与表达。')}</span>
+                  <span className="muted list-count">
+                    {tr('{0} / {1} 条', [String(visibleMaterials.length), String(data.materials.length)])}
+                  </span>
+                </div>
+              );
+            }
             return action ? <div className="page-actions">{action}</div> : null;
           })()}
           {!data ? (
@@ -1223,6 +1362,7 @@ export default function Home() {
                               : tr('设置跟进日期，方便每天查看')}
                           </small>
                         </span>
+                        <MatchBadge level={job.matchLevel} />
                         <Badge>
                           {tr(job.priority)}
                           {tr('优先级')}
@@ -1304,25 +1444,34 @@ export default function Home() {
                             {tr('已加入待处理队列，等待 Codex 生成。')}
                           </div>
                         )}
-                        {data.materials
-                          .filter((m) => m.jobId === job.id)
-                          .map((m) => (
-                            <button
-                              className="doc-card record-row"
-                              key={m.id}
-                              onClick={() => setDoc(m)}
-                            >
-                              <FileText size={20} />
-                              <span>
-                                <b>{m.title}</b>
-                                <small>
-                                  {tr(m.kind)} · {day(m.createdAt)}
-                                  {tr('· 待核对')}
-                                </small>
-                              </span>
-                              <ChevronRight size={17} />
-                            </button>
-                          ))}
+                        {data.materials.some((m) => m.jobId === job.id) && (
+                          <DataTable
+                            label={tr('准备资料')}
+                            columns={[
+                              { key: 'title', label: tr('标题'), width: 'minmax(160px, 1fr)' },
+                              { key: 'kind', label: tr('类型'), width: '104px' },
+                              { key: 'created', label: tr('创建'), width: '84px', hide: 'phone' },
+                              { key: 'review', label: tr('状态'), width: '80px' },
+                              { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
+                            ]}
+                          >
+                            {data.materials
+                              .filter((m) => m.jobId === job.id)
+                              .map((m) => (
+                                <DataRow key={m.id}>
+                                  <DataTitle title={m.title} onClick={() => setDoc(m)} />
+                                  <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
+                                  <DataCell label={tr('创建')} hide="phone" className="num">{day(m.createdAt)}</DataCell>
+                                  <DataCell label={tr('状态')}><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
+                                  <DataActions>
+                                    <button className="icon-button" onClick={() => setDoc(m)} title={tr('打开')} aria-label={tr('打开')}>
+                                      <ChevronRight size={16} />
+                                    </button>
+                                  </DataActions>
+                                </DataRow>
+                              ))}
+                          </DataTable>
+                        )}
                         {!data.materials.some((m) => m.jobId === job.id) && (
                           <Empty title={tr('尚无专属准备材料')}>
                             <p>
@@ -1336,45 +1485,15 @@ export default function Home() {
                     </div>
                   </>
                 ) : (
-                  <section className="panel">
-                    <div className="toolbar">
-                      <label className="search">
-                        <Search size={17} />
-                        <input
-                          aria-label={tr('搜索公司或职位')}
-                          placeholder={tr('搜索公司、职位或技能…')}
-                          value={query}
-                          onChange={(e) => setQuery(e.target.value)}
-                        />
-                      </label>
-                      <select
-                        aria-label={tr('筛选投递状态')}
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                      >
-                        {['全部', ...statuses].map((s) => (
-                          <option key={s} value={s}>
-                            {tr(s)}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        className="secondary phone-hidden"
-                        onClick={() => {
-                          setImportOpen(true);
-                          setPreview(null);
-                        }}
-                      >
-                        <Upload size={16} />
-                        {tr('导入')}
-                      </button>
-                    </div>
+                  <section className="panel dt-panel">
                     {visible.length ? (
-                      <div className="opportunity-list record-list" role="list" aria-label={tr('公司与投递')}>
+                      <OpportunityTable sort={sort.key} desc={sort.desc} onSort={toggleSort}>
                         {visible.map((j) => (
                           <OpportunityCard
                             key={j.id}
                             job={j}
+                            today={data.today}
+                            day={day}
                             materialCount={
                               data.materials.filter((m) => m.jobId === j.id)
                                 .length
@@ -1394,7 +1513,7 @@ export default function Home() {
                             onEdit={() => setJobEdit(j)}
                           />
                         ))}
-                      </div>
+                      </OpportunityTable>
                     ) : (
                       <Empty
                         title={
@@ -1435,53 +1554,38 @@ export default function Home() {
               )}
               {active === '个性化简历' && <PersonalizedResumes />}
               {active === '准备资料' && (
-                <section className="panel">
-                  <div className="toolbar">
-                    <select
-                      aria-label={tr('筛选准备资料类型')}
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
+                <section className="panel dt-panel">
+                  {visibleMaterials.length > 0 && (
+                    <DataTable
+                      label={tr('准备资料')}
+                      columns={[
+                        { key: 'title', label: tr('标题 / 公司'), width: 'minmax(200px, 1.6fr)' },
+                        { key: 'kind', label: tr('类型'), width: '110px' },
+                        { key: 'created', label: tr('创建'), width: '84px', hide: 'phone' },
+                        { key: 'review', label: tr('状态'), width: '80px' },
+                        { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
+                      ]}
                     >
-                      {['全部', ...materialKinds].map((s) => (
-                        <option key={s} value={s}>
-                          {tr(s)}
-                        </option>
+                      {visibleMaterials.map((m) => (
+                        <DataRow key={m.id}>
+                          <DataTitle
+                            title={m.title}
+                            meta={data.jobs.find((j) => j.id === m.jobId)?.company || tr('整个求职工作区')}
+                            onClick={() => setDoc(m)}
+                          />
+                          <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
+                          <DataCell label={tr('创建')} hide="phone" className="num">{day(m.createdAt)}</DataCell>
+                          <DataCell label={tr('状态')}><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
+                          <DataActions>
+                            <button className="icon-button" onClick={() => setDoc(m)} title={tr('打开')} aria-label={tr('打开')}>
+                              <ChevronRight size={16} />
+                            </button>
+                          </DataActions>
+                        </DataRow>
                       ))}
-                    </select>
-                    <span className="small muted page-note">
-                      {data.materials.length &&
-                      data.materials.every((m) => m.reviewStatus === '待核对')
-                        ? tr('共 {0} 份 AI 草稿，使用前请核对事实与表达。', [
-                            data.materials.length,
-                          ])
-                        : tr('AI 文稿使用前需核对事实与表达。')}
-                    </span>
-                  </div>
-                  {data.materials
-                    .filter((m) => filter === '全部' || m.kind === filter)
-                    .map((m) => (
-                      <button
-                        className="doc-card record-row"
-                        key={m.id}
-                        onClick={() => setDoc(m)}
-                      >
-                        <FileText size={22} />
-                        <span>
-                          <b>{m.title}</b>
-                          <small>
-                            {data.jobs.find((j) => j.id === m.jobId)?.company} ·{' '}
-                            {tr(m.kind)} · {day(m.createdAt)}
-                          </small>
-                        </span>
-                        {!data.materials.every(
-                          (item) => item.reviewStatus === '待核对',
-                        ) && <Badge>{m.reviewStatus}</Badge>}
-                        <ChevronRight size={17} />
-                      </button>
-                    ))}
-                  {!data.materials.filter(
-                    (m) => filter === '全部' || m.kind === filter,
-                  ).length && (
+                    </DataTable>
+                  )}
+                  {!visibleMaterials.length && (
                     <Empty title={tr('暂无准备资料')}>
                       <p>{tr('在公司详情中，把准备任务交给 Codex。')}</p>
                       <button
@@ -1496,35 +1600,40 @@ export default function Home() {
                 </section>
               )}
               {active === '每日分析' && (
-                <section className="panel">
-                  {
-                    data.reports
-                      .slice()
-                      .sort(
-                        (a, b) =>
-                          b.date.localeCompare(a.date) ||
-                          b.createdAt.localeCompare(a.createdAt),
-                      )
-                      .map((r) => (
-                        <button
-                          className="report-row record-row"
-                          key={r.id}
-                          onClick={() => setDoc(r)}
-                        >
-                          <div className="report-date">
-                            <b>{r.date.slice(8)}</b>
-                            <small>{r.date.slice(0, 7)}</small>
-                          </div>
-                          <span>
-                            <b>{r.title}</b>
-                            <p>
-                              {r.content.replace(/[#*]/g, '').slice(0, 90)}…
-                            </p>
-                          </span>
-                          <ArrowUpRight size={19} />
-                        </button>
-                      ))
-                  }
+                <section className="panel dt-panel">
+                  {data.reports.length > 0 && (
+                    <DataTable
+                      label={tr('每日分析')}
+                      columns={[
+                        { key: 'date', label: tr('日期'), width: '96px' },
+                        { key: 'title', label: tr('标题'), width: 'minmax(200px, 1fr)' },
+                        { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
+                      ]}
+                    >
+                      {data.reports
+                        .slice()
+                        .sort(
+                          (a, b) =>
+                            b.date.localeCompare(a.date) ||
+                            b.createdAt.localeCompare(a.createdAt),
+                        )
+                        .map((r) => (
+                          <DataRow key={r.id}>
+                            <DataCell className="num">{day(r.date)}</DataCell>
+                            <DataTitle
+                              title={r.title}
+                              meta={r.content.replace(/[#*]/g, '').slice(0, 120)}
+                              onClick={() => setDoc(r)}
+                            />
+                            <DataActions>
+                              <button className="icon-button" onClick={() => setDoc(r)} title={tr('打开')} aria-label={tr('打开')}>
+                                <ChevronRight size={16} />
+                              </button>
+                            </DataActions>
+                          </DataRow>
+                        ))}
+                    </DataTable>
+                  )}
                   {!data.reports.length && (
                     <Empty title={tr('还没有每日分析')}>
                       <p>
@@ -1577,16 +1686,49 @@ export default function Home() {
                     {(() => {
                       const active = mcpTokens.filter((item) => !item.revoked && !item.expired);
                       const archived = mcpTokens.filter((item) => item.revoked || item.expired);
-                      const row = (item: MpcTokenRecord) => (
-                        <RecordRow key={item.id} title={item.name} badge={<Badge>{item.revoked ? tr('已撤销') : item.expired ? tr('已过期') : tr('有效')}</Badge>} meta={tr('有效期至 {0}', [day(item.expiresAt)]) + (item.lastUsedAt ? ' · ' + tr('最近使用 {0}', [day(item.lastUsedAt)]) : '')} description={item.scopes.join(' · ')} actions={<><button className="text-button" onClick={() => void showAgentTrail(item.id)}>{agentTrail?.tokenId === item.id ? tr('收起记录') : tr('操作记录')}</button>{!item.revoked && !item.expired && <button className="text-button" onClick={() => void revokeMcpToken(item.id)}>{tr('撤销')}</button>}</>}>
-                          {agentTrail?.tokenId === item.id && (
-                            <ul className="agent-trail">
-                              {!agentTrail.rows.length && <li>{tr('还没有操作记录。')}</li>}
-                              {agentTrail.rows.map((entry) => <li key={entry.id}><time dateTime={entry.at}>{entry.at.slice(0, 16).replace('T', ' ')}</time><span>{describeActivity(entry)}</span></li>)}
-                            </ul>
-                          )}
-                        </RecordRow>
-                      );
+                      const tokenColumns = [
+                        { key: 'name', label: tr('助手 / 权限'), width: 'minmax(180px, 1.5fr)' },
+                        { key: 'expires', label: tr('有效期至'), width: '92px', hide: 'phone' as const },
+                        { key: 'used', label: tr('最近使用'), width: '92px', hide: 'tablet' as const },
+                        { key: 'state', label: tr('状态'), width: '72px' },
+                        { key: 'ops', label: tr('操作'), width: '76px', align: 'end' as const },
+                      ];
+                      const row = (item: MpcTokenRecord) => {
+                        const open = agentTrail?.tokenId === item.id;
+                        const live = !item.revoked && !item.expired;
+                        return (
+                          <Fragment key={item.id}>
+                            <DataRow>
+                              <DataTitle title={item.name} meta={item.scopes.join(' · ')} />
+                              <DataCell label={tr('有效期至')} hide="phone" className="num">{day(item.expiresAt)}</DataCell>
+                              <DataCell label={tr('最近使用')} hide="tablet" className="num">{item.lastUsedAt ? day(item.lastUsedAt) : '—'}</DataCell>
+                              <DataCell label={tr('状态')}>
+                                <span className={'badge ' + (live ? 'green' : 'gray')}>{item.revoked ? tr('已撤销') : item.expired ? tr('已过期') : tr('有效')}</span>
+                              </DataCell>
+                              <DataActions>
+                                <button className={'icon-button' + (open ? ' on' : '')} onClick={() => void showAgentTrail(item.id)} title={open ? tr('收起记录') : tr('操作记录')} aria-label={open ? tr('收起记录') : tr('操作记录')} aria-expanded={open}>
+                                  <ScrollText size={16} />
+                                </button>
+                                {live ? (
+                                  <button className="icon-button danger" onClick={() => void revokeMcpToken(item.id)} title={tr('撤销')} aria-label={tr('撤销')}>
+                                    <Ban size={16} />
+                                  </button>
+                                ) : (
+                                  <span className="icon-button placeholder" aria-hidden />
+                                )}
+                              </DataActions>
+                            </DataRow>
+                            {open && (
+                              <div className="dt-detail">
+                                <ul className="agent-trail">
+                                  {!agentTrail.rows.length && <li>{tr('还没有操作记录。')}</li>}
+                                  {agentTrail.rows.map((entry) => <li key={entry.id}><time dateTime={entry.at}>{entry.at.slice(0, 16).replace('T', ' ')}</time><span>{describeActivity(entry)}</span></li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </Fragment>
+                        );
+                      };
                       return (
                         <>
                           {!active.length ? (
@@ -1598,13 +1740,13 @@ export default function Home() {
                               </button>
                             </Empty>
                           ) : (
-                            <RecordList label={tr('MCP Token 管理')}>{active.map(row)}</RecordList>
+                            <DataTable label={tr('MCP Token 管理')} columns={tokenColumns}>{active.map(row)}</DataTable>
                           )}
                           {archived.length > 0 && (
                             <details className="agent-archive">
                               <summary>{tr('已撤销 / 已过期（{0}）', [archived.length])}</summary>
                               <p className="small page-note">{tr('归档保留 180 天的操作记录，用于事后核对；记录不含具体内容，只有工具名和条数。')}</p>
-                              <RecordList label={tr('已撤销 / 已过期的授权')}>{archived.map(row)}</RecordList>
+                              <DataTable label={tr('已撤销 / 已过期的授权')} columns={tokenColumns}>{archived.map(row)}</DataTable>
                             </details>
                           )}
                         </>
@@ -1659,19 +1801,29 @@ export default function Home() {
                         {tr('项待处理')}
                       </span>
                     </div>
-                    {data.tasks.map((t) => (
-                      <div className="queue-row record-row" key={t.id}>
-                        <span>
-                          <b>{tr(t.kind)}</b>
-                          <small>
-                            {data.jobs.find((j) => j.id === t.jobId)?.company ||
-                              tr('整个求职工作区')}{' '}
-                            · {day(t.createdAt)}
-                          </small>
-                        </span>
-                        <Badge>{t.status}</Badge>
-                      </div>
-                    ))}
+                    {data.tasks.length > 0 && (
+                      <DataTable
+                        label={tr('任务队列')}
+                        columns={[
+                          { key: 'kind', label: tr('任务'), width: 'minmax(160px, 1fr)' },
+                          { key: 'created', label: tr('创建'), width: '84px', hide: 'phone' },
+                          { key: 'status', label: tr('状态'), width: '80px', align: 'end' },
+                        ]}
+                      >
+                        {data.tasks.map((t) => (
+                          <DataRow key={t.id}>
+                            <DataTitle
+                              title={tr(t.kind)}
+                              meta={data.jobs.find((j) => j.id === t.jobId)?.company || tr('整个求职工作区')}
+                            />
+                            <DataCell label={tr('创建')} hide="phone" className="num">{day(t.createdAt)}</DataCell>
+                            <DataCell align="end">
+                              <span className={'badge ' + (t.status === '待处理' ? 'amber' : 'green')}>{tr(t.status)}</span>
+                            </DataCell>
+                          </DataRow>
+                        ))}
+                      </DataTable>
+                    )}
                     {!data.tasks.length && (
                       <Empty title={tr('没有待处理任务')}>
                         <p>
@@ -1694,7 +1846,12 @@ export default function Home() {
                   onDone={() => go('Agent 协作')}
                 />
               )}
-              {active === '定时任务' && <ScheduledSync />}
+              {active === '定时任务' && (
+                <>
+                  <ScheduledTemplates />
+                  <ScheduledSync />
+                </>
+              )}
             </>
           )}
         </div>
@@ -1716,7 +1873,19 @@ export default function Home() {
             }}
           >
             <div className="form-grid">
-              {researchFields.map(([k, label]) => (
+              {researchFields.map(([k, label]) => k === 'matchLevel' ? (
+                <label className="field" key={k}>
+                  <span>{tr(label)}</span>
+                  <select name="matchLevel" defaultValue={jobEdit.matchLevel || ''}>
+                    <option value="">{tr('待评估')}</option>
+                    {matchLevels.map((s) => (
+                      <option key={s} value={s}>
+                        {tr(s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
                 <Field
                   key={k}
                   name={k}

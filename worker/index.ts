@@ -52,6 +52,8 @@ class AppError extends Error {
 
 const STATUSES: JobStatus[] = ['关注中', '准备投递', '已投递', '书类选考', '面试中', '内定', '未通过', '已撤回'];
 const PRIORITIES: JobPriority[] = ['高', '普通', '低'];
+// Research verdict from the company-search skill; empty means not yet assessed.
+const MATCH_LEVELS = ['优先准备', '先确认条件', '暂不匹配'];
 const MATERIAL_KINDS: MaterialKind[] = ['履歴書', '職務経歴書', '志望動機', '面试准备', '公司研究'];
 const REVIEW_FIELDS = [
   'summary',
@@ -264,6 +266,7 @@ function validateResearch(data: Record<string, unknown>) {
     salary: validateString(data.salary, 'salary', { max: 100000 }),
     location: validateString(data.location, 'location', { max: 1000 }),
     sourceDate: validateString(data.sourceDate, 'sourceDate', { max: 64 }),
+    matchLevel: validateString(data.matchLevel, 'matchLevel', { max: 20 }),
     matchNotes: validateString(data.matchNotes, 'matchNotes', { max: 100000 }),
     unknowns: validateString(data.unknowns, 'unknowns', { max: 100000 }),
   };
@@ -278,6 +281,7 @@ function validateResearch(data: Record<string, unknown>) {
     }
   }
   if (result.sourceDate) validateDate(result.sourceDate, 'sourceDate');
+  if (result.matchLevel && !MATCH_LEVELS.includes(result.matchLevel)) throw new AppError(400, '无效的匹配评价');
   return result;
 }
 

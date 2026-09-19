@@ -3762,5 +3762,213 @@
   "登录邮箱格式不正确": {
     "ja": "ログイン用メールの形式が正しくありません",
     "en": "Login email is not a valid address"
+  },
+  "待评估": {
+    "ja": "未評価",
+    "en": "Not assessed"
+  },
+  "优先准备": {
+    "ja": "優先準備",
+    "en": "Prepare first"
+  },
+  "先确认条件": {
+    "ja": "条件を確認",
+    "en": "Confirm terms"
+  },
+  "暂不匹配": {
+    "ja": "マッチ不足",
+    "en": "Not a match"
+  },
+  "匹配评价": {
+    "ja": "マッチ評価",
+    "en": "Match"
+  },
+  "加入": {
+    "ja": "追加日",
+    "en": "Added"
+  },
+  "已逾期": {
+    "ja": "期限超過",
+    "en": "Overdue"
+  },
+  "未安排": {
+    "ja": "未設定",
+    "en": "Not scheduled"
+  },
+  "还没有练习题": {
+    "ja": "練習問題はまだありません",
+    "en": "No practice questions yet"
+  },
+  "全部状态": {
+    "ja": "すべての状態",
+    "en": "All statuses"
+  },
+  "全部匹配": {
+    "ja": "すべての評価",
+    "en": "All match levels"
+  },
+  "筛选匹配评价": {
+    "ja": "マッチ評価で絞り込む",
+    "en": "Filter by match"
+  },
+  "{0} / {1} 条": {
+    "ja": "{0} / {1} 件",
+    "en": "{0} / {1}"
+  },
+  "定时任务模板": {
+    "ja": "定期タスクのテンプレート",
+    "en": "Scheduled task templates"
+  },
+  "参考": {
+    "ja": "参考",
+    "en": "Reference"
+  },
+  "一个任务只做一种事：收集、核对、处理待办、汇总、复盘分开设置，失败互不影响，无变化各自保持安静。复制后按自己的来源、时刻和助手调整，再手动试跑一次。": {
+    "ja": "1 つのタスクは 1 種類の仕事だけを行います。収集・照合・キュー処理・日次まとめ・週次振り返りは別々に設定し、失敗が互いに影響せず、変化がなければそれぞれ静かに終わります。コピーしたら自分の情報源・時刻・アシスタントに合わせて調整し、まず手動で 1 回試してください。",
+    "en": "One task does one kind of work: collection, checking, queue processing, daily digest and weekly review are set up separately, so failures stay isolated and each stays quiet when nothing changed. After copying, adjust the sources, times and assistant to your own, then do one manual trial run."
+  },
+  "定时": {
+    "ja": "定期",
+    "en": "Scheduled"
+  },
+  "事件驱动": {
+    "ja": "イベント駆動",
+    "en": "Event-driven"
+  },
+  "定时轮询待办": {
+    "ja": "定期的にキューを確認",
+    "en": "Polls the queue"
+  },
+  "仅本机": {
+    "ja": "ローカルのみ",
+    "en": "Local only"
+  },
+  "云端或本机": {
+    "ja": "クラウドまたはローカル",
+    "en": "Cloud or local"
+  },
+  "写入": {
+    "ja": "書き込み",
+    "en": "Writes"
+  },
+  "查看任务指令": {
+    "ja": "タスク指示を表示",
+    "en": "Show task instructions"
+  },
+  "{0} 的任务指令": {
+    "ja": "{0} のタスク指示",
+    "en": "Task instructions for {0}"
+  },
+  "建议顺序：收集 07:00 → 邮件核对 07:30 → 每日分析 08:00；待办处理独立轮询。站内收集要用已登录的浏览器，只能在本机运行；云端任务不能访问 localhost。": {
+    "ja": "推奨順序：収集 07:00 → メール照合 07:30 → 日次分析 08:00。キュー処理は独立して巡回します。サイト内収集はログイン済みブラウザーが必要なためローカルでのみ実行でき、クラウドのタスクは localhost にアクセスできません。",
+    "en": "Suggested order: collection 07:00 → mail check 07:30 → daily digest 08:00; queue processing polls on its own. On-site collection needs a signed-in browser and only runs locally; cloud tasks cannot reach localhost."
+  },
+  "站内职位收集": {
+    "ja": "サイト内の求人収集",
+    "en": "On-site job collection"
+  },
+  "在已登录的求职网站按目标岗位与条件搜索，把匹配度高的职位整理进公司列表；只入库，不投递。": {
+    "ja": "ログイン済みの求人サイトで希望職種と条件を検索し、マッチ度の高い求人を企業リストに整理します。登録のみで応募はしません。",
+    "en": "Search signed-in job sites by target roles and conditions and file well-matched postings into the company list; it only records, never applies."
+  },
+  "邮件投递动态核对": {
+    "ja": "メールの応募状況照合",
+    "en": "Mail application check"
+  },
+  "通过邮件 MCP 读取求职相关邮件，整理事件时间、关联岗位与建议状态，保存为核对报告；不改投递状态。": {
+    "ja": "メール MCP で就活関連メールを読み、発生時刻・関連求人・推奨ステータスを照合レポートとして保存します。応募ステータスは変更しません。",
+    "en": "Reads job-hunting mail through the mail MCP, organises event times, linked postings and suggested status into a check report; it never changes application status."
+  },
+  "待办队列处理（事件驱动）": {
+    "ja": "キュー処理（イベント駆動）",
+    "en": "Queue processing (event-driven)"
+  },
+  "轮询网页写入的待办：本人标记\"公司准备\"后生成五类材料与题组；\"回答点评\"任务写入点评。只有决定投递才会产生这类待办。": {
+    "ja": "Web から登録されたタスクを巡回します。本人が「企業準備」を指定すると 5 種類の資料と問題セットを生成し、「回答レビュー」タスクにはレビューを書き込みます。応募を決めたときにだけこの種のタスクが生まれます。",
+    "en": "Polls tasks queued from the web: once you mark a posting for company preparation it produces the five materials and a question set, and answer-review tasks get a review. Such tasks only appear when you decide to apply."
+  },
+  "只读汇总：把当天新增职位、邮件事件、完成的材料与点评、逾期跟进串起来，给出最多 3 个优先行动。": {
+    "ja": "読み取り専用のまとめ。当日の新規求人・メールイベント・完成した資料とレビュー・期限超過のフォローをつなぎ、最大 3 つの優先行動を提示します。",
+    "en": "Read-only digest: links the day's new postings, mail events, finished materials and reviews, and overdue follow-ups into at most three priority actions."
+  },
+  "练习与投递周复盘": {
+    "ja": "練習と応募の週次振り返り",
+    "en": "Weekly practice & application review"
+  },
+  "每周汇总本周练习回答、点评与投递结果，找出反复出现的弱点，定下周只练一个重点。": {
+    "ja": "今週の練習回答・レビュー・応募結果をまとめ、繰り返し出る弱点を見つけて、来週は 1 つの重点だけ練習すると決めます。",
+    "en": "Summarises this week's practice answers, reviews and application outcomes, finds recurring weak points, and sets one focus to practise next week."
+  },
+  "标题": {
+    "ja": "タイトル",
+    "en": "Title"
+  },
+  "类型": {
+    "ja": "種類",
+    "en": "Type"
+  },
+  "创建": {
+    "ja": "作成",
+    "en": "Created"
+  },
+  "打开": {
+    "ja": "開く",
+    "en": "Open"
+  },
+  "标题 / 公司": {
+    "ja": "タイトル / 企業",
+    "en": "Title / company"
+  },
+  "全部类型": {
+    "ja": "すべての種類",
+    "en": "All types"
+  },
+  "日期": {
+    "ja": "日付",
+    "en": "Date"
+  },
+  "任务": {
+    "ja": "タスク",
+    "en": "Task"
+  },
+  "助手 / 权限": {
+    "ja": "アシスタント / 権限",
+    "en": "Agent / scopes"
+  },
+  "有效期至": {
+    "ja": "有効期限",
+    "en": "Expires"
+  },
+  "用途": {
+    "ja": "用途",
+    "en": "Purpose"
+  },
+  "时间": {
+    "ja": "日時",
+    "en": "Time"
+  },
+  "内容": {
+    "ja": "内容",
+    "en": "Contents"
+  },
+  "平台": {
+    "ja": "サービス",
+    "en": "Platform"
+  },
+  "账号": {
+    "ja": "アカウント",
+    "en": "Account"
+  },
+  "收起": {
+    "ja": "閉じる",
+    "en": "Collapse"
+  },
+  "详情": {
+    "ja": "詳細",
+    "en": "Details"
+  },
+  "已完成": {
+    "ja": "完了",
+    "en": "Done"
   }
 }

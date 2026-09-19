@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil } from 'lucide-react';
+import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import { api } from '@/lib/career';
 import {
   blankResume,
@@ -166,59 +168,84 @@ export default function PersonalizedResumes() {
               还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。
             </div>
           )}
-          {drafts.map((d) => (
-            <article className="panel" key={d.id}>
-              <h3>
-                {d.title} {d.archived ? '· 已归档' : ''}
-              </h3>
-              <p>
-                {d.targetRole} · {d.language.toUpperCase()} · v{d.revision}
-              </p>
-              <div className="toolbar">
-                <button
-                  onClick={() => {
+          {drafts.length > 0 && (
+            <div className="panel dt-panel">
+              <DataTable
+                label="个性化简历"
+                columns={[
+                  { key: 'title', label: '简历 / 目标岗位', width: 'minmax(200px, 1.6fr)' },
+                  { key: 'lang', label: '语言', width: '56px' },
+                  { key: 'rev', label: '版本', width: '56px', hide: 'phone' },
+                  { key: 'state', label: '状态', width: '72px' },
+                  { key: 'ops', label: '操作', width: '140px', align: 'end' },
+                ]}
+              >
+                {drafts.map((d) => {
+                  const edit = () => {
                     setDraft(structuredClone(d));
                     setPreview(null);
-                  }}
-                >
-                  编辑
-                </button>
-                <button
-                  onClick={() => {
-                    setDraft({
-                      ...structuredClone(d),
-                      id: crypto.randomUUID(),
-                      revision: 0,
-                      title: d.title + ' · 副本',
-                      archived: false,
-                    });
-                    setPreview(null);
-                  }}
-                >
-                  复制为新简历
-                </button>
-                <button
-                  onClick={() => {
-                    setPreview(d);
-                    setConfirmed(false);
-                    setExpiry('');
-                  }}
-                >
-                  预览与发布
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    act(async () => {
-                      await save({ ...d, archived: !d.archived });
-                    })
-                  }
-                >
-                  {d.archived ? '恢复' : '归档'}
-                </button>
-              </div>
-            </article>
-          ))}
+                  };
+                  return (
+                    <DataRow key={d.id} className={d.archived ? 'dt-dim' : ''}>
+                      <DataTitle title={d.title} meta={d.targetRole || '未填写目标岗位'} onClick={edit} />
+                      <DataCell label="语言">{d.language.toUpperCase()}</DataCell>
+                      <DataCell label="版本" hide="phone" className="num">v{d.revision}</DataCell>
+                      <DataCell label="状态">
+                        <span className={'badge ' + (d.archived ? 'gray' : 'green')}>{d.archived ? '已归档' : '草稿'}</span>
+                      </DataCell>
+                      <DataActions>
+                        <button className="icon-button" onClick={edit} title="编辑" aria-label={`编辑 ${d.title}`}>
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          title="复制为新简历"
+                          aria-label={`复制为新简历 ${d.title}`}
+                          onClick={() => {
+                            setDraft({
+                              ...structuredClone(d),
+                              id: crypto.randomUUID(),
+                              revision: 0,
+                              title: d.title + ' · 副本',
+                              archived: false,
+                            });
+                            setPreview(null);
+                          }}
+                        >
+                          <CopyPlus size={16} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          title="预览与发布"
+                          aria-label={`预览与发布 ${d.title}`}
+                          onClick={() => {
+                            setPreview(d);
+                            setConfirmed(false);
+                            setExpiry('');
+                          }}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          disabled={busy}
+                          title={d.archived ? '恢复' : '归档'}
+                          aria-label={`${d.archived ? '恢复' : '归档'} ${d.title}`}
+                          onClick={() =>
+                            act(async () => {
+                              await save({ ...d, archived: !d.archived });
+                            })
+                          }
+                        >
+                          {d.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                        </button>
+                      </DataActions>
+                    </DataRow>
+                  );
+                })}
+              </DataTable>
+            </div>
+          )}
         </>
       )}
       {draft && (
@@ -557,59 +584,71 @@ export default function PersonalizedResumes() {
               暂无公开链接。先在草稿中选择「预览与发布」。
             </div>
           )}
-          {publications.map((p) => {
-            const expired =
-                !!p.expiresAt && Date.parse(p.expiresAt) <= Date.now(),
-              active = !p.revokedAt && !expired;
-            return (
-              <article className="panel" key={p.id}>
-                <h3>
-                  {p.title} · v{p.draftRevision}
-                </h3>
-                <p>
-                  {p.revokedAt ? '已撤下' : expired ? '已过期' : '有效'} ·{' '}
-                  {p.mode === 'public' ? '允许收录' : '仅链接访问'} ·{' '}
-                  {p.expiresAt
-                    ? new Date(p.expiresAt).toLocaleString()
-                    : '永久有效'}
-                </p>
-                <div className="toolbar">
-                  {active && (
-                    <>
-                      <a href={p.path} target="_blank" rel="noreferrer">
-                        打开本地公开页
-                      </a>
-                      <button
-                        onClick={() =>
-                          act(() =>
-                            copy(new URL(p.path, window.location.origin).href),
-                          )
-                        }
-                      >
-                        复制本地链接
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          act(async () => {
-                            await api('resume-publications/revoke', {
-                              id: p.id,
-                            });
-                            await refresh();
-                            setNotice(
-                              '链接已撤下。已被他人保存的副本无法收回。',
-                            );
-                          })
-                        }
-                      >
-                        撤下链接
-                      </button>
-                    </>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+          {publications.length > 0 && (
+            <div className="panel dt-panel">
+              <DataTable
+                label="公开链接"
+                columns={[
+                  { key: 'title', label: '简历', width: 'minmax(200px, 1.6fr)' },
+                  { key: 'mode', label: '可见性', width: '92px', hide: 'phone' },
+                  { key: 'expires', label: '有效期', width: 'minmax(120px, 0.8fr)', hide: 'tablet' },
+                  { key: 'state', label: '状态', width: '72px' },
+                  { key: 'ops', label: '操作', width: '108px', align: 'end' },
+                ]}
+              >
+                {publications.map((p) => {
+                  const expired = !!p.expiresAt && Date.parse(p.expiresAt) <= Date.now(),
+                    active = !p.revokedAt && !expired;
+                  return (
+                    <DataRow key={p.id} className={active ? '' : 'dt-dim'}>
+                      <DataTitle title={p.title} meta={`v${p.draftRevision}`} />
+                      <DataCell label="可见性" hide="phone">{p.mode === 'public' ? '允许收录' : '仅链接访问'}</DataCell>
+                      <DataCell label="有效期" hide="tablet" className="num">
+                        {p.expiresAt ? new Date(p.expiresAt).toLocaleString() : '永久有效'}
+                      </DataCell>
+                      <DataCell label="状态">
+                        <span className={'badge ' + (active ? 'green' : 'gray')}>{p.revokedAt ? '已撤下' : expired ? '已过期' : '有效'}</span>
+                      </DataCell>
+                      <DataActions>
+                        {active ? (
+                          <>
+                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title="打开本地公开页" aria-label={`打开本地公开页 ${p.title}`}>
+                              <ExternalLink size={16} />
+                            </a>
+                            <button
+                              className="icon-button"
+                              title="复制本地链接"
+                              aria-label={`复制本地链接 ${p.title}`}
+                              onClick={() => act(() => copy(new URL(p.path, window.location.origin).href))}
+                            >
+                              <Copy size={16} />
+                            </button>
+                            <button
+                              className="icon-button danger"
+                              disabled={busy}
+                              title="撤下链接"
+                              aria-label={`撤下链接 ${p.title}`}
+                              onClick={() =>
+                                act(async () => {
+                                  await api('resume-publications/revoke', { id: p.id });
+                                  await refresh();
+                                  setNotice('链接已撤下。已被他人保存的副本无法收回。');
+                                })
+                              }
+                            >
+                              <Ban size={16} />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="icon-button placeholder" aria-hidden />
+                        )}
+                      </DataActions>
+                    </DataRow>
+                  );
+                })}
+              </DataTable>
+            </div>
+          )}
         </>
       )}
     </section>

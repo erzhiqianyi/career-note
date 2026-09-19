@@ -69,6 +69,7 @@ node scripts/career-data.mjs state
     "japanese": "待确认",
     "foreigner": "待确认",
     "visa": "待确认",
+    "matchLevel": "先确认条件",
     "matchNotes": "要求与个人事实的对应关系",
     "unknowns": "需要核对的问题"
   }],
@@ -91,7 +92,7 @@ node scripts/career-data.mjs state
 }
 ```
 
-kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。示例是协议示意，不能作为真实招聘信息导入。
+`matchLevel` 只能是 `优先准备`、`先确认条件`、`暂不匹配` 或空（待评估），与 `matchNotes` 中的理由一致。kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。示例是协议示意，不能作为真实招聘信息导入。
 
 ```sh
 node scripts/career-data.mjs preview /绝对路径/本次数据包.json
