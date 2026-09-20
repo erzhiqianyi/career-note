@@ -2926,7 +2926,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 
 /* Collections: one table layout for jobs, materials, reports, tasks, platforms, skills, tokens.
    Rows show a summary only; icon actions sit at the end; details open on click. */
-.list-toolbar { justify-content: flex-start; align-items: center; gap: 10px; flex-wrap: wrap; }
+.list-toolbar { display: flex; justify-content: flex-start; align-items: center; gap: 10px; flex-wrap: wrap; }
 .list-toolbar .search { flex: 1 1 240px; max-width: 420px; padding: 7px 12px; background: #fff; }
 .list-toolbar select { padding: 8px 10px; border: 1px solid #e1e7ef; border-radius: 6px; background: #fff; color: var(--ink-2); font-size: 13px; }
 .list-toolbar .list-count { font-size: 12px; margin-left: auto; white-space: nowrap; }
@@ -2986,3 +2986,213 @@ button.dt-th:hover, .dt-th.active { color: var(--accent); }
 .dt-detail .agent-trail { margin-top: 0; }
 .platform-toolbar { margin: 20px 0 16px; }
 .platforms-page > .panel.dt-panel { margin-top: 0; }
+
+/* Workspace reading hierarchy: task content leads; supporting context stays compact. */
+:root {
+  --ink: #20252d;
+  --ink-2: #343a43;
+  --ink-3: #58616d;
+  --ink-4: #65707c;
+  --accent: #28558a;
+  --line: #dde1e5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Microsoft YaHei', sans-serif;
+  background: #f7f8fa;
+}
+:root:lang(ja) {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+}
+main { background: #f7f8fa; }
+.page { max-width: 1520px; padding: 28px 36px 48px; }
+.workspace-heading { margin-bottom: 24px; }
+.workspace-heading h1, .job-overview h1 { font-size: 28px; letter-spacing: -.4px; font-weight: 650; }
+.workspace-heading p { margin-top: 8px; font-size: 15px; }
+p { font-size: 15px; }
+h2 { font-size: 18px; }
+.primary { background: var(--accent); font-size: 15px; font-weight: 550; }
+.secondary { font-size: 14px; }
+.sidebar { overflow-y: auto; }
+.sidebar nav { gap: 4px; }
+.sidebar nav button { padding-top: 12px; padding-bottom: 12px; flex-shrink: 0; }
+.sidebar nav button.active { background: #eaf0f7; color: #244f80; }
+.sidebar nav .nav-group-start { margin-top: 20px; }
+.sidebar-toggle { margin-top: auto; }
+.stats { padding: 16px 0; margin-bottom: 24px; }
+.stats > div { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 0 20px; }
+.stats strong { margin: 0; font-size: 25px; font-variant-numeric: tabular-nums; }
+.stats strong small { margin-left: 5px; }
+.stats p { display: none; }
+.home-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
+.home-aside { display: grid; gap: 20px; min-width: 0; }
+.home-aside .today-hero { grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 0; }
+.home-main .task-row { padding: 20px 0; }
+.task-row b { font-size: 16px; font-weight: 600; }
+.task-row small { font-size: 14px; margin-top: 5px; }
+.task-row:hover { background: #f7f9fc; }
+.home-aside .calendar { padding: 16px; }
+.home-aside .goal { padding: 18px; }
+.home-aside .goal-count { font-size: 14px; }
+.home-aside .goal-date { font-size: 24px; }
+.home-grid .analysis-card { padding: 22px; background: white; color: var(--ink); border: 1px solid var(--line); }
+.home-grid .analysis-card h2 { font-size: 19px; line-height: 1.5; }
+.home-grid .analysis-card p, .home-grid .analysis-card .eyebrow { color: var(--ink-3); }
+.home-grid .analysis-card > svg { color: var(--accent); }
+.home-grid .analysis-card .light-button { background: #edf2f8; color: var(--accent); }
+.dt-th { font-size: 13px; }
+.dt-cell { font-size: 14px; }
+.dt-main .record-title-button, .dt-main .dt-title { font-size: 16px; color: var(--ink); }
+.dt-main .record-meta { font-size: 14px; line-height: 1.65; }
+.opportunities-table .dt-row { padding: 18px 0; }
+.opportunities-table .dt-head { padding: 14px 0 10px; }
+.opportunities-table .dt-main { gap: 6px; }
+.opportunities-table .record-meta { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.opportunities-table .dt-actions { flex-wrap: wrap; gap: 6px; }
+.table-action { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 7px 9px; white-space: nowrap; }
+.table-action:disabled { opacity: .55; cursor: not-allowed; }
+.action-count { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.dt-actions .icon-button { min-width: 36px; min-height: 36px; align-items: center; justify-content: center; }
+.job-overview .section-head { align-items: flex-start; }
+.job-overview .job-role { color: var(--ink-2); font-size: 16px; margin-top: 8px; line-height: 1.6; }
+.job-overview .next-action { margin-top: 20px; background: #f0f4f9; color: var(--ink); flex-wrap: wrap; }
+.next-action b { font-size: 15px; font-weight: 600; }
+.next-action small { font-size: 13px; }
+.history-disclosure { margin-top: 16px; color: var(--ink-3); font-size: 14px; }
+.history-disclosure summary, .detail-disclosure summary, .fact-disclosure summary { cursor: pointer; border-radius: 4px; }
+summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #7798ee; outline-offset: 3px; }
+.history-disclosure .timeline { padding-bottom: 4px; }
+.detail-grid { grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr); gap: 24px; }
+.detail-grid > .panel { min-width: 0; }
+.facts > div { grid-template-columns: 110px minmax(0, 1fr); gap: 14px; font-size: 15px; padding: 16px 0; }
+.facts dd { overflow-wrap: anywhere; }
+.fact-disclosure summary { list-style: none; }
+.fact-expand, .fact-collapse { display: block; font-size: 13px; color: var(--accent); margin-top: 6px; font-weight: 550; }
+.fact-collapse { display: none; }
+.fact-disclosure[open] .fact-preview, .fact-disclosure[open] .fact-expand { display: none; }
+.fact-disclosure[open] .fact-collapse { display: block; }
+.fact-disclosure p { margin: 8px 0 0; color: var(--ink-2); white-space: pre-wrap; }
+.detail-disclosure { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 20px; }
+.detail-disclosure summary { font-size: 16px; font-weight: 600; }
+.detail-disclosure p { color: var(--ink-2); }
+@media (min-width: 701px) and (max-width: 1400px) {
+  .opportunities-table .dt-row { grid-template-columns: minmax(0, 1fr) 110px minmax(130px, .65fr) 40px; gap: 16px; }
+  .opportunities-table .dt-hide-tablet { display: none !important; }
+}
+@media (max-width: 1100px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; }
+  .detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr); }
+  .home-aside .today-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; }
+  .stats > div:nth-child(2) { border-right: 0; }
+}
+@media (max-width: 700px) {
+  .page { padding: 22px 18px 32px; }
+  .workspace-heading { margin-bottom: 20px; }
+  .workspace-heading h1, .job-overview h1 { font-size: 24px; }
+  .stats > div { padding: 0 12px; }
+  .stats span { font-size: 13px; }
+  .stats strong { font-size: 22px; }
+  .opportunities-table .dt-main { flex-basis: 100%; }
+  .opportunities-table .dt-actions { order: 4; flex-basis: 100%; justify-content: flex-start; margin-top: 8px; }
+  .opportunities-table .table-action { min-height: 40px; padding: 8px 12px; }
+  .opportunities-table .dt-next { flex-basis: 100%; }
+  .job-overview .section-head { flex-direction: column; }
+  .job-overview .next-action > span:nth-child(2) { min-width: 180px; }
+  .facts > div { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .facts dt { font-weight: 600; }
+}
+@media (max-width: 640px) {
+  .home-aside .today-hero { grid-template-columns: minmax(0, 1fr); }
+  .home-aside .calendar, .home-aside .goal { background: white; border: 1px solid var(--line); border-radius: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, main, button { transition: none; }
+}
+.workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.workspace-heading > .primary { flex-shrink: 0; }
+@media (max-width: 700px) {
+  .workspace-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
+}
+@media (max-width: 700px) {
+  .dt-row.dt-head { display: none; }
+  .dt-row > .dt-main { flex: 1 1 100%; max-width: 100%; order: 0; }
+  .job-overview .next-action .badge { display: inline-flex; }
+}
+.sidebar nav, .sidebar nav button { min-width: 0; }
+.sidebar nav button > svg { flex-shrink: 0; }
+.sidebar nav .nav-label { min-width: 0; }
+
+/* A compact overview leads to the full record; editing has its own workspace page. */
+.header-nav:empty { display: none; }
+.header-tools { margin-left: auto; }
+.job-editor-page { max-width: 980px; margin: 0 auto; }
+.editor-heading { margin-bottom: 28px; }
+.editor-heading h1 { font-size: 26px; letter-spacing: -.4px; }
+.editor-heading p { color: var(--ink-3); }
+.job-editor-page .form-grid { gap: 22px 24px; }
+.editor-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.opportunities-table .dt-row { gap: 24px; }
+@media (max-width: 700px) {
+  .opportunities-table .dt-row { display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 12px; }
+  .opportunities-table .dt-row.dt-head { display: none; }
+  .opportunities-table .dt-main { grid-column: 1; order: 0; }
+  .opportunities-table .dt-actions { grid-column: 2; grid-row: 1; order: 0; margin: 0; }
+  .opportunities-table .dt-cell:not(.dt-main):not(.dt-actions) { grid-column: 1 / -1; }
+  .job-editor-page { padding: 0; }
+  .editor-heading h1 { font-size: 24px; }
+}
+.header-page-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* Shared collection rhythm: brief rows, secondary actions on demand. */
+.dt-row { padding: 18px 0; gap: 20px; }
+.dt-head { padding: 14px 0 10px; }
+.dt-main { gap: 6px; }
+.platform-toolbar { margin-top: 0; }
+.record-detail-actions { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 0; }
+.record-detail-actions .icon-button { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.record-detail-actions .icon-button::after, .dt-more-menu .icon-button::after { content: attr(title); }
+.dt-more { position: relative; }
+.dt-more > summary { list-style: none; cursor: pointer; }
+.dt-more > summary::-webkit-details-marker { display: none; }
+.dt-more-menu { position: absolute; z-index: 5; top: 100%; right: 0; min-width: 170px; padding: 6px; background: white; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px #20252d18; }
+.dt-more-menu .icon-button { display: flex; width: 100%; gap: 8px; justify-content: flex-start; white-space: nowrap; font-size: 13px; }
+.personalized-manager > .list-toolbar { display: flex; margin-bottom: 20px; }
+.personalized-manager > .list-toolbar .toolbar { flex-wrap: wrap; }
+@media (max-width: 700px) {
+  .dt-row { gap: 10px; }
+  .dt-row > .dt-cell { max-width: 100%; }
+  .record-detail-actions .phone-hidden { display: inline-flex !important; }
+  .platform-toolbar .primary { margin-left: auto; }
+}
+.resume-record-details { margin-top: 12px; }
+.resume-record-details > summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.resume-record-head h3 { font-size: 16px; }
+.personalized-manager > .list-toolbar { margin: 0; }
+.personalized-manager .list-toolbar .toolbar { margin: 0; gap: 12px; }
+.personalized-manager .resume-tabs { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.personalized-manager .panel.dt-panel { padding: 6px 25px 8px; }
+.personalized-manager label.resume-import { position: relative; display: inline-flex; margin: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; background: white; cursor: pointer; font-size: 14px; }
+.resume-import input[type=file] { position: absolute; width: 1px; height: 1px; padding: 0; opacity: 0; overflow: hidden; }
+.resume-import:focus-within { outline: 3px solid #7798ee; outline-offset: 3px; }
+.record-page { min-width: 0; max-width: 1100px; margin: 0 auto; }
+.record-page > h2 { margin: 18px 0 24px; overflow-wrap: anywhere; }
+.record-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.record-detail-actions .dt-actions { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
+.record-detail-actions .dt-actions .icon-button { width: auto; }
+.record-page .skill-dialog-content { max-height: none; padding: 0; overflow: visible; }
+.record-page .resume-record { border: 0; }
+.practice-workspace > .list-toolbar { margin-bottom: 20px; }
+.practice-company-heading h2 { margin: 0; font-size: 22px; }
+.practice-company-heading p { margin: 6px 0 0; color: var(--ink-3); }
+.practice-company-heading select { max-width: 100%; }
+.question-help-link { margin: 0 0 16px; display: inline-flex; align-items: center; gap: 4px; }
+.answer-panel .answer-editor { margin-top: 0; }
+.practice-workspace .question-option { padding: 18px 12px; }
+@media (max-width: 700px) { .practice-company-heading { align-items: flex-start; flex-direction: column; gap: 12px; } }

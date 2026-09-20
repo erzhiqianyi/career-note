@@ -1,9 +1,8 @@
 'use client';
-import { ExternalLink, FolderOpen, MessageSquare, Pencil } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useLocale } from '@/components/locale-provider';
 import {
-  Count,
   DataActions,
   DataCell,
   DataRow,
@@ -54,15 +53,12 @@ export function OpportunityTable({
 }) {
   const { t } = useLocale();
   const columns: Column<JobSortKey>[] = [
-    { key: 'title', label: t('公司 / 职位'), width: 'minmax(200px, 1.6fr)' },
-    { key: 'status', label: t('状态'), width: '96px', sortable: true },
-    { key: 'match', label: t('匹配评价'), width: '104px', sortable: true },
-    { key: 'added', label: t('加入'), width: '84px', sortable: true, hide: 'tablet' },
-    { key: 'next', label: t('下一步'), width: 'minmax(150px, 1fr)', sortable: true },
-    { key: 'updated', label: t('操作'), width: '132px', align: 'end' },
-  ];
-  return (
-    <DataTable columns={columns} label={t('公司与投递')} sort={sort} desc={desc} onSort={onSort}>
+    { key: 'title', label: t('公司 / 职位'), width: 'minmax(0, 1fr)' },
+    { key: 'status', label: t('状态'), width: '120px', sortable: true },
+    { key: 'next', label: t('下一步'), width: 'minmax(140px, .65fr)', sortable: true },
+    { key: 'updated', label: '', width: '40px', align: 'end' },
+  ];  return (
+    <DataTable columns={columns} className="opportunities-table" label={t('公司与投递')} sort={sort} desc={desc} onSort={onSort}>
       {children}
     </DataTable>
   );
@@ -71,21 +67,13 @@ export function OpportunityTable({
 export default function OpportunityCard({
   job,
   today,
-  materialCount,
-  questionCount,
   day,
   onOpen,
-  onPractice,
-  onEdit,
 }: {
   job: Job;
   today: string;
-  materialCount: number;
-  questionCount: number;
   day: (value: string) => ReactNode;
   onOpen: () => void;
-  onPractice: () => void;
-  onEdit: () => void;
 }) {
   const { t } = useLocale();
   const overdue = !!job.nextDate && job.nextDate < today;
@@ -93,17 +81,11 @@ export default function OpportunityCard({
     <DataRow>
       <DataTitle
         title={job.company}
-        meta={job.role + (job.location ? ' · ' + job.location : '')}
+        meta={job.role}
         onClick={onOpen}
       />
       <DataCell label={t('状态')}>
         <span className={'badge ' + (statusTone[job.status] || '')}>{t(job.status)}</span>
-      </DataCell>
-      <DataCell label={t('匹配评价')}>
-        <MatchBadge level={job.matchLevel} />
-      </DataCell>
-      <DataCell label={t('加入')} hide="tablet" className="num">
-        {day(jobAddedAt(job))}
       </DataCell>
       <DataCell
         label={t('下一步')}
@@ -121,42 +103,9 @@ export default function OpportunityCard({
         {job.nextAction && <span className="ellipsis">{job.nextAction}</span>}
       </DataCell>
       <DataActions>
-        <button
-          className="icon-button"
-          onClick={onOpen}
-          title={`${t('查看准备资料')} · ${materialCount}`}
-          aria-label={`${t('查看准备资料')} · ${materialCount}`}
-        >
-          <FolderOpen size={16} />
-          <Count n={materialCount} />
+        <button className="icon-button" onClick={onOpen} aria-label={t('查看职位详情')} title={t('查看职位详情')}>
+          <ChevronRight size={18} />
         </button>
-        <button
-          className="icon-button"
-          onClick={onPractice}
-          disabled={questionCount === 0}
-          title={questionCount ? `${t('面试练习')} · ${questionCount}` : t('还没有练习题')}
-          aria-label={`${t('面试练习')} · ${questionCount}`}
-        >
-          <MessageSquare size={16} />
-          <Count n={questionCount} />
-        </button>
-        <button className="icon-button" onClick={onEdit} title={t('更新进展')} aria-label={t('更新进展')}>
-          <Pencil size={16} />
-        </button>
-        {job.url ? (
-          <a
-            className="icon-button"
-            href={job.url}
-            target="_blank"
-            rel="noreferrer"
-            title={t('招聘原文')}
-            aria-label={t('招聘原文')}
-          >
-            <ExternalLink size={16} />
-          </a>
-        ) : (
-          <span className="icon-button placeholder" aria-hidden />
-        )}
       </DataActions>
     </DataRow>
   );

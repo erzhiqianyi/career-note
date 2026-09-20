@@ -1,4 +1,6 @@
 'use client';
+import { RecordBack, useRecordPage } from './record-page';
+import { DataTable, DataRow, DataTitle, DataCell, DataActions } from './data-table';
 import { useLocale } from '@/components/locale-provider';
 
 import { useEffect, useState } from 'react';
@@ -36,17 +38,22 @@ const emptyDraft: Draft = {
 };
 export default function InterviewPractice({
   data,
-  initialJobId,
-  onJobChange,
   reload,
 }: {
   data: State;
-  initialJobId: string;
-  onJobChange: (id: string) => void;
   reload: () => Promise<void>;
 }) {
   const { t: tr, locale } = useLocale();
-  const jobId = initialJobId || BANK_JOB_ID;
+  const [company, setCompany] = useRecordPage<string>('#interview', 'company', id => id === BANK_JOB_ID || data.jobs.some(j => j.id === id) ? id : null, id => id);
+  const [help, setHelp] = useRecordPage<string>('#interview', 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
+  const [search, setSearch] = useState('');
+  const [practiceRecord, setPracticeRecord] = useRecordPage<string>('#interview', 'question', id => {
+    const [p, q] = id.split('|');
+    return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null;
+  }, id => id);
+  const [guide, setGuide] = useRecordPage<string>('#interview', 'guide', id => [...builtinQuestionSets, ...data.questionSets].some(p => p.id === id) ? id : null, id => id);
+  const routePack = help ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === help.split('|')[0]) : guide ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === guide) : practiceRecord ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === practiceRecord.split('|')[0]) : undefined;
+  const jobId = routePack ? (routePack.jobId || BANK_JOB_ID) : company || BANK_JOB_ID;
   const isBank = jobId === BANK_JOB_ID;
   // Bank text is authored in Chinese and translatable; user/agent text is shown verbatim.
   const bt = (text: string) => (isBank ? tr(text) : text);
@@ -57,12 +64,6 @@ export default function InterviewPractice({
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(''),
     [error, setError] = useState('');
-  useEffect(() => {
-    if (initialJobId) {
-      setPackId('');
-      setQuestionId('');
-    }
-  }, [initialJobId]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (Object.values(drafts).some((d) => d.dirty)) {
@@ -78,9 +79,9 @@ export default function InterviewPractice({
     : (data.questionSets || [])
         .filter((p) => p.jobId === jobId)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const pack = packs.find((p) => p.id === packId) || packs[0];
+  const pack = routePack || packs.find((p) => p.id === packId) || packs[0];
   const question =
-    pack?.questions.find((q) => q.id === questionId) || pack?.questions[0];
+    pack?.questions.find((q) => q.id === ((practiceRecord || help)?.split('|')[1] || questionId)) || pack?.questions[0];
   const key = pack && question ? pack.id + ':' + question.id : '';
   const draft = drafts[key] || emptyDraft;
   const attempts = (data.attempts || [])
@@ -164,53 +165,39 @@ export default function InterviewPractice({
       setNotice('指令已复制，可以发给当前 Codex 对话处理。');
     });
   }
+  function returnTo(hash: string) {
+    window.history.replaceState(null, '', hash);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  }
+  if (!company && !practiceRecord && !guide && !help) {
+    const jobs = data.jobs.filter(j => (j.company + ' ' + j.role).toLowerCase().includes(search.toLowerCase()));
+    return <div className="practice-workspace">
+      <div className="list-toolbar"><label className="search"><input aria-label={tr('搜索公司或职位')} placeholder={tr('搜索公司或职位')} value={search} onChange={e => setSearch(e.target.value)} /></label><span className="list-count muted">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span><button className="secondary" onClick={() => setCompany(BANK_JOB_ID)}>{tr('通用题库')}</button></div>
+      <section className="panel dt-panel"><DataTable label={tr('练习公司')} columns={[
+        {key:'company',label:tr('公司 / 职位'),width:'minmax(0,1fr)'},
+        {key:'progress',label:tr('练习进度'),width:'120px'},
+        {key:'open',label:tr('操作'),width:'40px',align:'end'},
+      ]}>{jobs.map(job => {
+        const latest = data.questionSets.filter(p => p.jobId === job.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt))[0];
+        const answered = new Set(data.attempts.filter(a => a.questionSetId === latest?.id).map(a => a.questionId));
+        return <DataRow key={job.id}><DataTitle title={job.company} meta={job.role} onClick={() => setCompany(job.id)} /><DataCell label={tr('练习进度')}>{latest ? tr('{0} / {1} 题', [String(answered.size),String(latest.questions.length)]) : <span className="badge pending">{tr('待准备题目')}</span>}</DataCell><DataActions><button className="icon-button" aria-label={tr('开始面试练习') + ' · ' + job.company} onClick={() => setCompany(job.id)}><ChevronRight size={16} /></button></DataActions></DataRow>;
+      })}</DataTable>{!jobs.length && <div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div>}</section>
+    </div>;
+  }
   return (
     <div className="practice-workspace">
-      <div className="toolbar">
-        <label className="practice-select">
-          {tr('练习公司')}
-          <select
-            value={jobId}
-            onChange={(e) => {
-              onJobChange(e.target.value);
-              setPackId('');
-              setQuestionId('');
-              setNotice('');
-              setError('');
-            }}
-          >
-            <option value={BANK_JOB_ID}>{tr('通用题库（不限公司）')}</option>
-            {data.jobs.map((j) => (
-              <option value={j.id} key={j.id}>
-                {j.company}
-              </option>
-            ))}
-          </select>
-        </label>
-        {packs.length > 1 && (
-          <label className="practice-select">
-            {tr(isBank ? '题组' : '题组版本')}
-            <select
-              value={pack?.id || ''}
-              onChange={(e) => {
-                setPackId(e.target.value);
-                setQuestionId('');
-              }}
-            >
-              {packs.map((p) => (
-                <option value={p.id} key={p.id}>
-                  {bt(p.title)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <span className="tag">{tr('模拟练习 · 不改变投递状态')}</span>
-      </div>
+      {practiceRecord && <RecordBack onBack={() => returnTo('#interview/company/' + encodeURIComponent(jobId))} />}
+      {guide && <RecordBack onBack={() => returnTo('#interview/company/' + encodeURIComponent(jobId))} />}
+      {help && <RecordBack onBack={() => returnTo('#interview/question/' + encodeURIComponent(help))} />}
+      {company && !practiceRecord && !guide && !help && <>
+        <RecordBack onBack={() => returnTo('#interview')} />
+        <div className="section-head practice-company-heading"><div><h2>{isBank ? tr('通用题库（不限公司）') : data.jobs.find(j => j.id === jobId)?.company}</h2>{!isBank && <p>{data.jobs.find(j => j.id === jobId)?.role}</p>}</div>
+        {packs.length > 1 && <select aria-label={tr('题组版本')} value={pack?.id || ''} onChange={e => {setPackId(e.target.value);setQuestionId('');}}>{packs.map(p => <option key={p.id} value={p.id}>{bt(p.title)}</option>)}</select>}
+        </div>
+      </>}
       {!pack || !question ? (
         <section className="panel">
           <h2>{tr('先为这家公司准备一组问题')}</h2>
-          <p>{tr('Codex 会结合公司特点、岗位要求和你的经历整理练习题。')}</p>
           <button
             className="primary block-button"
             disabled={busy || !jobId}
@@ -228,6 +215,8 @@ export default function InterviewPractice({
         </section>
       ) : (
         <>
+          {!practiceRecord && !guide && !help && <div className="section-head"><h2>{bt(pack.title)}</h2><button className="secondary" onClick={() => setGuide(pack.id)}>{tr('面试前要做什么')}</button></div>}
+          {guide && <>
           {isBank && pack.communicationGuide && (
             <section className="panel candidate-context">
               <h2>{tr('这组题在考察什么')}</h2>
@@ -271,16 +260,17 @@ export default function InterviewPractice({
               <span>{tr('已练问题')}</span>
             </div>
           </section>
-          <details className="panel preparation-plan">
-            <summary>
+          <section className="panel preparation-plan">
+            <h2>
               <BookOpen size={18} />
               {tr('面试前要做什么')}
-            </summary>
+            </h2>
             <p className="prewrap">{bt(pack.plan)}</p>
             <p className="source-line">
               {bt(pack.sourceNotes)}
             </p>
-          </details>
+          </section>
+          </>}
           {notice && (
             <div className="inline-note" role="status">
               {tr(notice)}
@@ -291,57 +281,7 @@ export default function InterviewPractice({
               {tr(error)}
             </div>
           )}
-          <div className="practice-grid">
-            <aside className="panel question-list">
-              <div className="section-head">
-                <h2>{tr('按题练习')}</h2>
-                <span className="small muted">{tr('建议顺序')}</span>
-              </div>
-              {pack.questions.map((q, i) => (
-                <button
-                  disabled={busy}
-                  className={
-                    'question-option ' + (q.id === question.id ? 'chosen' : '')
-                  }
-                  key={q.id}
-                  onClick={() => {
-                    setQuestionId(q.id);
-                    setNotice('');
-                    setError('');
-                  }}
-                >
-                  <span className="question-number">
-                    {practiced.has(q.id) ? (
-                      <Check size={16} />
-                    ) : (
-                      String(i + 1).padStart(2, '0')
-                    )}
-                  </span>
-                  <span>
-                    <b>{bt(q.title)}</b>
-                    <small>
-                      {tr(q.category)} · {q.targetSeconds}
-                      {tr('秒')}
-                    </small>
-                  </span>
-                  <ChevronRight size={15} />
-                </button>
-              ))}
-            </aside>
-            <section className="panel answer-panel">
-              <div className="section-head">
-                <span className="tag">{tr(question.category)}</span>
-                <span className="row small">
-                  <Clock3 size={16} />
-                  {tr('建议')}
-                  {question.targetSeconds}
-                  {tr('秒')}
-                </span>
-              </div>
-              <h2 className="japanese-question" lang="ja">
-                {question.questionJa}
-              </h2>
-              <p>{bt(question.meaning)}</p>
+          {help && <section className="panel question-help-page"><h2>{question.questionJa}</h2>              <p>{bt(question.meaning)}</p>
               {(question.simpleQuestionJa || question.vocabulary) && (
                 <details className="language-support">
                   <summary>{tr('换个简单说法，理解这道题')}</summary>
@@ -391,6 +331,55 @@ export default function InterviewPractice({
                   {question.followUps}
                 </p>
               </details>
+</section>}
+          <div className="practice-record-layout">
+            {!practiceRecord && !guide && !help && <aside className="panel question-list">
+              {pack.questions.map((q, i) => (
+                <button
+                  disabled={busy}
+                  className={
+                    'question-option'
+                  }
+                  key={q.id}
+                  onClick={() => {
+                    setQuestionId(q.id);
+                    setPracticeRecord(pack.id + '|' + q.id);
+                    setNotice('');
+                    setError('');
+                  }}
+                >
+                  <span className="question-number">
+                    {practiced.has(q.id) ? (
+                      <Check size={16} />
+                    ) : (
+                      String(i + 1).padStart(2, '0')
+                    )}
+                  </span>
+                  <span>
+                    <b>{bt(q.title)}</b>
+                    <small>
+                      {tr(q.category)} · {q.targetSeconds}
+                      {tr('秒')}
+                    </small>
+                  </span>
+                  <ChevronRight size={15} />
+                </button>
+              ))}
+            </aside>}
+            {practiceRecord && <section className="panel answer-panel">
+              <div className="section-head">
+                <span className="tag">{tr(question.category)}</span>
+                <span className="row small">
+                  <Clock3 size={16} />
+                  {tr('建议')}
+                  {question.targetSeconds}
+                  {tr('秒')}
+                </span>
+              </div>
+              <h2 className="japanese-question" lang="ja">
+                {question.questionJa}
+              </h2>
+              <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('回答提示')}<ChevronRight size={15} /></button>
               <div className="answer-editor">
                 <label htmlFor="practice-answer">
                   {tr('你的回答')}
@@ -402,9 +391,9 @@ export default function InterviewPractice({
                   disabled={busy}
                   onChange={(e) => edit({ text: e.target.value })}
                   placeholder={tr(
-                    '先用自己的话回答。可以直接写日语，也可以先用中文理清思路；口述后可粘贴转写稿。',
+                    '用日语或中文写下你的回答。',
                   )}
-                  rows={9}
+                  rows={6}
                   maxLength={20000}
                 />
                 <div className="answer-options">
@@ -438,11 +427,6 @@ export default function InterviewPractice({
                     </div>
                   </label>
                 </div>
-                <p className="small">
-                  {tr(
-                    '当前分析文字内容；发音、重音和真实语速需要音频依据。网站不录音，也不即时调用 AI。',
-                  )}
-                </p>
                 <div className="answer-actions">
                   <button
                     className="secondary"
@@ -462,9 +446,9 @@ export default function InterviewPractice({
                   </button>
                 </div>
               </div>
-            </section>
+            </section>}
           </div>
-          <section className="panel feedback-panel">
+          {practiceRecord && <section className="panel feedback-panel">
             <div className="section-head">
               <h2>
                 <MessageSquareText size={20} />
@@ -633,7 +617,7 @@ export default function InterviewPractice({
                 )}
               </>
             )}
-          </section>
+          </section>}
         </>
       )}
     </div>

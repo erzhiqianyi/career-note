@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, Download, Search, X } from 'lucide-react';
+import { RecordBack, useRecordPage } from './record-page';
+import { useState } from 'react';
+import { BookOpen, Download, Search } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useLocale } from '@/components/locale-provider';
@@ -19,15 +20,10 @@ const order = [
 export default function SkillArchive() {
   const { t, locale } = useLocale();
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<
-    (typeof archive.skills)[number] | null
-  >(null);
+  const [selected, setSelected] = useRecordPage<(typeof archive.skills)[number]>('#skills', 'view', id => archive.skills.find(s => s.name === id) || null, s => s.name);
+  const [showHistory, setShowHistory] = useRecordPage<string>('#skills', 'history', () => 'all', s => s);
   const [document, setDocument] = useState('');
   const [message, setMessage] = useState('');
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    if (selected) dialog.current?.showModal();
-  }, [selected]);
   const skills = [...archive.skills]
     .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
     .filter((skill) =>
@@ -45,6 +41,7 @@ export default function SkillArchive() {
   }
   return (
     <section className="panel skill-archive">
+      {!selected && !showHistory && <>
       <div className="section-head">
         <h2>{t('选择本次要做的事')}</h2>
         <a className="text-button" href={archive.archiveUrl} download>
@@ -52,9 +49,6 @@ export default function SkillArchive() {
           {t('下载全部技能')}
         </a>
       </div>
-      <p className="muted page-note">
-        {t('每个技能都可独立安装，通过已配置的 MCP 读取与同步你的资料。')}
-      </p>
       <div className="collection-toolbar">
         <label className="search">
           <Search size={16} />
@@ -75,7 +69,7 @@ export default function SkillArchive() {
           columns={[
             { key: 'skill', label: t('技能'), width: 'minmax(180px, 1fr)' },
             { key: 'desc', label: t('用途'), width: 'minmax(200px, 1.6fr)', hide: 'phone' },
-            { key: 'ops', label: t('操作'), width: '108px', align: 'end' },
+            { key: 'ops', label: t('操作'), width: '40px', align: 'end' },
           ]}
         >
           {skills.map((skill) => {
@@ -93,12 +87,7 @@ export default function SkillArchive() {
                   <button className="icon-button" onClick={open} title={t('查看详情')} aria-label={`${t('查看详情')} ${t(skill.title)}`}>
                     <BookOpen size={16} />
                   </button>
-                  <button className="icon-button" onClick={() => void copy(skill.prompt)} title={t('复制指令')} aria-label={`${t('复制指令')} ${t(skill.title)}`}>
-                    <Copy size={16} />
-                  </button>
-                  <a className="icon-button" href={skill.downloadUrl} download title={t('下载')} aria-label={`${t('下载')} ${t(skill.title)}`}>
-                    <Download size={16} />
-                  </a>
+
                 </DataActions>
               </DataRow>
             );
@@ -109,10 +98,9 @@ export default function SkillArchive() {
       <output aria-live="polite" className="skill-copy-status">
         {message}
       </output>
-      <details className="skill-history">
-        <summary>
-          {t('历史备份')} · {archive.history.length}
-        </summary>
+      <button className="secondary" onClick={() => setShowHistory('all')}>{t('历史备份')} · {archive.history.length}</button>
+      </>}
+      {showHistory && <section className="record-page"><RecordBack onBack={() => setShowHistory(null)} /><h2>{t('历史备份')}</h2>
         <DataTable
           label={t('历史备份')}
           columns={[
@@ -137,30 +125,15 @@ export default function SkillArchive() {
             </DataRow>
           ))}
         </DataTable>
-      </details>
-      <dialog
-        ref={dialog}
-        className="skill-dialog"
-        onClose={() => setSelected(null)}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) dialog.current?.close();
-        }}
-      >
+      </section>}
         {selected && (
-          <>
+          <section className="record-page">
+            <RecordBack onBack={() => setSelected(null)} />
             <header className="skill-dialog-header">
               <div>
                 <h2>{t(selected.title)}</h2>
                 <code>{selected.name}</code>
               </div>
-              <button
-                autoFocus
-                className="icon-button"
-                aria-label={t('关闭')}
-                onClick={() => dialog.current?.close()}
-              >
-                <X size={20} />
-              </button>
             </header>
             <div className="skill-dialog-content">
               <div className="collection-toolbar">
@@ -183,6 +156,7 @@ export default function SkillArchive() {
                   {t('下载此技能')}
                 </a>
               </div>
+              <button className="secondary" onClick={() => void copy(selected.prompt)}>{t('复制指令')}</button>
               <pre className="skill-prompt">{selected.prompt}</pre>
               <div className="skill-markdown">
                 <Markdown
@@ -201,13 +175,12 @@ export default function SkillArchive() {
                   {document
                     ? selected.references.find((ref) => ref.path === document)
                         ?.content
-                    : selected.content}
+                    : selected.content.replace(/^# [^\n]+\n/, '')}
                 </Markdown>
               </div>
             </div>
-          </>
+          </section>
         )}
-      </dialog>
     </section>
   );
 }

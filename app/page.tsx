@@ -1,4 +1,5 @@
 'use client';
+import { RecordBack, useRecordPage } from '@/components/record-page';
 import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
 
 import AgentConnection from '@/components/agent-connection';
@@ -11,7 +12,6 @@ import {
   mcpSetupHash,
   mcpSetupPage,
 } from '@/lib/mcp-clients';
-import ScheduledSync from '@/components/scheduled-sync';
 import ScheduledTemplates from '@/components/scheduled-templates';
 import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
 import CareerWelcome from '@/components/career-welcome';
@@ -67,7 +67,6 @@ import {
   Shield,
   ScrollText,
   Sparkles,
-  Ban,
   Upload,
   UserRound,
   Workflow,
@@ -130,8 +129,16 @@ const subPages: Record<string, { parent: string; hash: string }> = {
 };
 const sidebarKey = 'career-note.sidebar-collapsed';
 const hashes: Record<string, string> = {
+  '#today': '今日准备',
+  '#jobs': '公司与投递',
   '#interview': '面试练习',
   '#platforms': '求职平台',
+  '#resume': '我的履历',
+  '#personalized': '个性化简历',
+  '#materials': '准备资料',
+  '#reports': '每日分析',
+  '#documents': '准备资料',
+  '#agents': 'Agent 协作',
   ...Object.fromEntries(
     Object.entries(subPages).map(([label, page]) => [page.hash, label]),
   ),
@@ -235,7 +242,7 @@ function Field({
     </label>
   );
 }
-function Modal({
+function RecordPage({
   title,
   children,
   onClose,
@@ -245,31 +252,7 @@ function Modal({
   onClose: () => void;
 }) {
   const { t: tr } = useLocale();
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    ref.current?.showModal();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      onCancel={onClose}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="modal-head">
-        <h2>{tr(title)}</h2>
-        <button
-          className="icon-button"
-          aria-label={tr('关闭')}
-          onClick={onClose}
-        >
-          <X size={20} />
-        </button>
-      </div>
-      {children}
-    </dialog>
-  );
+  return <section className="panel record-page"><RecordBack onBack={onClose} /><h2>{tr(title)}</h2>{children}</section>;
 }
 // Left-hand sheet for the phone layout; the desktop sidebar makes it redundant there (hidden by CSS).
 function Drawer({ children, onClose }: { children: ReactNode; onClose: () => void }) {
@@ -315,8 +298,9 @@ export default function Home() {
     [matchFilter, setMatchFilter] = useState('全部'),
     [sort, setSort] = useState<{ key: JobSortKey; desc: boolean }>({ key: 'updated', desc: true }),
     [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
-    [doc, setDoc] = useState<Material | Report | null>(null);
-  const [practiceJob, setPracticeJob] = useState('');
+    [doc, setDoc] = useRecordPage<Material | Report>('#documents', 'view', id => [...(data?.materials || []), ...(data?.reports || [])].find(item => item.id === id) || null, item => item.id);
+  const [taskPage, setTaskPage] = useRecordPage<State['tasks'][number]>('#agents', 'task', id => data?.tasks.find(t => t.id === id) || null, t => t.id);
+  const [archivedTokens, setArchivedTokens] = useRecordPage<boolean>('#agents', 'archive', () => true, () => 'all');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [goalEdit, setGoalEdit] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(false);
@@ -339,17 +323,40 @@ export default function Home() {
   };
   useEffect(() => {
     const navigate = () => {
-      const target = hashes[window.location.hash];
-      if (target) setActive(target);
+      const hash = window.location.hash;
+      const editMatch = hash.match(/^#jobs\/([^/]+)\/edit$/);
+      const detailMatch = hash.match(/^#jobs\/([^/]+)$/);
+      if (hash === '#jobs/new' || editMatch) {
+        setActive('公司与投递');
+        if (hash === '#jobs/new') {
+          setSelected('');
+          setJobEdit({});
+        } else if (data) {
+          const editing = data.jobs.find((item) => encodeURIComponent(item.id) === editMatch?.[1]);
+          setSelected(editing?.id || '');
+          setJobEdit(editing || null);
+          if (!editing) setError('职位不存在或已移除');
+        }
+      } else {
+        setJobEdit(null);
+        if (detailMatch) {
+          setActive('公司与投递');
+          setSelected(data?.jobs.find((item) => encodeURIComponent(item.id) === detailMatch[1])?.id || '');
+        } else {
+          const target = hash.startsWith('#documents/view/') && data?.reports.some(r => encodeURIComponent(r.id) === hash.slice('#documents/view/'.length)) ? '每日分析' : hashes[hash] || hashes[hash.split('/')[0]];
+          if (target) { setActive(target); setSelected(''); }
+        }
+      }
+      window.scrollTo(0, 0);
     };
     navigate();
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
-  }, []);
-  const [importOpen, setImportOpen] = useState(false),
+  }, [data]);
+  const [importOpen, setImportOpen] = useRecordPage<boolean>('#agents', 'import', () => true, () => 'new'),
     [importText, setImportText] = useState(''),
     [preview, setPreview] = useState<Record<string, number> | null>(null),
-    [profileEdit, setProfileEdit] = useState(false);
+    [profileEdit, setProfileEdit] = useRecordPage<boolean>('#resume', 'profile', () => true, () => 'edit');
   const [authConfig, setAuthConfig] = useState<CareerAuthConfig | null>(null);
   const sessionEpoch = useRef(0);
   const lastUid = useRef<string | null>(null);
@@ -357,7 +364,15 @@ export default function Home() {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [mcpTokens, setMcpTokens] = useState<MpcTokenRecord[]>([]);
-  const [agentTrail, setAgentTrail] = useState<{ tokenId: string; rows: AgentActivity[] } | null>(null);
+  const [agentTrail, setAgentTrail] = useRecordPage<{ tokenId: string; rows: AgentActivity[] }>('#agents', 'activity', id => ({tokenId:id, rows:[]}), item => item.tokenId);
+  useEffect(() => {
+    if (!agentTrail) return;
+    let cancelled = false;
+    api<{activity: AgentActivity[]}>('mcp/activity?tokenId=' + encodeURIComponent(agentTrail.tokenId) + '&limit=50').then(response => {
+      if (!cancelled) setAgentTrail(previous => previous && ({...previous, rows: response.activity}));
+    }).catch(e => { if (!cancelled) setError(String(e)); });
+    return () => { cancelled = true; };
+  }, [agentTrail?.tokenId]);
   const visibleNav = useMemo(
     () => nav,
     [auth],
@@ -532,7 +547,7 @@ export default function Home() {
   async function revokeMcpToken(id: string) {
     await action(() => api('mcp/tokens/revoke', { id }), '已撤销 MCP token');
     await refreshMcpTokens();
-    if (agentTrail?.tokenId === id) await showAgentTrail(id);
+    if (agentTrail?.tokenId === id) { const r = await api<{activity: AgentActivity[]}>('mcp/activity?tokenId=' + encodeURIComponent(id) + '&limit=50'); setAgentTrail({tokenId:id, rows:r.activity}); }
   }
   async function showAgentTrail(tokenId: string) {
     if (agentTrail?.tokenId === tokenId) { setAgentTrail(null); return; }
@@ -550,7 +565,29 @@ export default function Home() {
     const kind = row.detail && typeof row.detail.kind === 'string' ? row.detail.kind : '';
     return tr(base) + (requested ? `（${requested}）` : kind ? `（${kind}）` : '') + (row.ok ? '' : ' · ' + tr('失败'));
   }
+  function openJob(id: string) {
+    setActive('公司与投递');
+    setSelected(id);
+    window.location.hash = 'jobs/' + encodeURIComponent(id);
+  }
+  function openJobEditor(value: Partial<Job>) {
+    const parent = value.id ? '#jobs/' + encodeURIComponent(value.id) : active === '今日准备' ? '#today' : '#jobs';
+    window.history.replaceState(null, '', parent);
+    setJobEdit(value);
+    setActive('公司与投递');
+    window.location.hash = value.id ? 'jobs/' + encodeURIComponent(value.id) + '/edit' : 'jobs/new';
+    window.scrollTo(0, 0);
+  }
+  function closeJobEditor() {
+    const id = jobEdit?.id;
+    setJobEdit(null);
+    setActive('公司与投递');
+    setSelected(id || '');
+    window.history.replaceState(null, '', id ? '#jobs/' + encodeURIComponent(id) : '#jobs');
+    window.scrollTo(0, 0);
+  }
   function go(label: string) {
+    setJobEdit(null);
     window.scrollTo(0, 0);
     const page = subPages[label]?.parent ?? label;
     if (visibleNav.some((item) => item.label === page)) {
@@ -558,13 +595,18 @@ export default function Home() {
       window.history.replaceState(
         null,
         '',
-        label === '求职平台'
+        label === '公司与投递'
+          ? '#jobs'
+          : label === '今日准备'
+            ? '#today'
+            : label === '求职平台'
           ? '#platforms'
           : label === '面试练习'
             ? '#interview'
-            : (subPages[label]?.hash ?? window.location.pathname),
+            : (subPages[label]?.hash ?? Object.entries(hashes).find(([, name]) => name === label)?.[0] ?? '#today'),
       );
     }
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
     setDrawerOpen(false);
     setSelected('');
     setFilter('全部');
@@ -637,7 +679,7 @@ export default function Home() {
         (j) => !['未通过', '已撤回', '内定'].includes(j.status),
       ) || [];
   // A drilled-in view (company detail, agent sub-pages): the header shows "back", phones drop the tab bar.
-  const isSubPage = !!(subPages[active] || (active === '公司与投递' && job));
+  const isSubPage = !!(jobEdit || subPages[active] || (active === '公司与投递' && job));
   const due = openJobs.filter(
       (j) => j.nextDate && j.nextDate <= (data?.today || ''),
     ),
@@ -724,7 +766,7 @@ export default function Home() {
             <button
               key={label}
               aria-current={activePage === label ? 'page' : undefined}
-              className={activePage === label ? 'active' : ''}
+              className={[activePage === label ? 'active' : '', ['我的履历', 'Agent 协作'].includes(label) ? 'nav-group-start' : ''].filter(Boolean).join(' ')}
               title={navCollapsed ? tr(label) : undefined}
               aria-label={navCollapsed ? tr(label) : undefined}
               onClick={() => go(label)}
@@ -844,23 +886,19 @@ export default function Home() {
                   tr(subPages[active]?.parent ?? active),
                 ])}
                 onClick={() =>
-                  subPages[active]
+                  jobEdit ? closeJobEditor() : subPages[active]
                     ? go(subPages[active].parent)
-                    : setSelected('')
+                    : go('公司与投递')
                 }
               >
                 <ArrowLeft size={18} />
               </button>
             )}
-            <span className="breadcrumb">
-              {tr(activePage)}
-              {isSubPage && (
-                <span className="muted">
-                  / {job ? job.company : tr(findMcpClient(active)?.name ?? active)}
-                  {job?.role ? ' · ' + job.role : ''}
-                </span>
-              )}
-            </span>
+            {isSubPage ? (
+              <span className="breadcrumb">{tr(activePage)}</span>
+            ) : (
+              <h1 className="header-page-title">{tr(activePage)}</h1>
+            )}
           </div>
           <div className="row header-tools">
             <LanguageSwitcher />
@@ -904,6 +942,119 @@ export default function Home() {
           </div>
         </header>
         <div className="page">
+          {!doc && !profileEdit && !importOpen && !agentTrail && !taskPage && !archivedTokens && <>
+          {jobEdit ? (
+<section className="panel job-editor-page" key={jobEdit.id || 'new'} aria-labelledby="job-editor-title">
+          <div className="editor-heading"><h1 id="job-editor-title">{jobEdit.id ? tr('编辑职位与投递进展') : tr('添加目标职位')}</h1><p>{jobEdit.company || tr('先填写公司和职位，其余信息可稍后补充。')}</p></div>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = Object.fromEntries(new FormData(e.currentTarget));
+              const ok = await action(
+                () => api('jobs', { ...jobEdit, ...form }),
+                '职位与投递进展已保存',
+              );
+              if (ok) closeJobEditor();
+            }}
+          >
+            <div className="form-grid">
+              {researchFields.map(([k, label]) => k === 'matchLevel' ? (
+                <label className="field" key={k}>
+                  <span>{tr(label)}</span>
+                  <select name="matchLevel" defaultValue={jobEdit.matchLevel || ''}>
+                    <option value="">{tr('待评估')}</option>
+                    {matchLevels.map((s) => (
+                      <option key={s} value={s}>
+                        {tr(s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <Field
+                  key={k}
+                  name={k}
+                  label={tr(label)}
+                  value={String(jobEdit[k as keyof Job] || '')}
+                  required={k === 'company' || k === 'role'}
+                  type={
+                    k === 'sourceDate' ? 'date' : k === 'url' ? 'url' : 'text'
+                  }
+                  large={[
+                    'business',
+                    'requirements',
+                    'description',
+                    'matchNotes',
+                    'unknowns',
+                  ].includes(k)}
+                />
+              ))}
+              <label className="field">
+                <span>{tr('投递状态')}</span>
+                <select name="status" defaultValue={jobEdit.status || '关注中'}>
+                  {statuses.map((s) => (
+                    <option key={s} value={s}>
+                      {tr(s)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{tr('优先级')}</span>
+                <select
+                  name="priority"
+                  defaultValue={jobEdit.priority || '普通'}
+                >
+                  {['高', '普通', '低'].map((s) => (
+                    <option key={s} value={s}>
+                      {tr(s)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Field
+                name="nextAction"
+                label={tr('下一步行动')}
+                value={jobEdit.nextAction}
+              />
+              <Field
+                name="nextDate"
+                label={tr('跟进 / 面试日期')}
+                value={jobEdit.nextDate}
+                type="date"
+              />
+              <Field
+                name="notes"
+                label={tr('我的跟进记录')}
+                value={jobEdit.notes}
+                large
+              />
+            </div>
+            {error && <p className="form-error">{tr(error)}</p>}
+            <div className="editor-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={closeJobEditor}
+              >
+                {tr('取消')}
+              </button>
+              <button className="primary" disabled={busy}>
+                {busy ? tr('保存中…') : tr('保存职位')}
+              </button>
+            </div>
+          </form>
+        </section>
+          ) : (<>
+          {active === '今日准备' && (
+            <div className="workspace-heading">
+              <p>{tr('从下一步开始，让准备持续推进。')}</p>
+              <button className="primary" disabled={!data} onClick={() => data?.questionSets.length ? go('面试练习') : openJobEditor({})}>
+                {data?.questionSets.length ? <CalendarDays size={18} /> : <Plus size={18} />}
+                {tr(data?.questionSets.length ? '开始面试练习' : '添加职位')}
+              </button>
+            </div>
+          )}
           {error && (
             <div className="alert" role="alert">
               {tr(error)}
@@ -928,20 +1079,6 @@ export default function Home() {
                 >
                   <Sparkles size={17} />
                   {tr('请求今日分析')}
-                </button>
-              ) : active === '今日准备' && !!data?.questionSets.length ? (
-                <button className="primary" onClick={() => go('面试练习')}>
-                  <CalendarDays size={18} />
-                  {tr('开始面试练习')}
-                </button>
-              ) : active === '今日准备' ? (
-                <button
-                  className="primary phone-hidden"
-                  disabled={!data}
-                  onClick={() => setJobEdit({})}
-                >
-                  <Plus size={18} />
-                  {tr('添加职位')}
                 </button>
               ) : null;
             if (active === '公司与投递' && !job) {
@@ -996,7 +1133,7 @@ export default function Home() {
                   <button
                     className="primary"
                     disabled={!data}
-                    onClick={() => setJobEdit({})}
+                    onClick={() => openJobEditor({})}
                   >
                     <Plus size={18} />
                     {tr('添加职位')}
@@ -1018,7 +1155,6 @@ export default function Home() {
                       </option>
                     ))}
                   </select>
-                  <span className="small muted">{tr('AI 文稿使用前需核对事实与表达。')}</span>
                   <span className="muted list-count">
                     {tr('{0} / {1} 条', [String(visibleMaterials.length), String(data.materials.length)])}
                   </span>
@@ -1044,78 +1180,11 @@ export default function Home() {
               <div hidden={active !== '面试练习'}>
                 <InterviewPractice
                   data={data}
-                  initialJobId={practiceJob}
-                  onJobChange={setPracticeJob}
                   reload={reload}
                 />
               </div>
               {active === '今日准备' && (
                 <>
-                  {(() => {
-                    // Calendar marks: follow-ups on their due day, interviews, and the personal target date.
-                    const marks: Record<string, CalendarMark> = {};
-                    for (const j of openJobs) if (j.nextDate) marks[j.nextDate.slice(0, 10)] = j.status === '面试中' ? 'interview' : 'due';
-                    const target = data.profile.targetDate;
-                    if (target) marks[target] = 'target';
-                    const daysLeft = target ? Math.round((Date.parse(target) - Date.parse(data.today)) / 86400000) : null;
-                    return (
-                      <section className="today-hero">
-                        <TodayCalendar today={data.today} marks={marks} activity={collectActivity(data.jobs, data.attempts, data.materials)} />
-                        <div className="goal">
-                          <h2>
-                            <Flag size={18} />
-                            {tr('目标')}
-                          </h2>
-                          {goalEdit ? (
-                            <form
-                              className="goal-form"
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                const targetDate = String(new FormData(e.currentTarget).get('targetDate') || '');
-                                void action(() => api('profile', { ...data.profile, targetDate }), '目标已保存').then((ok) => {
-                                  if (ok) setGoalEdit(false);
-                                });
-                              }}
-                            >
-                              <label>
-                                {tr('希望在这一天之前找到工作')}
-                                <input type="date" name="targetDate" defaultValue={target} min={data.today} />
-                              </label>
-                              <div className="row">
-                                <button className="primary" type="submit" disabled={busy}>
-                                  {tr('保存')}
-                                </button>
-                                <button className="text-button" type="button" onClick={() => setGoalEdit(false)}>
-                                  {tr('取消')}
-                                </button>
-                              </div>
-                            </form>
-                          ) : target && daysLeft !== null ? (
-                            <>
-                              <p className="goal-date">{day(target)}</p>
-                              <p className="goal-count">
-                                {daysLeft > 0
-                                  ? tr('距离目标还有 {0} 天', [daysLeft])
-                                  : daysLeft === 0
-                                    ? tr('目标日期就是今天')
-                                    : tr('目标日期已过 {0} 天，可以重新设定', [-daysLeft])}
-                              </p>
-                              <button className="text-button" onClick={() => setGoalEdit(true)}>
-                                {tr('修改目标')}
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <p className="goal-count">{tr('给自己定一个找到工作的日期，每天在这里看到倒计时。')}</p>
-                              <button className="secondary" onClick={() => setGoalEdit(true)}>
-                                {tr('设定目标日期')}
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </section>
-                    );
-                  })()}
                   <div className="stats">
                     {[
                       ['关注职位', data.jobs.length, '全部保存的求职机会'],
@@ -1167,7 +1236,7 @@ export default function Home() {
                               key={j.id}
                               onClick={() => {
                                 go('公司与投递');
-                                setSelected(j.id);
+                                openJob(j.id);
                               }}
                             >
                               <span className="step">
@@ -1256,7 +1325,7 @@ export default function Home() {
                                 key={j.id}
                                 onClick={() => {
                                   go('公司与投递');
-                                  setSelected(j.id);
+                                  openJob(j.id);
                                 }}
                               >
                                 <span className="company-avatar">
@@ -1278,6 +1347,72 @@ export default function Home() {
                         )}
                       </section>
                     </div>
+                    <aside className="home-aside">
+                  {(() => {
+                    // Calendar marks: follow-ups on their due day, interviews, and the personal target date.
+                    const marks: Record<string, CalendarMark> = {};
+                    for (const j of openJobs) if (j.nextDate) marks[j.nextDate.slice(0, 10)] = j.status === '面试中' ? 'interview' : 'due';
+                    const target = data.profile.targetDate;
+                    if (target) marks[target] = 'target';
+                    const daysLeft = target ? Math.round((Date.parse(target) - Date.parse(data.today)) / 86400000) : null;
+                    return (
+                      <section className="today-hero">
+                        <TodayCalendar today={data.today} marks={marks} activity={collectActivity(data.jobs, data.attempts, data.materials)} />
+                        <div className="goal">
+                          <h2>
+                            <Flag size={18} />
+                            {tr('目标')}
+                          </h2>
+                          {goalEdit ? (
+                            <form
+                              className="goal-form"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const targetDate = String(new FormData(e.currentTarget).get('targetDate') || '');
+                                void action(() => api('profile', { ...data.profile, targetDate }), '目标已保存').then((ok) => {
+                                  if (ok) setGoalEdit(false);
+                                });
+                              }}
+                            >
+                              <label>
+                                {tr('希望在这一天之前找到工作')}
+                                <input type="date" name="targetDate" defaultValue={target} min={data.today} />
+                              </label>
+                              <div className="row">
+                                <button className="primary" type="submit" disabled={busy}>
+                                  {tr('保存')}
+                                </button>
+                                <button className="text-button" type="button" onClick={() => setGoalEdit(false)}>
+                                  {tr('取消')}
+                                </button>
+                              </div>
+                            </form>
+                          ) : target && daysLeft !== null ? (
+                            <>
+                              <p className="goal-date">{day(target)}</p>
+                              <p className="goal-count">
+                                {daysLeft > 0
+                                  ? tr('距离目标还有 {0} 天', [daysLeft])
+                                  : daysLeft === 0
+                                    ? tr('目标日期就是今天')
+                                    : tr('目标日期已过 {0} 天，可以重新设定', [-daysLeft])}
+                              </p>
+                              <button className="text-button" onClick={() => setGoalEdit(true)}>
+                                {tr('修改目标')}
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="goal-count">{tr('给自己定一个找到工作的日期，每天在这里看到倒计时。')}</p>
+                              <button className="secondary" onClick={() => setGoalEdit(true)}>
+                                {tr('设定目标日期')}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </section>
+                    );
+                  })()}
                     <section className="analysis-card">
                       <Sparkles size={24} />
                       <div className="eyebrow">
@@ -1324,33 +1459,25 @@ export default function Home() {
                         )}
                       </div>
                     </section>
+                    </aside>
                   </div>
                 </>
               )}
               {active === '公司与投递' &&
                 (job ? (
                   <>
-                    <section className="panel">
+                    <section className="panel job-overview">
                       <div className="section-head">
-                        <h2>{tr('投递时间线')}</h2>
+                        <div><h1>{job.company}</h1><p className="job-role">{job.role}</p></div>
                         <div className="row">
                           <Badge>{job.status}</Badge>
                           <button
                             className="secondary"
-                            onClick={() => setJobEdit(job)}
+                            onClick={() => openJobEditor(job)}
                           >
                             {tr('更新进展')}
                           </button>
                         </div>
-                      </div>
-                      <div className="timeline">
-                        {job.history.map((h, i) => (
-                          <div key={i}>
-                            <span className="timeline-dot" />
-                            <b>{tr(h.status)}</b>
-                            <small>{day(h.at)}</small>
-                          </div>
-                        ))}
                       </div>
                       <div className="next-action">
                         <CalendarDays size={18} />
@@ -1362,12 +1489,24 @@ export default function Home() {
                               : tr('设置跟进日期，方便每天查看')}
                           </small>
                         </span>
+                        <button className="secondary" onClick={() => openJobEditor(job)}>{tr(job.nextDate ? '更新进展' : '安排跟进')}</button>
                         <MatchBadge level={job.matchLevel} />
                         <Badge>
                           {tr(job.priority)}
                           {tr('优先级')}
                         </Badge>
                       </div>
+                      <details className="history-disclosure"><summary>{tr('投递时间线')} · {job.history.length}</summary>
+                      <div className="timeline">
+                        {job.history.map((h, i) => (
+                          <div key={i}>
+                            <span className="timeline-dot" />
+                            <b>{tr(h.status)}</b>
+                            <small>{day(h.at)}</small>
+                          </div>
+                        ))}
+                      </div>
+                      </details>
                     </section>
                     <div className="detail-grid">
                       <section className="panel">
@@ -1396,7 +1535,7 @@ export default function Home() {
                           ].map(([k, v]) => (
                             <div key={k}>
                               <dt>{tr(k)}</dt>
-                              <dd>{v || tr('待确认')}</dd>
+                              <dd>{v && v.length > 100 ? <details className="fact-disclosure"><summary><span className="fact-preview">{v.slice(0, 100)}…</span><span className="fact-expand">{tr('查看完整说明')}</span><span className="fact-collapse">{tr('收起说明')}</span></summary><p>{v}</p></details> : v || tr('待确认')}</dd>
                             </div>
                           ))}
                         </dl>
@@ -1408,10 +1547,10 @@ export default function Home() {
                           ['待确认事项', job.unknowns],
                           ['我的跟进记录', job.notes],
                         ].map(([k, v]) => (
-                          <div className="text-section" key={k}>
-                            <h3>{tr(k)}</h3>
+                          <details className="text-section detail-disclosure" key={k} open={k === '匹配点' || k === '待确认事项'}>
+                            <summary>{tr(k)}</summary>
                             <p className="prewrap">{v || tr('尚未补充')}</p>
-                          </div>
+                          </details>
                         ))}
                       </section>
                       <section className="panel">
@@ -1421,8 +1560,8 @@ export default function Home() {
                         <button
                           className="secondary block-button"
                           onClick={() => {
-                            setPracticeJob(job.id);
                             go('面试练习');
+                            window.location.hash = '#interview/company/' + encodeURIComponent(job.id);
                           }}
                         >
                           <CalendarDays size={17} />
@@ -1448,9 +1587,7 @@ export default function Home() {
                           <DataTable
                             label={tr('准备资料')}
                             columns={[
-                              { key: 'title', label: tr('标题'), width: 'minmax(160px, 1fr)' },
-                              { key: 'kind', label: tr('类型'), width: '104px' },
-                              { key: 'created', label: tr('创建'), width: '84px', hide: 'phone' },
+                              { key: 'title', label: tr('标题'), width: 'minmax(0, 1fr)' },
                               { key: 'review', label: tr('状态'), width: '80px' },
                               { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
                             ]}
@@ -1459,9 +1596,7 @@ export default function Home() {
                               .filter((m) => m.jobId === job.id)
                               .map((m) => (
                                 <DataRow key={m.id}>
-                                  <DataTitle title={m.title} onClick={() => setDoc(m)} />
-                                  <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
-                                  <DataCell label={tr('创建')} hide="phone" className="num">{day(m.createdAt)}</DataCell>
+                                  <DataTitle title={m.title} meta={<>{tr(m.kind)} · {day(m.createdAt)}</>} onClick={() => setDoc(m)} />
                                   <DataCell label={tr('状态')}><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
                                   <DataActions>
                                     <button className="icon-button" onClick={() => setDoc(m)} title={tr('打开')} aria-label={tr('打开')}>
@@ -1494,23 +1629,7 @@ export default function Home() {
                             job={j}
                             today={data.today}
                             day={day}
-                            materialCount={
-                              data.materials.filter((m) => m.jobId === j.id)
-                                .length
-                            }
-                            questionCount={
-                              [...data.questionSets]
-                                .filter((q) => q.jobId === j.id)
-                                .sort((a, b) =>
-                                  b.createdAt.localeCompare(a.createdAt),
-                                )[0]?.questions.length || 0
-                            }
-                            onOpen={() => setSelected(j.id)}
-                            onPractice={() => {
-                              setPracticeJob(j.id);
-                              go('面试练习');
-                            }}
-                            onEdit={() => setJobEdit(j)}
+                            onOpen={() => openJob(j.id)}
                           />
                         ))}
                       </OpportunityTable>
@@ -1559,9 +1678,8 @@ export default function Home() {
                     <DataTable
                       label={tr('准备资料')}
                       columns={[
-                        { key: 'title', label: tr('标题 / 公司'), width: 'minmax(200px, 1.6fr)' },
+                        { key: 'title', label: tr('标题 / 公司'), width: 'minmax(0, 1fr)' },
                         { key: 'kind', label: tr('类型'), width: '110px' },
-                        { key: 'created', label: tr('创建'), width: '84px', hide: 'phone' },
                         { key: 'review', label: tr('状态'), width: '80px' },
                         { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
                       ]}
@@ -1570,11 +1688,10 @@ export default function Home() {
                         <DataRow key={m.id}>
                           <DataTitle
                             title={m.title}
-                            meta={data.jobs.find((j) => j.id === m.jobId)?.company || tr('整个求职工作区')}
+                            meta={<>{data.jobs.find((j) => j.id === m.jobId)?.company || tr('整个求职工作区')} · {day(m.createdAt)}</>}
                             onClick={() => setDoc(m)}
                           />
                           <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
-                          <DataCell label={tr('创建')} hide="phone" className="num">{day(m.createdAt)}</DataCell>
                           <DataCell label={tr('状态')}><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
                           <DataActions>
                             <button className="icon-button" onClick={() => setDoc(m)} title={tr('打开')} aria-label={tr('打开')}>
@@ -1605,8 +1722,8 @@ export default function Home() {
                     <DataTable
                       label={tr('每日分析')}
                       columns={[
+                        { key: 'title', label: tr('标题'), width: 'minmax(0, 1fr)' },
                         { key: 'date', label: tr('日期'), width: '96px' },
-                        { key: 'title', label: tr('标题'), width: 'minmax(200px, 1fr)' },
                         { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
                       ]}
                     >
@@ -1619,12 +1736,11 @@ export default function Home() {
                         )
                         .map((r) => (
                           <DataRow key={r.id}>
-                            <DataCell className="num">{day(r.date)}</DataCell>
                             <DataTitle
                               title={r.title}
-                              meta={r.content.replace(/[#*]/g, '').slice(0, 120)}
-                              onClick={() => setDoc(r)}
+                                                            onClick={() => setDoc(r)}
                             />
+                            <DataCell label={tr('日期')} className="num">{day(r.date)}</DataCell>
                             <DataActions>
                               <button className="icon-button" onClick={() => setDoc(r)} title={tr('打开')} aria-label={tr('打开')}>
                                 <ChevronRight size={16} />
@@ -1694,38 +1810,24 @@ export default function Home() {
                         { key: 'ops', label: tr('操作'), width: '76px', align: 'end' as const },
                       ];
                       const row = (item: MpcTokenRecord) => {
-                        const open = agentTrail?.tokenId === item.id;
                         const live = !item.revoked && !item.expired;
                         return (
                           <Fragment key={item.id}>
                             <DataRow>
-                              <DataTitle title={item.name} meta={item.scopes.join(' · ')} />
+                              <DataTitle title={item.name} meta={item.scopes.join(' · ')} onClick={() => void showAgentTrail(item.id)} />
                               <DataCell label={tr('有效期至')} hide="phone" className="num">{day(item.expiresAt)}</DataCell>
                               <DataCell label={tr('最近使用')} hide="tablet" className="num">{item.lastUsedAt ? day(item.lastUsedAt) : '—'}</DataCell>
                               <DataCell label={tr('状态')}>
                                 <span className={'badge ' + (live ? 'green' : 'gray')}>{item.revoked ? tr('已撤销') : item.expired ? tr('已过期') : tr('有效')}</span>
                               </DataCell>
                               <DataActions>
-                                <button className={'icon-button' + (open ? ' on' : '')} onClick={() => void showAgentTrail(item.id)} title={open ? tr('收起记录') : tr('操作记录')} aria-label={open ? tr('收起记录') : tr('操作记录')} aria-expanded={open}>
+                                <button className="icon-button" onClick={() => void showAgentTrail(item.id)} title={tr('打开')} aria-label={tr('打开')}>
                                   <ScrollText size={16} />
                                 </button>
-                                {live ? (
-                                  <button className="icon-button danger" onClick={() => void revokeMcpToken(item.id)} title={tr('撤销')} aria-label={tr('撤销')}>
-                                    <Ban size={16} />
-                                  </button>
-                                ) : (
-                                  <span className="icon-button placeholder" aria-hidden />
-                                )}
+
                               </DataActions>
                             </DataRow>
-                            {open && (
-                              <div className="dt-detail">
-                                <ul className="agent-trail">
-                                  {!agentTrail.rows.length && <li>{tr('还没有操作记录。')}</li>}
-                                  {agentTrail.rows.map((entry) => <li key={entry.id}><time dateTime={entry.at}>{entry.at.slice(0, 16).replace('T', ' ')}</time><span>{describeActivity(entry)}</span></li>)}
-                                </ul>
-                              </div>
-                            )}
+
                           </Fragment>
                         );
                       };
@@ -1743,11 +1845,7 @@ export default function Home() {
                             <DataTable label={tr('MCP Token 管理')} columns={tokenColumns}>{active.map(row)}</DataTable>
                           )}
                           {archived.length > 0 && (
-                            <details className="agent-archive">
-                              <summary>{tr('已撤销 / 已过期（{0}）', [archived.length])}</summary>
-                              <p className="small page-note">{tr('归档保留 180 天的操作记录，用于事后核对；记录不含具体内容，只有工具名和条数。')}</p>
-                              <DataTable label={tr('已撤销 / 已过期的授权')} columns={tokenColumns}>{archived.map(row)}</DataTable>
-                            </details>
+                            <button className="secondary" onClick={() => setArchivedTokens(true)}>{tr('已撤销 / 已过期（{0}）', [archived.length])}</button>
                           )}
                         </>
                       );
@@ -1805,7 +1903,8 @@ export default function Home() {
                       <DataTable
                         label={tr('任务队列')}
                         columns={[
-                          { key: 'kind', label: tr('任务'), width: 'minmax(160px, 1fr)' },
+                          { key: 'kind', label: tr('任务'), width: 'minmax(0, 1fr)' },
+                          { key: 'created', label: tr('创建'), width: '84px', hide: 'phone' },
                           { key: 'created', label: tr('创建'), width: '84px', hide: 'phone' },
                           { key: 'status', label: tr('状态'), width: '80px', align: 'end' },
                         ]}
@@ -1814,6 +1913,7 @@ export default function Home() {
                           <DataRow key={t.id}>
                             <DataTitle
                               title={tr(t.kind)}
+                              onClick={() => setTaskPage(t)}
                               meta={data.jobs.find((j) => j.id === t.jobId)?.company || tr('整个求职工作区')}
                             />
                             <DataCell label={tr('创建')} hide="phone" className="num">{day(t.createdAt)}</DataCell>
@@ -1849,120 +1949,20 @@ export default function Home() {
               {active === '定时任务' && (
                 <>
                   <ScheduledTemplates />
-                  <ScheduledSync />
                 </>
               )}
             </>
           )}
-        </div>
-      </main>
-      {jobEdit && (
-        <Modal
-          title={jobEdit.id ? tr('编辑职位与投递进展') : tr('添加目标职位')}
-          onClose={() => setJobEdit(null)}
-        >
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const form = Object.fromEntries(new FormData(e.currentTarget));
-              const ok = await action(
-                () => api('jobs', { ...jobEdit, ...form }),
-                '职位与投递进展已保存',
-              );
-              if (ok) setJobEdit(null);
-            }}
-          >
-            <div className="form-grid">
-              {researchFields.map(([k, label]) => k === 'matchLevel' ? (
-                <label className="field" key={k}>
-                  <span>{tr(label)}</span>
-                  <select name="matchLevel" defaultValue={jobEdit.matchLevel || ''}>
-                    <option value="">{tr('待评估')}</option>
-                    {matchLevels.map((s) => (
-                      <option key={s} value={s}>
-                        {tr(s)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <Field
-                  key={k}
-                  name={k}
-                  label={tr(label)}
-                  value={String(jobEdit[k as keyof Job] || '')}
-                  required={k === 'company' || k === 'role'}
-                  type={
-                    k === 'sourceDate' ? 'date' : k === 'url' ? 'url' : 'text'
-                  }
-                  large={[
-                    'business',
-                    'requirements',
-                    'description',
-                    'matchNotes',
-                    'unknowns',
-                  ].includes(k)}
-                />
-              ))}
-              <label className="field">
-                <span>{tr('投递状态')}</span>
-                <select name="status" defaultValue={jobEdit.status || '关注中'}>
-                  {statuses.map((s) => (
-                    <option key={s} value={s}>
-                      {tr(s)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>{tr('优先级')}</span>
-                <select
-                  name="priority"
-                  defaultValue={jobEdit.priority || '普通'}
-                >
-                  {['高', '普通', '低'].map((s) => (
-                    <option key={s} value={s}>
-                      {tr(s)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Field
-                name="nextAction"
-                label={tr('下一步行动')}
-                value={jobEdit.nextAction}
-              />
-              <Field
-                name="nextDate"
-                label={tr('跟进 / 面试日期')}
-                value={jobEdit.nextDate}
-                type="date"
-              />
-              <Field
-                name="notes"
-                label={tr('我的跟进记录')}
-                value={jobEdit.notes}
-                large
-              />
-            </div>
-            {error && <p className="form-error">{tr(error)}</p>}
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setJobEdit(null)}
-              >
-                {tr('取消')}
-              </button>
-              <button className="primary" disabled={busy}>
-                {busy ? tr('保存中…') : tr('保存职位')}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+          </>)}
+          </>}
+      {archivedTokens && <RecordPage title={tr('已撤销 / 已过期的授权')} onClose={() => setArchivedTokens(null)}><DataTable label={tr('已撤销 / 已过期的授权')} columns={[{key:'name',label:tr('标题'),width:'minmax(0,1fr)'},{key:'open',label:tr('操作'),width:'40px',align:'end'}]}>{mcpTokens.filter(item => item.revoked || item.expired).map(item => <DataRow key={item.id}><DataTitle title={item.name} onClick={() => void showAgentTrail(item.id)} /><DataActions><button className="icon-button" aria-label={tr('打开')} onClick={() => void showAgentTrail(item.id)}><ChevronRight size={16} /></button></DataActions></DataRow>)}</DataTable></RecordPage>}
+      {taskPage && <RecordPage title={tr(taskPage.kind)} onClose={() => setTaskPage(null)}><p>{tr(taskPage.status)} · {day(taskPage.createdAt)}</p><p>{data?.jobs.find(j => j.id === taskPage.jobId)?.company || tr('整个求职工作区')}</p><p className="prewrap">{taskPage.instructions}</p></RecordPage>}
+      {agentTrail && <RecordPage title={mcpTokens.find(item => item.id === agentTrail.tokenId)?.name || tr('操作记录')} onClose={() => setAgentTrail(null)}>
+        {mcpTokens.some(item => item.id === agentTrail.tokenId && !item.revoked && !item.expired) && <button className="secondary" onClick={() => void revokeMcpToken(agentTrail.tokenId)}>{tr('撤销')}</button>}
+        <ul className="agent-trail">{!agentTrail.rows.length && <li>{tr('还没有操作记录。')}</li>}{agentTrail.rows.map(entry => <li key={entry.id}><time dateTime={entry.at}>{entry.at.slice(0,16).replace('T',' ')}</time><span>{describeActivity(entry)}</span></li>)}</ul>
+      </RecordPage>}
       {profileEdit && data && (
-        <Modal title={tr('编辑个人履历')} onClose={() => setProfileEdit(false)}>
+        <RecordPage title={tr('编辑个人履历')} onClose={() => setProfileEdit(false)}>
           <ProfileForm
             profile={data.profile}
             busy={busy}
@@ -1975,10 +1975,10 @@ export default function Home() {
               if (ok) setProfileEdit(false);
             }}
           />
-        </Modal>
+        </RecordPage>
       )}
       {doc && (
-        <Modal title={doc.title} onClose={() => setDoc(null)}>
+        <RecordPage title={doc.title} onClose={() => setDoc(null)}>
           <div className="document-meta">
             <Badge>{'kind' in doc ? tr(doc.kind) : tr('每日分析')}</Badge>
             <span>
@@ -2016,10 +2016,10 @@ export default function Home() {
             <h3>{tr('依据与待确认事项')}</h3>
             <p className="prewrap">{doc.sourceNotes}</p>
           </div>
-        </Modal>
+        </RecordPage>
       )}
       {importOpen && (
-        <Modal
+        <RecordPage
           title={tr('导入 Agent 数据包')}
           onClose={() => setImportOpen(false)}
         >
@@ -2107,8 +2107,11 @@ export default function Home() {
               {tr('确认导入')}
             </button>
           </div>
-        </Modal>
+        </RecordPage>
       )}
+        </div>
+      </main>
+
     </div>
   );
 }

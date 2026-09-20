@@ -1,6 +1,7 @@
 'use client';
+import { RecordBack, useRecordPage } from './record-page';
 import { useEffect, useState } from 'react';
-import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil } from 'lucide-react';
+import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil, ChevronRight } from 'lucide-react';
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import { api } from '@/lib/career';
 import {
@@ -14,8 +15,10 @@ import {
 export default function PersonalizedResumes() {
   const [drafts, setDrafts] = useState<PersonalizedResume[]>([]),
     [publications, setPublications] = useState<ResumePublication[]>([]);
-  const [draft, setDraft] = useState<PersonalizedResume | null>(null),
-    [preview, setPreview] = useState<PersonalizedResume | null>(null);
+  const [draft, setDraft] = useRecordPage<PersonalizedResume>('#personalized', 'edit', id => id === 'new' ? blankResume() : drafts.find(d => d.id === id) || null, d => d.revision === 0 ? 'new' : d.id);
+  const [preview, setPreview] = useRecordPage<PersonalizedResume>('#personalized', 'preview', id => drafts.find(d => d.id === id) || null, d => d.id);
+  const [selected, setSelected] = useRecordPage<PersonalizedResume>('#personalized', 'view', id => drafts.find(d => d.id === id) || null, d => d.id);
+  const [publication, setPublication] = useRecordPage<ResumePublication>('#personalized', 'publication', id => publications.find(p => p.id === id) || null, p => p.id);
   const [tab, setTab] = useState('drafts'),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
@@ -76,12 +79,7 @@ export default function PersonalizedResumes() {
   );
   return (
     <section className="personalized-manager">
-      <div className="panel">
-        <h2>个性化简历</h2>
-        <p>
-          从履历母版选取经历，交给你使用的 AI Agent
-          改写。每份简历独立保存、预览和发布。
-        </p>
+      {!draft && !preview && !selected && !publication && <div className="list-toolbar resume-tabs">
         <div className="toolbar">
           <button onClick={() => setTab('drafts')}>
             简历草稿（{drafts.length}）
@@ -102,17 +100,18 @@ export default function PersonalizedResumes() {
           </button>
         </div>
       </div>
+      }
       {error && (
         <p role="alert" className="inline-note">
           {error}
         </p>
       )}
       {notice && <p role="status">{notice}</p>}
-      {tab === 'drafts' && (
+      {tab === 'drafts' && !draft && !preview && !selected && !publication && (
         <>
-          <div className="panel">
+          <div className="list-toolbar">
             <div className="toolbar">
-              <button
+              <button className="primary"
                 onClick={() => {
                   setDraft(blankResume());
                   setPreview(null);
@@ -159,9 +158,6 @@ export default function PersonalizedResumes() {
                 />
               </label>
             </div>
-            <p>
-              技能可在「Agent 协作」下载。导入只创建新草稿；不会覆盖原有版本。
-            </p>
           </div>
           {!drafts.length && (
             <div className="panel">
@@ -173,30 +169,34 @@ export default function PersonalizedResumes() {
               <DataTable
                 label="个性化简历"
                 columns={[
-                  { key: 'title', label: '简历 / 目标岗位', width: 'minmax(200px, 1.6fr)' },
+                  { key: 'title', label: '简历 / 目标岗位', width: 'minmax(0, 1fr)' },
                   { key: 'lang', label: '语言', width: '56px' },
-                  { key: 'rev', label: '版本', width: '56px', hide: 'phone' },
                   { key: 'state', label: '状态', width: '72px' },
-                  { key: 'ops', label: '操作', width: '140px', align: 'end' },
+                  { key: 'ops', label: '操作', width: '40px', align: 'end' },
                 ]}
               >
                 {drafts.map((d) => {
-                  const edit = () => {
-                    setDraft(structuredClone(d));
-                    setPreview(null);
-                  };
                   return (
                     <DataRow key={d.id} className={d.archived ? 'dt-dim' : ''}>
-                      <DataTitle title={d.title} meta={d.targetRole || '未填写目标岗位'} onClick={edit} />
+                      <DataTitle title={d.title} meta={`${d.targetRole || '未填写目标岗位'} · v${d.revision}`} onClick={() => setSelected(d)} />
                       <DataCell label="语言">{d.language.toUpperCase()}</DataCell>
-                      <DataCell label="版本" hide="phone" className="num">v{d.revision}</DataCell>
                       <DataCell label="状态">
                         <span className={'badge ' + (d.archived ? 'gray' : 'green')}>{d.archived ? '已归档' : '草稿'}</span>
                       </DataCell>
-                      <DataActions>
+                      <DataActions><button className="icon-button" title="打开" aria-label={`打开 ${d.title}`} onClick={() => setSelected(d)}><ChevronRight size={16} /></button></DataActions>
+                    </DataRow>
+                  );
+                })}
+              </DataTable>
+            </div>
+          )}
+        </>
+      )}
+      {selected && (() => { const d = drafts.find(item => item.id === selected.id) || selected; const edit = () => setDraft(structuredClone(d)); return <section className="panel record-page"><RecordBack onBack={() => setSelected(null)} /><h2>{d.title}</h2><p>{d.targetRole} · {d.language.toUpperCase()} · v{d.revision}</p><div className="record-detail-actions">                      <DataActions>
                         <button className="icon-button" onClick={edit} title="编辑" aria-label={`编辑 ${d.title}`}>
                           <Pencil size={16} />
                         </button>
+
                         <button
                           className="icon-button"
                           title="复制为新简历"
@@ -239,15 +239,42 @@ export default function PersonalizedResumes() {
                         >
                           {d.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                         </button>
-                      </DataActions>
-                    </DataRow>
-                  );
-                })}
-              </DataTable>
-            </div>
-          )}
-        </>
-      )}
+
+                      </DataActions></div><iframe title="简历详情" sandbox="" srcDoc={resumeHTML(d.content, d.language)} className="resume-public-preview" /></section>; })()}
+      {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? '允许收录' : '仅链接访问'}</p><div className="record-detail-actions">                      <DataActions>
+                        {active ? (
+                          <>
+                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title="打开本地公开页" aria-label={`打开本地公开页 ${p.title}`}>
+                              <ExternalLink size={16} />
+                            </a>
+                            <button
+                              className="icon-button"
+                              title="复制本地链接"
+                              aria-label={`复制本地链接 ${p.title}`}
+                              onClick={() => act(() => copy(new URL(p.path, window.location.origin).href))}
+                            >
+                              <Copy size={16} />
+                            </button>
+                            <button
+                              className="icon-button danger"
+                              disabled={busy}
+                              title="撤下链接"
+                              aria-label={`撤下链接 ${p.title}`}
+                              onClick={() =>
+                                act(async () => {
+                                  await api('resume-publications/revoke', { id: p.id });
+                                  await refresh();
+                                  setNotice('链接已撤下。已被他人保存的副本无法收回。');
+                                })
+                              }
+                            >
+                              <Ban size={16} />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="icon-button placeholder" aria-hidden />
+                        )}
+                      </DataActions></div></section>; })()}
       {draft && (
         <form
           className="panel personalized-editor"
@@ -258,6 +285,7 @@ export default function PersonalizedResumes() {
             });
           }}
         >
+          <RecordBack onBack={() => setDraft(null)} />
           <h2>编辑简历草稿</h2>
           <div className="personalized-fields">
             {field('title', '管理名称（不公开）')}
@@ -508,6 +536,7 @@ export default function PersonalizedResumes() {
       )}
       {preview && (
         <div className="panel">
+          <RecordBack onBack={() => setPreview(null)} />
           <h2>
             发布预览 · {preview.title} · v{preview.revision}
           </h2>
@@ -574,7 +603,7 @@ export default function PersonalizedResumes() {
           </div>
         </div>
       )}
-      {tab === 'public' && (
+      {tab === 'public' && !draft && !preview && !selected && !publication && (
         <>
           <div className="inline-note">
             管理每一份简历的公开链接。当前链接在本机运行，互联网发布需要独立的公开服务。归档草稿不会撤下链接。
@@ -601,7 +630,7 @@ export default function PersonalizedResumes() {
                     active = !p.revokedAt && !expired;
                   return (
                     <DataRow key={p.id} className={active ? '' : 'dt-dim'}>
-                      <DataTitle title={p.title} meta={`v${p.draftRevision}`} />
+                      <DataTitle title={p.title} meta={`v${p.draftRevision}`} onClick={() => setPublication(p)} />
                       <DataCell label="可见性" hide="phone">{p.mode === 'public' ? '允许收录' : '仅链接访问'}</DataCell>
                       <DataCell label="有效期" hide="tablet" className="num">
                         {p.expiresAt ? new Date(p.expiresAt).toLocaleString() : '永久有效'}
@@ -609,40 +638,7 @@ export default function PersonalizedResumes() {
                       <DataCell label="状态">
                         <span className={'badge ' + (active ? 'green' : 'gray')}>{p.revokedAt ? '已撤下' : expired ? '已过期' : '有效'}</span>
                       </DataCell>
-                      <DataActions>
-                        {active ? (
-                          <>
-                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title="打开本地公开页" aria-label={`打开本地公开页 ${p.title}`}>
-                              <ExternalLink size={16} />
-                            </a>
-                            <button
-                              className="icon-button"
-                              title="复制本地链接"
-                              aria-label={`复制本地链接 ${p.title}`}
-                              onClick={() => act(() => copy(new URL(p.path, window.location.origin).href))}
-                            >
-                              <Copy size={16} />
-                            </button>
-                            <button
-                              className="icon-button danger"
-                              disabled={busy}
-                              title="撤下链接"
-                              aria-label={`撤下链接 ${p.title}`}
-                              onClick={() =>
-                                act(async () => {
-                                  await api('resume-publications/revoke', { id: p.id });
-                                  await refresh();
-                                  setNotice('链接已撤下。已被他人保存的副本无法收回。');
-                                })
-                              }
-                            >
-                              <Ban size={16} />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="icon-button placeholder" aria-hidden />
-                        )}
-                      </DataActions>
+                      <DataActions><button className="icon-button" aria-label={`打开 ${p.title}`} onClick={() => setPublication(p)}><ChevronRight size={16} /></button></DataActions>
                     </DataRow>
                   );
                 })}

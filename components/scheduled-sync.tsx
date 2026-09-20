@@ -33,8 +33,7 @@ export default function ScheduledSync() {
           '设置来源与频率，生成交给助手的任务指令。网页不会自行抓取或启动定时任务。',
         )}
       </p>
-      <details>
-        <summary>{t('配置来源与执行时间')}</summary>
+      <div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -155,7 +154,7 @@ export default function ScheduledSync() {
           </div>
         )}
         <output aria-live="polite">{t(notice)}</output>
-      </details>
+      </div>
     </section>
   );
 }

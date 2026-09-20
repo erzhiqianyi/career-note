@@ -3970,5 +3970,57 @@
   "已完成": {
     "ja": "完了",
     "en": "Done"
+  },
+  "从下一步开始，让准备持续推进。": {
+    "ja": "次の一歩から、準備を進めましょう。",
+    "en": "Keep moving forward, one next step at a time."
+  },
+  "安排跟进": {
+    "ja": "フォローアップを設定",
+    "en": "Plan follow-up"
+  },
+  "查看完整说明": {
+    "ja": "説明をすべて表示",
+    "en": "Read full details"
+  },
+  "收起说明": {
+    "ja": "説明を折りたたむ",
+    "en": "Collapse details"
+  },
+  "查看职位详情": {
+    "ja": "求人詳細を見る",
+    "en": "View job details"
+  },
+  "职位不存在或已移除": {
+    "ja": "求人が見つからないか、削除されています",
+    "en": "This job was not found or has been removed"
+  },
+  "先填写公司和职位，其余信息可稍后补充。": {
+    "ja": "企業名と職種を入力してください。その他は後から追加できます。",
+    "en": "Start with the company and role. You can add the remaining details later."
+  },
+  "回答提示": {
+    "ja": "回答のヒント",
+    "en": "Answer hints"
+  },
+  "通用题库": {
+    "ja": "共通問題",
+    "en": "General practice"
+  },
+  "练习进度": {
+    "ja": "練習の進捗",
+    "en": "Practice progress"
+  },
+  "待准备题目": {
+    "ja": "問題の準備待ち",
+    "en": "Questions not prepared"
+  },
+  "{0} / {1} 题": {
+    "ja": "{0} / {1} 問",
+    "en": "{0} / {1} questions"
+  },
+  "用日语或中文写下你的回答。": {
+    "ja": "日本語または中国語で回答を書いてください。",
+    "en": "Write your answer in Japanese or Chinese."
   }
 }

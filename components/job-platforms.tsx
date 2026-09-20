@@ -1,8 +1,9 @@
 'use client';
+import { RecordBack, useRecordPage } from './record-page';
 import { useLocale } from '@/components/locale-provider';
 
-import { Fragment, useEffect, useRef, useState, type SyntheticEvent } from 'react';
-import { ChevronDown, ExternalLink, Pencil, Plus, Power, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
+import { Fragment, useState, type SyntheticEvent } from 'react';
+import { ChevronDown, ExternalLink, Pencil, Plus, Power, RotateCcw, Search, Star, Trash2 } from 'lucide-react';
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import { api } from '@/lib/career';
 import {
@@ -25,15 +26,11 @@ export default function JobPlatforms({ platforms, reload }: Props) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('使用中');
   const [category, setCategory] = useState('全部类别');
-  const [edit, setEdit] = useState<Partial<JobPlatform> | null>(null);
+  const [edit, setEdit] = useRecordPage<Partial<JobPlatform>>('#platforms', 'edit', id => id === 'new' ? {} : platforms.find(p => p.id === id) || null, p => p.id || 'new');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [expanded, setExpanded] = useState('');
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    if (edit) dialog.current?.showModal();
-  }, [edit]);
+  const [selected, setSelected] = useRecordPage<JobPlatform>('#platforms', 'view', id => platforms.find(p => p.id === id) || null, p => p.id);
   const visible = platforms
     .filter(
       (p) =>
@@ -85,29 +82,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
   }
   return (
     <div className="platforms-page">
-      {/* Phones only browse and star platforms; editing the list is desktop work (CSS hides these). */}
-      <div className="platform-intro phone-hidden">
-        <p>
-          {tr(
-            '选择你想使用的求职入口，记录搜索方向和使用心得。收藏的平台会排在前面。',
-          )}
-        </p>
-        <button
-          className="primary"
-          onClick={() => {
-            setError('');
-            setEdit({});
-          }}
-        >
-          <Plus size={17} />
-          {tr('添加平台')}
-        </button>
-      </div>
-      <p className="muted page-note">
-        {tr(
-          '内置平台提供求职入口；具体岗位的日语、经验和在留资格支持仍需逐项确认。这里不会自动采集职位。',
-        )}
-      </p>
+      {!edit && !selected && <>
       <div className="list-toolbar platform-toolbar">
         <label className="search">
           <Search size={17} />
@@ -137,6 +112,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
           {visible.length}
           {tr('个平台')}
         </span>
+        <button className="primary" onClick={() => { setError(''); setEdit({}); }}><Plus size={17} />{tr('添加平台')}</button>
       </div>
       {error && !edit && (
         <p role="alert" className="form-error">
@@ -149,22 +125,20 @@ export default function JobPlatforms({ platforms, reload }: Props) {
           <DataTable
             label={tr('求职平台')}
             columns={[
-              { key: 'name', label: tr('平台'), width: 'minmax(200px, 1.6fr)' },
+              { key: 'name', label: tr('平台'), width: 'minmax(0, 1fr)' },
               { key: 'category', label: tr('类别'), width: '96px', hide: 'phone' },
               { key: 'registered', label: tr('账号'), width: 'minmax(90px, 0.8fr)' },
-              { key: 'state', label: tr('状态'), width: '80px', hide: 'tablet' },
-              { key: 'ops', label: tr('操作'), width: '176px', align: 'end' },
+              { key: 'ops', label: tr('操作'), width: '40px', align: 'end' },
             ]}
           >
             {visible.map((p) => {
-              const open = expanded === p.id;
-              const toggle = () => setExpanded(open ? '' : p.id);
+              const toggle = () => setSelected(p);
               return (
                 <Fragment key={p.id}>
                   <DataRow className={p.deleted || !p.enabled ? 'dt-dim' : ''}>
                     <DataTitle
-                      title={p.name}
-                      meta={platformText(p, 'description') || tr('还没有平台说明。')}
+                      title={<>{p.favorite && <Star size={14} aria-label={tr('收藏')} />} {p.name}</>}
+                      meta={new URL(p.url).hostname}
                       onClick={toggle}
                     />
                     <DataCell label={tr('类别')} hide="phone">
@@ -180,12 +154,44 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                         <span className="badge pending">{tr('未注册')}</span>
                       )}
                     </DataCell>
-                    <DataCell label={tr('状态')} hide="tablet" className="muted">
-                      {p.deleted ? tr('已删除') : p.enabled ? tr('使用中') : tr('已停用')}
-                      {' · '}
-                      {p.builtin ? tr('内置') : tr('自定义')}
-                    </DataCell>
                     <DataActions>
+                      <button
+                        className="icon-button"
+                        title={tr('详情')}
+                        aria-label={`${tr('详情')} ${p.name}`}
+                        onClick={toggle}
+                      >
+                        <ChevronDown size={16} style={{ transform: 'rotate(-90deg)' }} />
+                      </button>
+                    </DataActions>
+                  </DataRow>
+
+                </Fragment>
+              );
+            })}
+          </DataTable>
+        </section>
+      )}
+      {!visible.length && (
+        <div className="panel empty">
+          <h3>{tr('没有符合条件的平台')}</h3>
+          <p>{tr('试着修改筛选条件，或添加自己的求职入口。')}</p>
+          <button
+            onClick={() => {
+              setQuery('');
+              setFilter('全部');
+              setCategory('全部类别');
+            }}
+          >
+            {tr('查看全部平台')}
+          </button>
+        </div>
+      )}
+      </>}
+      {selected && !edit && (() => { const p = platforms.find(item => item.id === selected.id) || selected; return <section className="panel record-page"><RecordBack onBack={() => setSelected(null)} /><h2>{p.name}</h2>
+                    <div className="dt-detail">
+                      <span className="badge">{p.deleted ? tr('已删除') : p.enabled ? tr('使用中') : tr('已停用')}</span>
+                      <div className="record-detail-actions">
                       <button
                         className={'icon-button' + (p.favorite ? ' on' : '')}
                         disabled={busy || p.deleted}
@@ -247,19 +253,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                           </button>
                         </>
                       )}
-                      <button
-                        className={'icon-button' + (open ? ' on' : '')}
-                        title={open ? tr('收起') : tr('详情')}
-                        aria-label={`${open ? tr('收起') : tr('详情')} ${p.name}`}
-                        aria-expanded={open}
-                        onClick={toggle}
-                      >
-                        <ChevronDown size={16} style={{ transform: open ? 'rotate(180deg)' : undefined }} />
-                      </button>
-                    </DataActions>
-                  </DataRow>
-                  {open && (
-                    <div className="dt-detail">
+                      </div>
                       <p>{platformText(p, 'description') || tr('还没有平台说明。')}</p>
                       {p.notes && (
                         <p className="platform-notes">
@@ -281,57 +275,20 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                           </p>
                         </>
                       )}
-                    </div>
-                  )}
-                </Fragment>
-              );
-            })}
-          </DataTable>
-        </section>
-      )}
-      {!visible.length && (
-        <div className="panel empty">
-          <h3>{tr('没有符合条件的平台')}</h3>
-          <p>{tr('试着修改筛选条件，或添加自己的求职入口。')}</p>
-          <button
-            onClick={() => {
-              setQuery('');
-              setFilter('全部');
-              setCategory('全部类别');
-            }}
-          >
-            {tr('查看全部平台')}
-          </button>
-        </div>
-      )}
+                    </div></section>; })()}
       {edit && (
-        <dialog
-          ref={dialog}
-          onCancel={(e) => {
-            if (busy) e.preventDefault();
-            else setEdit(null);
-          }}
-          aria-labelledby="platform-dialog-title"
-        >
+        <section className="panel job-editor-page" aria-labelledby="platform-dialog-title">
+          <RecordBack onBack={() => setEdit(null)} />
           <div className="modal-head">
             <h2 id="platform-dialog-title">
               {edit.id ? tr('编辑平台') : tr('添加平台')}
             </h2>
-            <button
-              disabled={busy}
-              className="icon-button"
-              aria-label={tr('关闭平台编辑')}
-              onClick={() => setEdit(null)}
-            >
-              <X size={20} />
-            </button>
           </div>
           <form onSubmit={(e) => void submit(e)}>
             <div className="form-grid">
               <label className="field">
                 <span>{tr('平台名称 *')}</span>
                 <input
-                  autoFocus
                   name="name"
                   required
                   maxLength={120}
@@ -415,7 +372,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
               </button>
             </div>
           </form>
-        </dialog>
+        </section>
       )}
     </div>
   );

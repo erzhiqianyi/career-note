@@ -1,8 +1,11 @@
 'use client';
-import { useState, type ReactNode } from 'react';
+import { RecordBack, useRecordPage } from './record-page';
+import { DataActions, DataCell, DataRow, DataTable, DataTitle, DataMoreActions } from '@/components/data-table';
+import { useEffect, useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
+  ChevronRight,
   Archive,
   ArchiveRestore,
   Briefcase,
@@ -49,17 +52,6 @@ const verificationTone: Record<Verification, string> = {
   confirmed: 'green',
   pending: 'amber',
   recorded: 'gray',
-};
-// 每个分类在生成投递简历时承担的角色，帮助用户理解为什么要维护它。
-const sectionHint: Partial<Record<ResumeKind, string>> = {
-  employment: '简历的骨架。生成投递简历时按岗位挑选经历并调整表述。',
-  education: '学历与课程背景，日文履歴書的必填项。',
-  project: '挂在经历下的具体项目，按岗位要求选取最相关的几项。',
-  skill: '按分类整理并标注年数，方便与职位要求逐项对照。',
-  achievement: '用背景、行动、成果三段记录，志望动机与面试回答的素材。',
-  language: '语言能力与资格，决定可投递的岗位范围。',
-  preferences: '目标岗位与条件，用于筛选机会和确定简历方向。',
-  document: '已生成的完整文档版本，可回看与下载。',
 };
 const sectionIcon: Record<ResumeKind, typeof Briefcase> = {
   basics: Globe,
@@ -130,7 +122,10 @@ export default function ResumeManager({
     locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'zh';
   const [kind, setKind] = useState<ResumeKind>('employment');
   const [view, setView] = useState<View>('all');
-  const [draft, setDraft] = useState<ResumeEntry | null>(null);
+  const [draft, setDraft] = useRecordPage<ResumeEntry>('#resume', 'edit', id => entries.find(e => e.id === id) || null, e => e.id);
+  const [selected, setSelected] = useRecordPage<ResumeEntry>('#resume', 'view', id => entries.find(e => e.id === id) || null, e => e.id);
+  const [historyEntry, setHistoryEntry] = useRecordPage<ResumeEntry>('#resume', 'history', id => entries.find(e => e.id === id) || null, e => e.id);
+  const [sourcePage, setSourcePage] = useRecordPage<string>('#resume', 'source', () => 'original', s => s);
   const [history, setHistory] = useState<ResumeEntry[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -208,7 +203,15 @@ export default function ResumeManager({
           },
     );
   }
+  useEffect(() => {
+    if (!historyEntry) return;
+    let cancelled = false;
+    setHistory(null);
+    api<{ entries: ResumeEntry[] }>('resume/history?id=' + encodeURIComponent(historyEntry.id)).then(r => { if (!cancelled) setHistory(r.entries); }).catch(e => { if (!cancelled) setError(String(e)); });
+    return () => { cancelled = true; };
+  }, [historyEntry?.id]);
   async function versions(entry: ResumeEntry) {
+    setHistoryEntry(entry);
     setError('');
     try {
       const r = await api<{ entries: ResumeEntry[] }>(
@@ -401,6 +404,7 @@ export default function ResumeManager({
             <Pencil size={16} />
           </button>
         )}
+        <DataMoreActions label={t('更多')}>
         <button
           className="icon-button"
           title={t('修改历史')}
@@ -423,6 +427,7 @@ export default function ResumeManager({
             <Archive size={16} />
           )}
         </button>
+        </DataMoreActions>
       </div>
     );
   }
@@ -565,6 +570,7 @@ export default function ResumeManager({
             </div>
             {actions(entry)}
           </div>
+          <div className="resume-record-details">
           {body}
           {!!tech.length && (
             <div className="resume-chips">
@@ -605,6 +611,7 @@ export default function ResumeManager({
               ))}
             </div>
           )}
+          </div>
           {footer(entry)}
         </div>
       </article>
@@ -614,6 +621,48 @@ export default function ResumeManager({
   const sectionPending = (k: ResumeKind) =>
     active.filter((e) => e.kind === k && e.verification === 'pending').length;
   const Icon = sectionIcon[kind];
+
+  if (draft) return <section className="panel record-page"><RecordBack onBack={() => setDraft(null)} />{editor}</section>;
+  if (historyEntry) return <div className="record-page"><RecordBack onBack={() => setHistoryEntry(null)} />{error && <p role="alert">{error}</p>}
+        <section className="panel resume-history">
+          <div className="resume-section-head">
+            <h2>
+              <History size={18} />
+              {t('修改历史')}
+            </h2>
+            <button
+              className="icon-button"
+              aria-label={t('关闭')}
+              onClick={() => setHistoryEntry(null)}
+            >
+              <X size={17} />
+            </button>
+          </div>
+          {(history || []).map((v) => (
+            <details key={v.revision}>
+              <summary>
+                {resumeTitle(v)} · {t('版本')} {v.revision} · {v.updatedAt}
+                {v.archived ? ' · ' + t('已归档') : ''}
+              </summary>
+              <dl className="resume-details">
+                {Object.entries(v.data).map(([k, value]) => (
+                  <div key={k}>
+                    <dt>
+                      {t(
+                        resumeSections[v.kind].fields.find((f) => f.key === k)
+                          ?.label || k,
+                      )}
+                    </dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p>{v.sourceNotes}</p>
+            </details>
+          ))}
+        </section></div>;
+  if (selected) return <section className="panel record-page"><RecordBack onBack={() => setSelected(null)} />{error && <p role="alert">{error}</p>}{record(entries.find(e => e.id === selected.id) || selected)}</section>;
+  if (sourcePage) return <section className="panel record-page"><RecordBack onBack={() => setSourcePage(null)} /><h2>{t('旧版履历原文（保留）')}</h2><ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.experience || profile.summary}</ReactMarkdown></section>;
 
   return (
     <div className="resume-manager">
@@ -674,13 +723,7 @@ export default function ResumeManager({
             </button>
           </div>
         </div>
-        {basics?.data.summary && (
-          <details className="resume-summary">
-            <summary>{t('查看职业摘要')}</summary>
-            <p>{basics.data.summary}</p>
-          </details>
-        )}
-        {draft?.kind === 'basics' && editor}
+        {basics?.data.summary && <button className="text-button" onClick={() => setSelected(basics)}>{t('查看职业摘要')}</button>}
         <div className="resume-health">
           <div>
             <span>{t('记录语言')}</span>
@@ -759,7 +802,6 @@ export default function ResumeManager({
                 <Icon size={18} />
                 {t(resumeSections[kind].label)}
               </h2>
-              {sectionHint[kind] && <p>{t(sectionHint[kind]!)}</p>}
             </div>
             <div className="row">
               <select
@@ -788,7 +830,6 @@ export default function ResumeManager({
               {error}
             </p>
           )}
-          {draft && draft.kind !== 'basics' && editor}
           {!listed.length && !draft && (
             <div className="empty">
               <Icon size={26} />
@@ -804,125 +845,19 @@ export default function ResumeManager({
               </p>
             </div>
           )}
-          {kind === 'skill' || kind === 'language' ? (
-            <div className="resume-groups">
-              {Array.from(
-                listed.reduce((m, e) => {
-                  const g = e.data.category || '';
-                  m.set(g, [...(m.get(g) || []), e]);
-                  return m;
-                }, new Map<string, ResumeEntry[]>()),
-              ).map(([group, items]) => (
-                <section key={group} className="resume-group">
-                  {(group || listed.some((e) => e.data.category)) && (
-                    <h4>{group || t('未分类')}</h4>
-                  )}
-                  <ul className="resume-compact">
-                    {items.map((entry) => {
-                      const parent = parentOf(entry);
-                      const detail =
-                        entry.data.usage ||
-                        [entry.data.level, entry.data.qualification]
-                          .filter(Boolean)
-                          .join(' · ');
-                      return (
-                        <li key={entry.id} className="resume-compact-row">
-                          <div className="resume-compact-main">
-                            <strong>{resumeTitle(entry)}</strong>
-                            {detail && <span>{detail}</span>}
-                          </div>
-                          <span className="resume-compact-meta">
-                            {entry.data.years
-                              ? entry.data.years + ' ' + t('年')
-                              : entry.data.date || ''}
-                          </span>
-                          <span className="resume-compact-meta resume-compact-link">
-                            {parent && (
-                              <button
-                                className="text-button"
-                                onClick={() => {
-                                  setKind(parent.kind);
-                                  setView('all');
-                                  setDraft(null);
-                                }}
-                              >
-                                <Link2 size={12} />
-                                {resumeTitle(parent)}
-                              </button>
-                            )}
-                          </span>
-                          <span
-                            className={
-                              'badge ' + verificationTone[entry.verification]
-                            }
-                            title={entry.sourceNotes || t('尚未补充来源')}
-                          >
-                            {t(verificationLabel[entry.verification])}
-                          </span>
-                          {actions(entry)}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <div className="resume-records">{listed.map(record)}</div>
-          )}
+          {!!listed.length && <DataTable label={t(resumeSections[kind].label)} columns={[
+            {key:'title',label:t('标题'),width:'minmax(0, 1fr)'},
+            {key:'state',label:t('状态'),width:'110px'},
+            {key:'open',label:t('操作'),width:'40px',align:'end'},
+          ]}>{listed.map(entry => <DataRow key={entry.id}>
+            <DataTitle title={resumeTitle(entry)} meta={[entry.data.role || entry.data.category || entry.data.major, entry.data.startDate && [entry.data.startDate, entry.data.endDate].filter(Boolean).join(' — ')].filter(Boolean).join(' · ')} onClick={() => setSelected(entry)} />
+            <DataCell label={t('状态')}><span className={'badge ' + verificationTone[entry.verification]}>{t(verificationLabel[entry.verification])}</span></DataCell>
+            <DataActions><button className="icon-button" title={t('打开')} aria-label={t('打开')} onClick={() => setSelected(entry)}><ChevronRight size={16} /></button></DataActions>
+          </DataRow>)}</DataTable>}
         </section>
       </div>
 
-      {history && (
-        <section className="panel resume-history">
-          <div className="resume-section-head">
-            <h2>
-              <History size={18} />
-              {t('修改历史')}
-            </h2>
-            <button
-              className="icon-button"
-              aria-label={t('关闭')}
-              onClick={() => setHistory(null)}
-            >
-              <X size={17} />
-            </button>
-          </div>
-          {history.map((v) => (
-            <details key={v.revision}>
-              <summary>
-                {resumeTitle(v)} · {t('版本')} {v.revision} · {v.updatedAt}
-                {v.archived ? ' · ' + t('已归档') : ''}
-              </summary>
-              <dl className="resume-details">
-                {Object.entries(v.data).map(([k, value]) => (
-                  <div key={k}>
-                    <dt>
-                      {t(
-                        resumeSections[v.kind].fields.find((f) => f.key === k)
-                          ?.label || k,
-                      )}
-                    </dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p>{v.sourceNotes}</p>
-            </details>
-          ))}
-        </section>
-      )}
-      {(profile.experience || profile.skills) && (
-        <details className="panel">
-          <summary>{t('旧版履历原文（保留）')}</summary>
-          <p className="page-note">{t('原文保留用于核对；分类记录是当前简历管理入口。')}</p>
-          <div className="resume-markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {profile.experience || profile.summary}
-            </ReactMarkdown>
-          </div>
-        </details>
-      )}
+      {(profile.experience || profile.skills) && <button className="secondary" onClick={() => setSourcePage('original')}>{t('旧版履历原文（保留）')}</button>}
     </div>
   );
 }

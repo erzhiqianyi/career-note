@@ -1,5 +1,5 @@
 'use client';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, MoreHorizontal } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
 /**
@@ -132,13 +132,28 @@ export function DataTitle({
 /** Trailing icon actions. Give each button a `title` so the icon is explained on hover. */
 export function DataActions({ children }: { children: ReactNode }) {
   return (
-    <span className="dt-cell dt-actions">
+    <div className="dt-cell dt-actions">
       {children}
-    </span>
+    </div>
   );
 }
 
 /** Small count bubble on an icon action, e.g. number of materials. */
 export function Count({ n }: { n: number }) {
   return n > 0 ? <i className="dt-count">{n}</i> : null;
+}
+
+/** Secondary actions stay available without crowding every record. */
+export function DataMoreActions({ label, children }: { label: string; children: ReactNode }) {
+  return <details className="dt-more" onKeyDown={(event) => {
+    if (event.key === 'Escape') {
+      event.currentTarget.open = false;
+      event.currentTarget.querySelector('summary')?.focus();
+    }
+  }}>
+    <summary className="icon-button" aria-label={label} title={label}><MoreHorizontal size={16} /></summary>
+    <div className="dt-more-menu" onClick={(event) => {
+      if ((event.target as HTMLElement).closest('button, a')) event.currentTarget.closest('details')?.removeAttribute('open');
+    }}>{children}</div>
+  </details>;
 }
