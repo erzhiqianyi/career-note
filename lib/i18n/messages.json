@@ -1681,7 +1681,7 @@
   },
   "面试准备": {
     "ja": "面接準備",
-    "en": "Interview preparation"
+    "en": "Interview prep"
   },
   "公司研究": {
     "ja": "企業研究",
@@ -4550,5 +4550,21 @@
   "从履历新建": {
     "ja": "プロフィールから作成",
     "en": "Create from profile"
+  },
+  "{0} 份": {
+    "ja": "{0} 件",
+    "en": "{0}"
+  },
+  "所有准备资料": {
+    "ja": "すべての準備資料",
+    "en": "All materials"
+  },
+  "没有符合条件的资料": {
+    "ja": "条件に合う資料はありません",
+    "en": "No materials match the filter"
+  },
+  "通用准备资料": {
+    "ja": "共通の準備資料",
+    "en": "General materials"
   }
 }

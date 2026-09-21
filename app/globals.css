@@ -3447,3 +3447,6 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
   .shell:not(.nav-collapsed) .sidebar { width: 14.375rem; }
   .shell:not(.nav-collapsed) > main { margin-left: 14.375rem; }
 }
+.practice-materials { margin-top: 20px; }
+.practice-materials .section-head { padding: 0 0 12px; }
+.practice-materials .section-head select { padding: 7px 10px; border: 1px solid #e1e7ef; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-size: 0.8125rem; }

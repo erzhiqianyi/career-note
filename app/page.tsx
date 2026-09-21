@@ -78,7 +78,6 @@ import {
 import {
   api,
   download,
-  materialKinds,
   statuses,
   matchLevels,
   type MpcTokenRecord,
@@ -104,8 +103,7 @@ const nav = [
   { label: '求职平台', icon: Search },
   { label: '我的履历', icon: UserRound },
   { label: '个性化简历', icon: FileText },
-  { label: '准备资料', icon: FileText },
-  { label: '面试练习', icon: CalendarDays },
+  { label: '面试准备', icon: CalendarDays },
   { label: '每日分析', icon: Sparkles },
   { label: 'Agent 协作', icon: Workflow },
   { label: '系统设置', icon: Settings },
@@ -115,10 +113,10 @@ const nav = [
 const phoneTabs = [
   { label: '今日准备', short: '今日', icon: LayoutDashboard },
   { label: '公司与投递', short: '公司', icon: BriefcaseBusiness },
-  { label: '准备资料', short: '资料', icon: FileText },
-  { label: '面试练习', short: '面试', icon: CalendarDays },
+  { label: '面试准备', short: '面试', icon: CalendarDays },
+  { label: '我的履历', short: '履历', icon: UserRound },
 ];
-const drawerPages = ['我的履历', '个性化简历', '每日分析'];
+const drawerPages = ['个性化简历', '每日分析'];
 const drawerSettings = ['求职平台', 'Agent 协作', '系统设置'];
 const subPages: Record<string, { parent: string; hash: string }> = {
   技能库: { parent: 'Agent 协作', hash: '#skills' },
@@ -136,13 +134,13 @@ const hashes: Record<string, string> = {
   '#settings': '系统设置',
   '#today': '今日准备',
   '#jobs': '公司与投递',
-  '#interview': '面试练习',
+  '#interview': '面试准备',
   '#platforms': '求职平台',
   '#resume': '我的履历',
   '#personalized': '个性化简历',
-  '#materials': '准备资料',
+  '#materials': '面试准备',
   '#reports': '每日分析',
-  '#documents': '准备资料',
+  '#documents': '面试准备',
   '#agents': 'Agent 协作',
   ...Object.fromEntries(
     Object.entries(subPages).map(([label, page]) => [page.hash, label]),
@@ -606,7 +604,7 @@ export default function Home() {
             ? '#today'
             : label === '求职平台'
           ? '#platforms'
-          : label === '面试练习'
+          : label === '面试准备'
             ? '#interview'
             : (subPages[label]?.hash ?? Object.entries(hashes).find(([, name]) => name === label)?.[0] ?? '#today'),
       );
@@ -732,14 +730,6 @@ export default function Home() {
       return sort.desc ? -c : c;
     });
   }, [data, filter, matchFilter, query, sort]);
-  const visibleMaterials = useMemo(
-    () =>
-      (data?.materials || [])
-        .filter((m) => filter === '全部' || m.kind === filter)
-        .slice()
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [data, filter],
-  );
   const toggleSort = (key: JobSortKey) =>
     setSort((s) => ({ key, desc: s.key === key ? !s.desc : key !== 'match' && key !== 'status' }));
   const pending = data?.tasks.filter((t) => t.status === '待处理') || [];
@@ -761,8 +751,8 @@ export default function Home() {
     if (!openJobs.length) steps.push(['收集目标职位', '保留招聘链接、岗位要求和信息确认日期。', '公司与投递']);
     if (noNext) steps.push(['为{0}设定下一步', '写下这家公司接下来要做的事和日期，首页会提醒。', '公司与投递', noNext.company]);
     if (firstJob && hasEmployment) steps.push(['为{0}生成个性化简历', '按岗位要求调整职业定位和经历顺序，保留可核对的版本。', '个性化简历', firstJob.company]);
-    if (unpracticed) steps.push(['练一题自我介绍', '先用自己的话回答，再交给 AI Agent 点评。', '面试练习']);
-    else if (firstJob && !data.questionSets.length) steps.push(['整理公司准备资料', '让 AI Agent 生成面试题组，或自己整理常见问题。', '面试练习']);
+    if (unpracticed) steps.push(['练一题自我介绍', '先用自己的话回答，再交给 AI Agent 点评。', '面试准备']);
+    else if (firstJob && !data.questionSets.length) steps.push(['整理公司准备资料', '让 AI Agent 生成面试题组，或自己整理常见问题。', '面试准备']);
     if (!todayReport) steps.push(['整理每日分析', '从匹配点和准备缺口中，确定下一步行动。', '每日分析']);
     return steps.slice(0, 3).map((step, i) => [String(i + 1).padStart(2, '0'), ...step] as [string, string, string, string, string?]);
   })();
@@ -1077,7 +1067,7 @@ export default function Home() {
           {active === '今日准备' && (
             <div className="workspace-heading">
               <p>{tr('从下一步开始，让准备持续推进。')}</p>
-              <button className="primary" disabled={!data} onClick={() => data?.questionSets.length ? go('面试练习') : openJobEditor({})}>
+              <button className="primary" disabled={!data} onClick={() => data?.questionSets.length ? go('面试准备') : openJobEditor({})}>
                 {data?.questionSets.length ? <CalendarDays size={18} /> : <Plus size={18} />}
                 {tr(data?.questionSets.length ? '开始面试练习' : '添加职位')}
               </button>
@@ -1169,26 +1159,6 @@ export default function Home() {
                 </div>
               );
             }
-            if (active === '准备资料' && data) {
-              return (
-                <div className="page-actions list-toolbar">
-                  <select
-                    aria-label={tr('筛选准备资料类型')}
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                  >
-                    {['全部', ...materialKinds].map((s) => (
-                      <option key={s} value={s}>
-                        {s === '全部' ? tr('全部类型') : tr(s)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="muted list-count">
-                    {tr('{0} / {1} 条', [String(visibleMaterials.length), String(data.materials.length)])}
-                  </span>
-                </div>
-              );
-            }
             return action ? <div className="page-actions">{action}</div> : null;
           })()}
           {active === '系统设置' ? <SystemSettings /> : !data ? (
@@ -1205,10 +1175,11 @@ export default function Home() {
             </section>
           ) : (
             <>
-              <div hidden={active !== '面试练习'}>
+              <div hidden={active !== '面试准备'}>
                 <InterviewPractice
                   data={data}
                   reload={reload}
+                  openMaterial={(m) => setDoc(m)}
                 />
               </div>
               {active === '今日准备' && (
@@ -1555,7 +1526,7 @@ export default function Home() {
                         <button
                           className="secondary block-button"
                           onClick={() => {
-                            go('面试练习');
+                            go('面试准备');
                             window.location.hash = '#interview/company/' + encodeURIComponent(job.id);
                           }}
                         >
@@ -1667,50 +1638,6 @@ export default function Home() {
                 />
               )}
               {active === '个性化简历' && <PersonalizedResumes entries={data.resume || []} jobs={data.jobs} />}
-              {active === '准备资料' && (
-                <section className="panel dt-panel">
-                  {visibleMaterials.length > 0 && (
-                    <DataTable
-                      label={tr('准备资料')}
-                      columns={[
-                        { key: 'title', label: tr('标题 / 公司'), width: 'minmax(0, 1fr)' },
-                        { key: 'kind', label: tr('类型'), width: '110px' },
-                        { key: 'review', label: tr('状态'), width: '80px' },
-                        { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
-                      ]}
-                    >
-                      {visibleMaterials.map((m) => (
-                        <DataRow key={m.id}>
-                          <DataTitle
-                            title={m.title}
-                            meta={<>{data.jobs.find((j) => j.id === m.jobId)?.company || tr('整个求职工作区')} · {day(m.createdAt)}</>}
-                            onClick={() => setDoc(m)}
-                          />
-                          <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
-                          <DataCell label={tr('状态')}><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
-                          <DataActions>
-                            <button className="icon-button" onClick={() => setDoc(m)} title={tr('打开')} aria-label={tr('打开')}>
-                              <ChevronRight size={16} />
-                            </button>
-                          </DataActions>
-                        </DataRow>
-                      ))}
-                    </DataTable>
-                  )}
-                  {!visibleMaterials.length && (
-                    <Empty title={tr('暂无准备资料')}>
-                      <p>{tr('在公司详情中，把准备任务交给 AI Agent。')}</p>
-                      <button
-                        className="text-button centered"
-                        onClick={() => go('公司与投递')}
-                      >
-                        {tr('前往公司与投递')}
-                        <ArrowUpRight size={16} />
-                      </button>
-                    </Empty>
-                  )}
-                </section>
-              )}
               {active === '每日分析' && (
                 <section className="panel dt-panel">
                   {data.reports.length > 0 && (

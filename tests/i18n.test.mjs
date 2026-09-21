@@ -44,6 +44,7 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
           export const addedAt = jobAddedAt({history:[{status:'关注中',at:'2026-09-01T00:00:00Z'}]});
           const practiceProps = {
             async reload(){},
+            openMaterial(){},
             data: {jobs:[{id:'demo',company:'Example'}],profile:{revision:0},tasks:[],reviews:[],attempts:[],
               questionSets:[{id:'pack',jobId:'demo',title:'Original title',createdAt:'2026-09-12',questions:[
                 {id:'q',title:'質問の原文',questionJa:'自己紹介をお願いします。',category:'自己紹介',targetSeconds:60}

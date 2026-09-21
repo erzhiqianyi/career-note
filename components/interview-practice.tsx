@@ -14,7 +14,7 @@ import {
   Save,
   Sparkles,
 } from 'lucide-react';
-import { api, type Attempt, type Profile, type State } from '@/lib/career';
+import { api, materialKinds, type Attempt, type Material, type Profile, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 const profileLabels: Record<string, string> = {
   summary: '个人概要',
@@ -39,11 +39,29 @@ const emptyDraft: Draft = {
 export default function InterviewPractice({
   data,
   reload,
+  openMaterial,
 }: {
   data: State;
   reload: () => Promise<void>;
+  openMaterial: (material: Material) => void;
 }) {
   const { t: tr, locale } = useLocale();
+  const [materialKind, setMaterialKind] = useState('全部');
+  const day = (v: string) => (v ? v.slice(0, 10).replaceAll('-', '.') : '—');
+  // 准备资料（企业研究、志望动机、面试准备等）和练习题同属一家公司的面试准备，放在同一页。
+  const materials = data.materials || [];
+  const materialsFor = (jobId: string) => materials.filter(m => (m.jobId || '') === jobId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const materialTable = (rows: Material[], label: string, withCompany = false) => <DataTable label={label} columns={[
+    { key: 'title', label: tr(withCompany ? '标题 / 公司' : '标题'), width: 'minmax(0,1fr)' },
+    { key: 'kind', label: tr('类型'), width: '110px', hide: 'phone' },
+    { key: 'review', label: tr('状态'), width: '80px' },
+    { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
+  ]}>{rows.map(m => <DataRow key={m.id}>
+    <DataTitle title={m.title} meta={<>{withCompany ? (data.jobs.find(j => j.id === m.jobId)?.company || tr('整个求职工作区')) + ' · ' : ''}{day(m.createdAt)}</>} onClick={() => openMaterial(m)} />
+    <DataCell label={tr('类型')} hide="phone">{tr(m.kind)}</DataCell>
+    <DataCell label={tr('状态')}><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
+    <DataActions><button className="icon-button" onClick={() => openMaterial(m)} title={tr('打开')} aria-label={tr('打开') + ' ' + m.title}><ChevronRight size={16} /></button></DataActions>
+  </DataRow>)}</DataTable>;
   const [company, setCompany] = useRecordPage<string>('#interview', 'company', id => id === BANK_JOB_ID || data.jobs.some(j => j.id === id) ? id : null, id => id);
   const [help, setHelp] = useRecordPage<string>('#interview', 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
   const [search, setSearch] = useState('');
@@ -175,13 +193,26 @@ export default function InterviewPractice({
       <div className="list-toolbar"><label className="search"><input aria-label={tr('搜索公司或职位')} placeholder={tr('搜索公司或职位')} value={search} onChange={e => setSearch(e.target.value)} /></label><span className="list-count muted">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span><button className="secondary" onClick={() => setCompany(BANK_JOB_ID)}>{tr('通用题库')}</button></div>
       <section className="panel dt-panel"><DataTable label={tr('练习公司')} columns={[
         {key:'company',label:tr('公司 / 职位'),width:'minmax(0,1fr)'},
+        {key:'materials',label:tr('准备资料'),width:'96px',hide:'phone'},
         {key:'progress',label:tr('练习进度'),width:'120px'},
         {key:'open',label:tr('操作'),width:'40px',align:'end'},
       ]}>{jobs.map(job => {
         const latest = data.questionSets.filter(p => p.jobId === job.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt))[0];
         const answered = new Set(data.attempts.filter(a => a.questionSetId === latest?.id).map(a => a.questionId));
-        return <DataRow key={job.id}><DataTitle title={job.company} meta={job.role} onClick={() => setCompany(job.id)} /><DataCell label={tr('练习进度')}>{latest ? tr('{0} / {1} 题', [String(answered.size),String(latest.questions.length)]) : <span className="badge pending">{tr('待准备题目')}</span>}</DataCell><DataActions><button className="icon-button" aria-label={tr('开始面试练习') + ' · ' + job.company} onClick={() => setCompany(job.id)}><ChevronRight size={16} /></button></DataActions></DataRow>;
+        const count = materialsFor(job.id).length;
+        return <DataRow key={job.id}><DataTitle title={job.company} meta={job.role} onClick={() => setCompany(job.id)} /><DataCell label={tr('准备资料')} hide="phone" className="num">{count ? tr('{0} 份', [String(count)]) : <span className="muted">—</span>}</DataCell><DataCell label={tr('练习进度')}>{latest ? tr('{0} / {1} 题', [String(answered.size),String(latest.questions.length)]) : <span className="badge pending">{tr('待准备题目')}</span>}</DataCell><DataActions><button className="icon-button" aria-label={tr('开始面试练习') + ' · ' + job.company} onClick={() => setCompany(job.id)}><ChevronRight size={16} /></button></DataActions></DataRow>;
       })}</DataTable>{!jobs.length && <div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div>}</section>
+      {(() => {
+        const rows = materials.filter(m => materialKind === '全部' || m.kind === materialKind).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        return <section className="panel dt-panel practice-materials">
+          <div className="section-head"><h2>{tr('所有准备资料')}</h2>
+            <select aria-label={tr('筛选准备资料类型')} value={materialKind} onChange={e => setMaterialKind(e.target.value)}>
+              {['全部', ...materialKinds].map(k => <option key={k} value={k}>{k === '全部' ? tr('全部类型') : tr(k)}</option>)}
+            </select>
+          </div>
+          {rows.length ? materialTable(rows, tr('准备资料'), true) : <div className="empty"><p>{tr(materials.length ? '没有符合条件的资料' : '暂无准备资料')}</p><p className="muted">{tr('在公司详情中，把准备任务交给 AI Agent。')}</p></div>}
+        </section>;
+      })()}
     </div>;
   }
   return (
@@ -195,6 +226,10 @@ export default function InterviewPractice({
         {packs.length > 1 && <select aria-label={tr('题组版本')} value={pack?.id || ''} onChange={e => {setPackId(e.target.value);setQuestionId('');}}>{packs.map(p => <option key={p.id} value={p.id}>{bt(p.title)}</option>)}</select>}
         </div>
       </>}
+      {company && !practiceRecord && !guide && !help && materialsFor(isBank ? '' : jobId).length > 0 && <section className="panel dt-panel practice-materials">
+        <div className="section-head"><h2>{tr(isBank ? '通用准备资料' : '这家公司的准备资料')}</h2></div>
+        {materialTable(materialsFor(isBank ? '' : jobId), tr('准备资料'))}
+      </section>}
       {!pack || !question ? (
         <section className="panel">
           <h2>{tr('先为这家公司准备一组问题')}</h2>
