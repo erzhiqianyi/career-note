@@ -11,7 +11,7 @@
 
 ### 直接使える公开站点
 
-不想自己部署时，可以直接打开 **<https://career.erzhiqian.cc/>** 使用线上版本。线上站点由项目维护者部署；登录、数据保存和线上服务状态以该站点当前配置为准。希望自己管理域名、Cloudflare 账号和数据时，请按[部署手顺](docs/deployment.md)自行部署。
+不想自己部署时，可以直接打开 **<https://career.erzhiqian.cc/>** 使用线上版本。线上站点由项目维护者部署；登录、数据保存和线上服务状态以该站点当前配置为准。希望自己管理域名、Cloudflare 账号和数据时，请按 [部署步骤](docs/deployment.md) 自行部署。
 
 ## 何ができる？
 
@@ -43,6 +43,18 @@ npm run dev
 - データ：`~/.local/share/career-note/worker-state/`（Git 管理外）
 
 macOS / Linux / Windows の WSL2 を導入対象としています。OS 別手順、ポート変更、Google ログイン、バックアップは[ローカル導入手順](docs/local-setup.md)を参照してください。全 OS・全環境での動作を保証するものではなく、検証範囲は[テスト結果](docs/verification.md)に記録します。
+
+### 本地部署后连接 MCP
+
+`npm run dev` 启动后，本地 Worker 会同时提供 MCP 服务。使用 Claude Code、Codex CLI、Cursor 或 VS Code 等本机 Agent 时，将下面的地址添加为 Streamable HTTP MCP 服务器即可：
+
+```sh
+claude mcp add --transport http career-note http://127.0.0.1:4211/api/career/mcp
+```
+
+不需要手动填写令牌。首次连接时，Agent 会打开浏览器授权页面；登录（Google 模式）并同意权限后即可使用。也可以使用网页端代理地址 `http://localhost:4210/api/career/mcp`。本地数据仍保存在本机的 `worker-state/` 中。
+
+如果 Agent 运行在 claude.ai、ChatGPT 等托管环境，无法访问本机的 `localhost`，请按[本地部署手册中的 MCP 连接说明](docs/local-setup.md#ai-agent-の接続mcp--oauth)启动 `npm run dev:tunnel`，再把启动时显示的公网 MCP 地址添加到 Agent。公网访问必须使用 `CAREER_AUTH_MODE=strict`；不要把本地 `off` 模式通过隧道公开。
 
 ## 仕組みをひと目で
 

@@ -238,6 +238,12 @@ test('structured resume records persist, reject conflicts, preserve documents an
     assert.equal((await send('resume/version?id=original&revision=' + revision)).status, 400);
   }
   assert.equal((await send('resume/version?revision=1')).status, 400);
+  // A summary read has no body; restoring or archiving from it keeps the stored content.
+  const { content: _omitted, ...withoutBody } = listedDoc.data;
+  const restored = await ok('resume', { id: 'original', kind: 'document', revision: 2, data: withoutBody, archived: false });
+  assert.equal(restored.archived, false);
+  assert.equal((await ok('resume/version?id=original&revision=3')).entry.data.content, '# Immutable source');
+  await saveRecord(restored, { archived: true });
   assert.equal((await ok('state')).profile.summary, 'Preserve summary');
 
   const overview = await ok('resume/overview?language=ja&archived=true');

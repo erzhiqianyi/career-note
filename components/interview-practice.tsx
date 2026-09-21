@@ -162,7 +162,7 @@ export default function InterviewPractice({
       await navigator.clipboard.writeText(
         `使用 $career-interview-coach，通过已配置的 Career Note MCP 读取 career_get_contract 和 career_get_context。只针对已保存的回答 id ${attempt.id}，结合所属问题、公司来源、个人履历和历史回答，依据我在个人履历中确认的背景，将工作能力与日语表达分开分析，补充简单口述版与外国求职者沟通建议，不推测个人身份或签证结论。按 reviews 协议 preview/import 写回建议并读回关联，仅完成对应且已全部交付的点评任务，不伪造或覆盖我的原回答，不改变投递状态。`,
       );
-      setNotice('指令已复制，可以发给当前 Codex 对话处理。');
+      setNotice('指令已复制，可以发给当前 AI Agent 对话处理。');
     });
   }
   function returnTo(hash: string) {
@@ -204,7 +204,7 @@ export default function InterviewPractice({
             onClick={() =>
               void run(async () => {
                 await api('tasks', { kind: '公司准备', jobId });
-                setNotice('已请求公司准备，等待 Codex 写入题组。');
+                setNotice('已请求公司准备，等待 AI Agent 写入题组。');
               })
             }
           >
@@ -442,7 +442,7 @@ export default function InterviewPractice({
                     onClick={() => void save(true)}
                   >
                     <Sparkles size={16} />
-                    {tr('保存并请 Codex 点评')}
+                    {tr('保存并请 AI Agent 点评')}
                   </button>
                 </div>
               </div>
@@ -581,7 +581,7 @@ export default function InterviewPractice({
                   <div className="waiting-feedback">
                     <h3>
                       {pending
-                        ? tr('等待 Codex 点评')
+                        ? tr('等待 AI Agent 点评')
                         : tr('这次回答还没有点评')}
                     </h3>
                     <p>
@@ -590,7 +590,7 @@ export default function InterviewPractice({
                             '请求已加入任务队列。复制指令交给助手处理；如已配置包含回答点评的定时任务，也可等待该任务执行。结果写回后显示。',
                           )
                         : tr(
-                            '提交后，Codex 会针对这份已保存的回答分析，而不是评价尚未保存的编辑内容。',
+                            '提交后，AI Agent 会针对这份已保存的回答分析，而不是评价尚未保存的编辑内容。',
                           )}
                     </p>
                     <div className="answer-actions">
@@ -610,7 +610,7 @@ export default function InterviewPractice({
                         onClick={() => void copyPrompt()}
                       >
                         <Copy size={16} />
-                        {tr('复制给 Codex 的指令')}
+                        {tr('复制给 AI Agent 的指令')}
                       </button>
                     </div>
                   </div>

@@ -46,6 +46,9 @@ export const resumeSections: Record<
       field('summary', '职业摘要', { multiline: true }),
       field('website', '个人网站'),
       field('github', 'GitHub'),
+      field('email', '邮箱'),
+      field('phone', '电话'),
+      field('birthDate', '出生年月', { date: true }),
     ],
   },
   employment: {
@@ -99,9 +102,10 @@ export const resumeSections: Record<
     label: '成果案例',
     fields: [
       field('title', '成果标题', { required: true }),
-      field('context', '背景与问题', { multiline: true }),
-      field('action', '本人行动', { multiline: true }),
-      field('result', '成果', { multiline: true }),
+      field('context', 'S｜背景与状况', { multiline: true }),
+      field('task', 'T｜需要完成的任务', { multiline: true }),
+      field('action', 'A｜本人行动', { multiline: true }),
+      field('result', 'R｜成果与影响', { multiline: true }),
       field('measurement', '数字口径与限制', { multiline: true }),
     ],
   },

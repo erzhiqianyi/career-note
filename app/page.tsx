@@ -620,7 +620,7 @@ export default function Home() {
   async function request(kind: string, jobId = '') {
     await action(
       () => api('tasks', { kind, jobId, instructions: '' }),
-      '已加入 Codex 待处理队列；分析完成后会显示结果。',
+      '已加入 AI Agent 待处理队列；分析完成后会显示结果。',
     );
   }
   useEffect(() => {
@@ -649,7 +649,7 @@ export default function Home() {
       {
         name: 'queue_career_preparation',
         description:
-          'Queue company preparation for Codex; does not generate content or apply to a job.',
+          'Queue company preparation for the AI Agent; does not generate content or apply to a job.',
         inputSchema: {
           type: 'object',
           properties: { jobId: { type: 'string' } },
@@ -743,6 +743,29 @@ export default function Home() {
   const toggleSort = (key: JobSortKey) =>
     setSort((s) => ({ key, desc: s.key === key ? !s.desc : key !== 'match' && key !== 'status' }));
   const pending = data?.tasks.filter((t) => t.status === '待处理') || [];
+  // 首页「下一步」按实际资料推导：先补履历，再收集职位、定制简历、练习回答，最后看分析。
+  const nextSteps = (() => {
+    if (!data) return [] as [string, string, string, string, string?][];
+    const resume = data.resume.filter((e) => !e.archived);
+    const hasBasics = resume.some((e) => e.kind === 'basics') || !!data.profile.summary;
+    const hasEmployment = resume.some((e) => e.kind === 'employment');
+    const firstJob = openJobs[0];
+    const noNext = openJobs.find((j) => !j.nextAction);
+    const practiced = new Set(data.attempts.map((a) => a.questionSetId));
+    const unpracticed = data.questionSets.find((q) => !practiced.has(q.id));
+    const todayReport = data.reports.some((r) => r.date === data.today);
+    const steps: [string, string, string, string?][] = [];
+    if (!hasBasics || !hasEmployment)
+      steps.push(['整理个人履历', '补充基本资料、工作经历和求职条件，后续材料都从这里引用。', '我的履历']);
+    if (pending.length) steps.push(['查看 Agent 待处理任务', '核对 Agent 整理的结果，再决定是否导入。', 'Agent 协作']);
+    if (!openJobs.length) steps.push(['收集目标职位', '保留招聘链接、岗位要求和信息确认日期。', '公司与投递']);
+    if (noNext) steps.push(['为{0}设定下一步', '写下这家公司接下来要做的事和日期，首页会提醒。', '公司与投递', noNext.company]);
+    if (firstJob && hasEmployment) steps.push(['为{0}生成个性化简历', '按岗位要求调整职业定位和经历顺序，保留可核对的版本。', '个性化简历', firstJob.company]);
+    if (unpracticed) steps.push(['练一题自我介绍', '先用自己的话回答，再交给 AI Agent 点评。', '面试练习']);
+    else if (firstJob && !data.questionSets.length) steps.push(['整理公司准备资料', '让 AI Agent 生成面试题组，或自己整理常见问题。', '面试练习']);
+    if (!todayReport) steps.push(['整理每日分析', '从匹配点和准备缺口中，确定下一步行动。', '每日分析']);
+    return steps.slice(0, 3).map((step, i) => [String(i + 1).padStart(2, '0'), ...step] as [string, string, string, string, string?]);
+  })();
   if (!authConfig || (authConfig.mode !== 'off' && !loggedIn)) {
     return (
       <CareerWelcome
@@ -1261,40 +1284,7 @@ export default function Home() {
                           ))
                         ) : (
                           <>
-                            {[
-                              [
-                                '01',
-                                data.profile.summary
-                                  ? '核对求职条件与日语能力'
-                                  : '整理个人履历',
-                                data.profile.summary
-                                  ? '确认目标岗位、工作条件和当前日语水平。'
-                                  : '补充工作经历、项目事实和求职条件。',
-                                '我的履历',
-                              ],
-                              [
-                                '02',
-                                data.questionSets.length
-                                  ? '练一题自我介绍'
-                                  : data.jobs.length
-                                    ? '整理公司准备资料'
-                                    : '收集目标职位',
-                                data.questionSets.length
-                                  ? '先用自己的话回答，再交给 Codex 点评。'
-                                  : '保留招聘链接、岗位要求和信息确认日期。',
-                                data.questionSets.length
-                                  ? '面试练习'
-                                  : '公司与投递',
-                              ],
-                              [
-                                '03',
-                                pending.length
-                                  ? '查看 Agent 待处理任务'
-                                  : '整理每日分析',
-                                '从匹配点和准备缺口中，确定下一步行动。',
-                                pending.length ? 'Agent 协作' : '每日分析',
-                              ],
-                            ].map(([n, t, s, d]) => (
+                            {nextSteps.map(([n, t, s, d, arg]) => (
                               <button
                                 className="task-row"
                                 key={n}
@@ -1302,7 +1292,7 @@ export default function Home() {
                               >
                                 <span className="step">{n}</span>
                                 <span>
-                                  <b>{tr(t)}</b>
+                                  <b>{tr(t, arg ? [arg] : [])}</b>
                                   <small>{tr(s)}</small>
                                 </span>
                                 <ArrowUpRight size={18} />
@@ -1347,7 +1337,7 @@ export default function Home() {
                           </div>
                         ) : (
                           <Empty title={tr('下一份工作，从一条机会开始')}>
-                            <p>{tr('添加招聘信息，或让 Codex 整理后导入。')}</p>
+                            <p>{tr('添加招聘信息，或让 AI Agent 整理后导入。')}</p>
                           </Empty>
                         )}
                       </section>
@@ -1458,7 +1448,7 @@ export default function Home() {
                             disabled={busy}
                             onClick={() => void request('每日分析')}
                           >
-                            {tr('交给 Codex 分析')}
+                            {tr('交给 AI Agent 分析')}
                             <ArrowUpRight size={15} />
                           </button>
                         )}
@@ -1581,11 +1571,11 @@ export default function Home() {
                           onClick={() => void request('公司准备', job.id)}
                         >
                           <Sparkles size={17} />
-                          {tr('交给 Codex 准备')}
+                          {tr('交给 AI Agent 准备')}
                         </button>
                         {pending.some((t) => t.jobId === job.id) && (
                           <div className="inline-note">
-                            {tr('已加入待处理队列，等待 Codex 生成。')}
+                            {tr('已加入待处理队列，等待 AI Agent 生成。')}
                           </div>
                         )}
                         {data.materials.some((m) => m.jobId === job.id) && (
@@ -1656,7 +1646,7 @@ export default function Home() {
                           disabled={busy}
                           onClick={() => void request('职位研究')}
                         >
-                          {tr('请求 Codex 收集职位')}
+                          {tr('请求 AI Agent 收集职位')}
                           <ArrowUpRight size={16} />
                         </button>
                       </Empty>
@@ -1676,7 +1666,7 @@ export default function Home() {
                   reload={reload}
                 />
               )}
-              {active === '个性化简历' && <PersonalizedResumes />}
+              {active === '个性化简历' && <PersonalizedResumes entries={data.resume || []} jobs={data.jobs} />}
               {active === '准备资料' && (
                 <section className="panel dt-panel">
                   {visibleMaterials.length > 0 && (
@@ -1709,7 +1699,7 @@ export default function Home() {
                   )}
                   {!visibleMaterials.length && (
                     <Empty title={tr('暂无准备资料')}>
-                      <p>{tr('在公司详情中，把准备任务交给 Codex。')}</p>
+                      <p>{tr('在公司详情中，把准备任务交给 AI Agent。')}</p>
                       <button
                         className="text-button centered"
                         onClick={() => go('公司与投递')}
@@ -1758,7 +1748,7 @@ export default function Home() {
                   {!data.reports.length && (
                     <Empty title={tr('还没有每日分析')}>
                       <p>
-                        {tr('请求分析后，由 Codex 读取最新进度并整理建议。')}
+                        {tr('请求分析后，由 AI Agent 读取最新进度并整理建议。')}
                       </p>
                     </Empty>
                   )}

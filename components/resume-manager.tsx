@@ -1,7 +1,7 @@
 'use client';
 import { RecordBack, useRecordPage } from './record-page';
 import { DataMoreActions } from '@/components/data-table';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -22,6 +22,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  Printer,
   Target,
   Trophy,
   Wrench,
@@ -39,6 +40,7 @@ import {
   type ResumeLanguage,
 } from '@/lib/resume';
 import { useLocale } from './locale-provider';
+import { printTemplateLabels, printableEntries, resumePrintHTML, type PrintTemplate } from '@/lib/resume-print';
 
 type Verification = ResumeEntry['verification'];
 type View = 'all' | Verification | 'archived';
@@ -88,9 +90,17 @@ const headFields = new Set([
 const navKinds = resumeKinds.filter(k => k !== 'basics');
 const primaryKinds: ResumeKind[] = ['employment', 'achievement', 'skill', 'document'];
 const moreKinds: ResumeKind[] = [];
+// 一个分类页可以列出多种记录：職歴页同时列项目，スキル页同时列语言，否则这些记录只能从关联经历里找到。
+const groupedKinds: Partial<Record<ResumeKind, ResumeKind[]>> = {
+  employment: ['employment', 'project'],
+  project: ['employment', 'project'],
+  skill: ['skill', 'language'],
+  language: ['skill', 'language'],
+};
+const kindsOf = (k: ResumeKind) => groupedKinds[k] || [k];
 const sectionLabels: Record<ResumeKind, string> = {
-  basics: '概要', employment: '職歴・プロジェクト', education: '基本情報', project: '職歴・プロジェクト',
-  skill: 'スキル・語学', achievement: '実績・事例', language: 'スキル・語学', preferences: '基本情報', document: '資料・履歴',
+  basics: '概要', employment: '工作经历与项目', education: '基本信息', project: '工作经历与项目',
+  skill: '技能与语言', achievement: '成果与案例', language: '技能与语言', preferences: '基本信息', document: '资料与版本',
 };
 
 /** 把多行文本拆成条目，去掉手写的「1.」「-」等前缀，交给真正的列表渲染。 */
@@ -133,6 +143,10 @@ export default function ResumeManager({
   const [selected, setSelected] = useRecordPage<ResumeEntry>('#resume', 'view', id => entries.find(e => e.id === id) || null, e => e.id);
   const [historyEntry, setHistoryEntry] = useRecordPage<ResumeEntry>('#resume', 'history', id => entries.find(e => e.id === id) || null, e => e.id);
   const [sourcePage, setSourcePage] = useRecordPage<string>('#resume', 'source', () => 'original', s => s);
+  const [printPage, setPrintPage] = useRecordPage<PrintTemplate>('#resume', 'print', id => id === 'rirekisho' || id === 'shokumu' ? id : null, s => s);
+  const [printPending, setPrintPending] = useState(false);
+  const [printCompany, setPrintCompany] = useState('');
+  const printFrame = useRef<HTMLIFrameElement>(null);
   const [history, setHistory] = useState<ResumeEntry[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -158,18 +172,20 @@ export default function ResumeManager({
     .filter(
       (e) =>
         lang(e) &&
-        e.kind === kind &&
+        kindsOf(kind).includes(e.kind) &&
         (view === 'archived'
           ? e.archived
           : !e.archived && (view === 'all' || e.verification === view)),
     )
     .sort((a, b) =>
-      kind === 'skill' || kind === 'language'
+      a.kind === 'skill' || a.kind === 'language'
         ? (a.data.category || '').localeCompare(b.data.category || '') ||
           (a.data.name || '').localeCompare(b.data.name || '')
-        : (b.data.startDate || b.data.date || '').localeCompare(
-            a.data.startDate || a.data.date || '',
-          ),
+        : a.kind === 'document'
+          ? (b.updatedAt || '').localeCompare(a.updatedAt || '')
+          : (b.data.startDate || b.data.date || '').localeCompare(
+              a.data.startDate || a.data.date || '',
+            ),
     );
   const childrenOf = (id: string) => active.filter((e) => e.parentId === id);
   const parentOf = (entry: ResumeEntry) =>
@@ -465,6 +481,7 @@ export default function ResumeManager({
   function record(entry: ResumeEntry) {
     const parent = parentOf(entry);
     const kids = childrenOf(entry.id);
+    const fields = extraFields(entry);
     const kidSummary = navKinds
       .map((k) => ({ k, n: kids.filter((e) => e.kind === k).length }))
       .filter((x) => x.n);
@@ -472,29 +489,30 @@ export default function ResumeManager({
     let body: ReactNode = null;
     if (entry.kind === 'document') {
       body = (
-        <details className="resume-document">
+        <details className="resume-document" open>
           <summary>
             {t('查看文档')} · {entry.data.version}
             {entry.data.language ? ' · ' + entry.data.language : ''}
           </summary>
+          <div className="resume-document-tools">
+            <button
+              className="secondary"
+              onClick={() =>
+                download('resume-' + entry.id + '.md', entry.data.content)
+              }
+            >
+              <Download size={15} />
+              {t('下载 Markdown')}
+            </button>
+          </div>
           <div className="resume-markdown">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {entry.data.content}
             </ReactMarkdown>
           </div>
-          <button
-            className="secondary"
-            onClick={() =>
-              download('resume-' + entry.id + '.md', entry.data.content)
-            }
-          >
-            <Download size={15} />
-            {t('下载 Markdown')}
-          </button>
         </details>
       );
     } else {
-      const fields = extraFields(entry);
       body = fields.length ? (
         <dl className="resume-details">
           {fields.map((f) => {
@@ -518,6 +536,39 @@ export default function ResumeManager({
           })}
         </dl>
       ) : null;
+    }
+    if (entry.kind === 'achievement') {
+      const starFields = [
+        ['S', 'context', 'S｜背景与状况'],
+        ['T', 'task', 'T｜需要完成的任务'],
+        ['A', 'action', 'A｜本人行动'],
+        ['R', 'result', 'R｜成果与影响'],
+      ] as const;
+      body = (
+        <>
+          <div className="resume-star-analysis" aria-label="STAR分析">
+            {starFields.map(([letter, key, label]) => (
+              <div key={key} className={'resume-star-step star-' + letter.toLowerCase()}>
+                <span className="resume-star-letter">{letter}</span>
+                <div>
+                  <strong>{t(label)}</strong>
+                  <p>{entry.data[key] || t('待补充')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {fields.some((f) => f.key === 'measurement') && (
+            <dl className="resume-details resume-star-evidence">
+              {fields.filter((f) => f.key === 'measurement').map((f) => (
+                <div key={f.key}>
+                  <dt>{t(f.label)}</dt>
+                  <dd>{entry.data[f.key] || t('尚未补充')}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </>
+      );
     }
     const period =
       entry.data.startDate || entry.data.date
@@ -625,6 +676,49 @@ export default function ResumeManager({
     );
   }
 
+  /** 列表行的标题、副标题、时间：职历以雇主为主，文档以版本区分，成果标出所属经历。 */
+  function rowOf(entry: ResumeEntry) {
+    const d = entry.data;
+    const period = d.startDate
+      ? [d.startDate, d.endDate || t('至今或待确认')].join(' — ')
+      : d.date || '';
+    const parent = parentOf(entry);
+    switch (entry.kind) {
+      case 'employment':
+        return {
+          title: d.employer || resumeTitle(entry),
+          subtitle: [d.role, d.client].filter(Boolean).join(' · '),
+          period,
+        };
+      case 'project':
+        return {
+          title: d.name || resumeTitle(entry),
+          subtitle: [d.role, parent ? resumeTitle(parent) : d.status].filter(Boolean).join(' · '),
+          period,
+        };
+      case 'achievement':
+        return {
+          title: d.title || resumeTitle(entry),
+          subtitle: parent ? (parent.data.employer || resumeTitle(parent)) : '',
+          period: '',
+        };
+      case 'skill':
+        return { title: d.category || d.name || '', subtitle: d.category ? d.name : '', period: d.years ? d.years + ' ' + t('年') : '' };
+      case 'language':
+        return { title: d.name || '', subtitle: [d.level, d.qualification].filter(Boolean).join(' · '), period: d.date || '' };
+      case 'document':
+        return {
+          title: d.title || resumeTitle(entry),
+          subtitle: [d.version, d.language ? resumeLanguageLabels[d.language as ResumeLanguage] || d.language : ''].filter(Boolean).join(' · '),
+          period: entry.updatedAt ? entry.updatedAt.slice(0, 10) : '',
+        };
+      case 'education':
+        return { title: d.school || resumeTitle(entry), subtitle: [d.major, d.degree].filter(Boolean).join(' · '), period };
+      default:
+        return { title: resumeTitle(entry), subtitle: d.role || d.level || '', period };
+    }
+  }
+
   function chooseKind(next: ResumeKind) {
     setKind(next);
     setView('all');
@@ -672,6 +766,30 @@ export default function ResumeManager({
           ))}
         </section></div>;
   if (selected) return <section className="panel record-page"><RecordBack onBack={() => setSelected(null)} />{error && <p role="alert">{error}</p>}{record(entries.find(e => e.id === selected.id) || selected)}</section>;
+  if (printPage) {
+    const today = new Date().toISOString().slice(0, 10);
+    const used = printableEntries(entries, language, printPending);
+    const html = resumePrintHTML(used, { template: printPage, includePending: printPending, date: today.replace(/-/g, '/'), company: printCompany });
+    const pendingCount = entries.filter(e => !e.archived && lang(e) && e.verification === 'pending').length;
+    return <section className="panel record-page resume-print-page"><RecordBack onBack={() => setPrintPage(null)} />
+      <div className="resume-print-head">
+        <h2><Printer size={18} />{t('打印 / 保存为 PDF')}</h2>
+        <nav className="resume-sub-tabs" aria-label={t('打印模板')}>
+          {(['rirekisho', 'shokumu'] as PrintTemplate[]).map(k => <button key={k} aria-current={printPage === k ? 'page' : undefined} onClick={() => setPrintPage(k)}>{printTemplateLabels[k]}</button>)}
+        </nav>
+      </div>
+      <div className="resume-print-options">
+        <label className="field"><span>{t('应募公司（可选，印在标题旁）')}</span><input value={printCompany} onChange={e => setPrintCompany(e.target.value)} placeholder="株式会社〇〇" /></label>
+        <label className="resume-print-check"><input type="checkbox" checked={printPending} onChange={e => setPrintPending(e.target.checked)} />{t('包含待确认的记录（{0} 条）', [pendingCount])}</label>
+        <div className="row">
+          <button className="primary" onClick={() => printFrame.current?.contentWindow?.print()}><Printer size={16} />{t('打印 / 保存为 PDF')}</button>
+          <button className="secondary" onClick={() => download('resume-' + printPage + '-' + today + '.html', html, 'text/html')}><Download size={15} />{t('下载 HTML')}</button>
+        </div>
+      </div>
+      <p className="resume-print-note">{t('内容来自当前语言的结构化记录（基本资料、工作经历、学历、项目、技能、语言、求职方向），引用 {0} 条。修改记录后回到这里即可重新生成；电话、生年月日等空栏请在基本资料中补充或打印后手写。', [used.length])}</p>
+      <iframe ref={printFrame} title={printTemplateLabels[printPage]} srcDoc={html} className="resume-print-preview" />
+    </section>;
+  }
   if (sourcePage) return <section className="panel record-page"><RecordBack onBack={() => setSourcePage(null)} /><h2>{t('旧版履历原文（保留）')}</h2><ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.experience || profile.summary}</ReactMarkdown></section>;
 
   return (
@@ -680,7 +798,7 @@ export default function ResumeManager({
         <div className="resume-avatar" aria-hidden="true">{initials(basics?.data.name) || '?'}</div>
         <div className="resume-identity-text">
           <h2>{basics?.data.name || t('还没有基本资料')}</h2>
-          <p>{basics?.data.headline?.split(/[｜|]/)[0].trim() || t('職歴・実績・スキルを管理します。応募先に合わせた書類は「応募書類」で作成します。')}</p>
+          <p>{basics?.data.headline?.split(/[｜|]/)[0].trim() || t('管理工作经历、成果与技能；针对公司的材料在「个性化简历」中生成。')}</p>
         </div>
         <div className="resume-identity-actions">
           <button className="text-button" disabled={busy} onClick={() => basics ? setSelected(basics) : start('basics')}>
@@ -689,6 +807,7 @@ export default function ResumeManager({
           <DataMoreActions label={t('更多')}>
             <button onClick={() => start('basics', basics)}>{t('编辑基本资料')}</button>
             <button onClick={() => setShowTools(value => !value)}>{t('资料状态与筛选')}</button>
+            <button onClick={() => setPrintPage('rirekisho')}><Printer size={15} />{t('打印 / 保存为 PDF')}</button>
             <button onClick={() => download('resume-data.json', JSON.stringify({ schemaVersion: 1, entries }, null, 2), 'application/json')}>
               <Download size={15} />{t('导出 JSON')}
             </button>
@@ -716,8 +835,8 @@ export default function ResumeManager({
         </details>}
       </nav>
 
-      {['basics', 'education', 'preferences'].includes(kind) && <nav className="resume-sub-tabs" aria-label={t('基本情報')}>
-        {(['basics', 'education', 'preferences'] as ResumeKind[]).map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={() => chooseKind(k)}>{t(k === 'basics' ? '個人情報' : k === 'education' ? '学歴' : '求職方向')}</button>)}
+      {['basics', 'education', 'preferences'].includes(kind) && <nav className="resume-sub-tabs" aria-label={t('基本信息')}>
+        {(['basics', 'education', 'preferences'] as ResumeKind[]).map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={() => chooseKind(k)}>{t(k === 'basics' ? '个人信息' : k === 'education' ? '教育经历' : '求职方向')}</button>)}
       </nav>}
 
       {showTools && <aside className="resume-library-tools" aria-label={t('资料状态与筛选')}>
@@ -730,29 +849,76 @@ export default function ResumeManager({
         </select></label>
       </aside>}
 
+      {kind === 'basics' ? (
+        <section className="resume-records resume-basics-card" aria-labelledby="resume-records-heading">
+          <div className="resume-records-heading">
+            <h2 id="resume-records-heading">{t('个人信息')}</h2>
+            <button className={basics ? 'secondary' : 'primary'} disabled={busy} onClick={() => start('basics', basics)}>
+              {basics ? <Pencil size={16} /> : <Plus size={18} />}{basics ? t('编辑基本资料') : t('添加{0}', [t(resumeSections.basics.label)])}
+            </button>
+          </div>
+          {error && <p role="alert" className="resume-error">{error}</p>}
+          {basics ? (
+            <dl className="resume-details resume-basics-details">
+              <div><dt>{t('姓名')}</dt><dd>{basics.data.name}{basics.data.reading ? <span className="resume-basics-reading">{basics.data.reading}</span> : null}</dd></div>
+              {basics.data.headline && <div><dt>{t('职业定位')}</dt><dd>{basics.data.headline}</dd></div>}
+              {basics.data.location && <div><dt>{t('所在地')}</dt><dd>{basics.data.location}</dd></div>}
+              {basics.data.summary && <div className="wide"><dt>{t('职业摘要')}</dt><dd className="resume-basics-summary">{lines(basics.data.summary).map((p, i) => <p key={i}>{p}</p>)}</dd></div>}
+              {(basics.data.website || basics.data.github) && <div><dt>{t('链接')}</dt><dd className="resume-basics-links">
+                {basics.data.website && <a href={basics.data.website} target="_blank" rel="noreferrer"><Globe size={13} />{basics.data.website.replace(/^https?:\/\//, '')}</a>}
+                {basics.data.github && <a href={basics.data.github} target="_blank" rel="noreferrer"><Link2 size={13} />{basics.data.github.replace(/^https?:\/\//, '')}</a>}
+              </dd></div>}
+              {active.some(e => e.kind === 'language') && <div><dt>{t('语言能力')}</dt><dd className="resume-chips">
+                {active.filter(e => e.kind === 'language').map(e => <span key={e.id} className="tag">{e.data.name}{e.data.qualification ? ' · ' + e.data.qualification : e.data.level ? ' · ' + e.data.level : ''}</span>)}
+              </dd></div>}
+            </dl>
+          ) : (
+            <div className="empty"><Icon size={26} /><h3>{t('还没有基本资料')}</h3><p>{t('新增一条，或通过 MCP 整理已有资料。')}</p></div>
+          )}
+          {basics && <div className="resume-basics-footer">{footer(basics)}</div>}
+        </section>
+      ) : (
       <section className="resume-records" aria-labelledby="resume-records-heading">
         <div className="resume-records-heading">
           <h2 id="resume-records-heading">{t(sectionLabels[kind])}</h2>
-          <button className="primary" disabled={busy} onClick={() => start(kind)}><Plus size={18} />{t('添加{0}', [t(resumeSections[kind].label)])}</button>
+          <div className="resume-records-actions">
+            {kind === 'document' && <button className="secondary" onClick={() => setPrintPage('shokumu')}><Printer size={16} />{t('打印 / 保存为 PDF')}</button>}
+            {kindsOf(kind).length === 1 && <button className="primary" disabled={busy} onClick={() => start(kind)}><Plus size={18} />{t('添加{0}', [t(resumeSections[kind].label)])}</button>}
+          </div>
         </div>
         {view !== 'all' && <div className="resume-active-filter"><span>{view === 'archived' ? t('已归档') : t(verificationLabel[view])}</span><button className="text-button" onClick={() => setView('all')}>{t('清除筛选')}</button></div>}
         {error && <p role="alert" className="resume-error">{error}</p>}
-        {!listed.length && <div className="empty"><Icon size={26} /><h3>{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</h3><p>{view === 'all' ? t('新增一条，或通过 MCP 整理已有资料。') : t('切换筛选条件查看其他记录。')}</p></div>}
-        <ul className={'resume-record-list' + (kind === 'preferences' ? ' resume-preference-list' : '')}>
-          {listed.flatMap(entry => kind === 'preferences' && (entry.data.role || chips(entry.data.roles)).length > 1
-            ? (entry.data.role ? [entry.data.role] : chips(entry.data.roles)).map((role, index) => ({ entry, role, key: entry.id + '-role-' + index }))
-            : [{ entry, role: '', key: entry.id }]
-          ).map(({ entry, role, key }) => <li key={key}>
-            <button className="resume-record-open" onClick={() => setSelected(role ? { ...entry, data: { ...entry.data, role } } : entry)}>
-              <span className="resume-record-title">{role || resumeTitle(entry)}</span>
-              {(entry.data.role || entry.data.category || entry.data.major || entry.data.level) && <span className="resume-record-subtitle">{entry.data.role || entry.data.category || entry.data.major || entry.data.level}</span>}
-              {(entry.data.startDate || entry.data.date) && <span className="resume-record-period">{entry.data.startDate ? [entry.data.startDate, entry.data.endDate || t('至今或待确认')].join(' — ') : entry.data.date}</span>}
-              {entry.verification === 'pending' && <span className="resume-record-pending">{t('待确认')}</span>}
-            </button>
-            <button className="icon-button resume-record-edit" title={t('编辑')} aria-label={t('编辑') + ' ' + (role || resumeTitle(entry))} disabled={busy} onClick={() => start(kind, entry)}><Pencil size={19} /></button>
-          </li>)}
-        </ul>
+        {!listed.length && kindsOf(kind).length === 1 && <div className="empty"><Icon size={26} /><h3>{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</h3><p>{view === 'all' ? t('新增一条，或通过 MCP 整理已有资料。') : t('切换筛选条件查看其他记录。')}</p></div>}
+        {kindsOf(kind).map(k => {
+          const rows = listed.filter(e => e.kind === k);
+          const grouped = kindsOf(kind).length > 1;
+          return <div key={k} className="resume-record-group">
+            {grouped && <div className="resume-record-group-head">
+              <h3>{t(resumeSections[k].label)}<span>{rows.length}</span></h3>
+              <button className="text-button" disabled={busy} onClick={() => start(k)}><Plus size={16} />{t('添加{0}', [t(resumeSections[k].label)])}</button>
+            </div>}
+            {grouped && !rows.length && <p className="resume-record-group-empty">{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</p>}
+            <ul className={'resume-record-list' + (k === 'preferences' ? ' resume-preference-list' : '')}>
+              {rows.flatMap(entry => k === 'preferences' && (entry.data.role || chips(entry.data.roles)).length > 1
+                ? (entry.data.role ? [entry.data.role] : chips(entry.data.roles)).map((role, index) => ({ entry, role, key: entry.id + '-role-' + index }))
+                : [{ entry, role: '', key: entry.id }]
+              ).map(({ entry, role, key }) => {
+                const row = role ? { title: role, subtitle: '', period: '' } : rowOf(entry);
+                return <li key={key}>
+                  <button className="resume-record-open" onClick={() => setSelected(role ? { ...entry, data: { ...entry.data, role } } : entry)}>
+                    <span className="resume-record-title">{row.title}</span>
+                    {row.subtitle && <span className="resume-record-subtitle">{row.subtitle}</span>}
+                    {row.period && <span className="resume-record-period">{row.period}</span>}
+                    {entry.verification === 'pending' && <span className="resume-record-pending">{t('待确认')}</span>}
+                  </button>
+                  <button className="icon-button resume-record-edit" title={t('编辑')} aria-label={t('编辑') + ' ' + row.title} disabled={busy} onClick={() => start(k, entry)}><Pencil size={19} /></button>
+                </li>;
+              })}
+            </ul>
+          </div>;
+        })}
       </section>
+      )}
     </div>
   );
 }

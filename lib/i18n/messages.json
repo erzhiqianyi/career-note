@@ -187,9 +187,9 @@
     "ja": "MCP token を無効にしました",
     "en": "MCP token revoked"
   },
-  "已加入 Codex 待处理队列；分析完成后会显示结果。": {
-    "ja": "Codex の処理待ちに追加しました。分析後に結果が表示されます。",
-    "en": "Added to the Codex queue. Results will appear after analysis."
+  "已加入 AI Agent 待处理队列；分析完成后会显示结果。": {
+    "ja": "AI Agent の処理待ちに追加しました。分析後に結果が表示されます。",
+    "en": "Added to the AI Agent queue. Results will appear after analysis."
   },
   "公司准备": {
     "ja": "企業別の準備",
@@ -475,9 +475,9 @@
     "ja": "希望求人を集める",
     "en": "Collect target jobs"
   },
-  "先用自己的话回答，再交给 Codex 点评。": {
-    "ja": "まず自分の言葉で答えてから、Codex に講評を依頼しよう。",
-    "en": "Answer in your own words first, then ask Codex for feedback."
+  "先用自己的话回答，再交给 AI Agent 点评。": {
+    "ja": "まず自分の言葉で答えてから、AI Agent に講評を依頼しよう。",
+    "en": "Answer in your own words first, then ask your AI Agent for feedback."
   },
   "保留招聘链接、岗位要求和信息确认日期。": {
     "ja": "求人リンク、応募要件、情報確認日を保存しよう。",
@@ -507,9 +507,9 @@
     "ja": "次の仕事は、ひとつの求人から",
     "en": "Your next job starts with one opportunity"
   },
-  "添加招聘信息，或让 Codex 整理后导入。": {
-    "ja": "求人情報を追加するか、Codex が整理したデータをインポートしよう。",
-    "en": "Add a job or import research prepared by Codex."
+  "添加招聘信息，或让 AI Agent 整理后导入。": {
+    "ja": "求人情報を追加するか、AI Agent が整理したデータをインポートしよう。",
+    "en": "Add a job or import research prepared by AI Agent."
   },
   "等待第一份分析": {
     "ja": "最初の分析を待っています",
@@ -531,9 +531,9 @@
     "ja": "レポートを読む",
     "en": "Read report"
   },
-  "交给 Codex 分析": {
-    "ja": "Codex に分析を依頼",
-    "en": "Ask Codex to analyze"
+  "交给 AI Agent 分析": {
+    "ja": "AI Agent に分析を依頼",
+    "en": "Ask AI Agent to analyze"
   },
   "返回职位列表": {
     "ja": "求人一覧に戻る",
@@ -595,13 +595,13 @@
     "ja": "求人の特徴とプロフィールを基に整理し、完成後にここに保存します。",
     "en": "Materials based on the role and your profile will be saved here when ready."
   },
-  "交给 Codex 准备": {
-    "ja": "Codex に準備を依頼",
-    "en": "Ask Codex to prepare"
+  "交给 AI Agent 准备": {
+    "ja": "AI Agent に準備を依頼",
+    "en": "Ask AI Agent to prepare"
   },
-  "已加入待处理队列，等待 Codex 生成。": {
-    "ja": "処理待ちに追加済み。Codex の生成を待っています。",
-    "en": "Queued, waiting for Codex to prepare the materials."
+  "已加入待处理队列，等待 AI Agent 生成。": {
+    "ja": "処理待ちに追加済み。AI Agent の生成を待っています。",
+    "en": "Queued, waiting for AI Agent to prepare the materials."
   },
   "· 待核对": {
     "ja": "· 要確認",
@@ -675,9 +675,9 @@
     "ja": "求人調査",
     "en": "Job research"
   },
-  "请求 Codex 收集职位": {
-    "ja": "Codex に求人収集を依頼",
-    "en": "Ask Codex to find jobs"
+  "请求 AI Agent 收集职位": {
+    "ja": "AI Agent に求人収集を依頼",
+    "en": "Ask AI Agent to find jobs"
   },
   "以真实经历为依据。日语水平、在留资格、技能年限及未确认的成果，请核对后再用于投递。": {
     "ja": "実際の経験に基づいて記入してください。日本語力、在留資格、経験年数、未確認の成果は、応募前に確認しましょう。",
@@ -719,9 +719,9 @@
     "ja": "準備資料はまだありません",
     "en": "No preparation materials yet"
   },
-  "在公司详情中，把准备任务交给 Codex。": {
-    "ja": "企業の詳細画面から Codex に準備を依頼してください。",
-    "en": "Ask Codex to prepare materials from a company's detail page."
+  "在公司详情中，把准备任务交给 AI Agent。": {
+    "ja": "企業の詳細画面から AI Agent に準備を依頼してください。",
+    "en": "Ask AI Agent to prepare materials from a company's detail page."
   },
   "前往公司与投递": {
     "ja": "企業・応募へ",
@@ -735,17 +735,17 @@
     "ja": "日次分析はまだありません",
     "en": "No daily analysis yet"
   },
-  "请求分析后，由 Codex 读取最新进度并整理建议。": {
-    "ja": "依頼後、Codex が最新の進捗を読み取り、提案を整理します。",
-    "en": "After your request, Codex reviews your latest progress and prepares suggestions."
+  "请求分析后，由 AI Agent 读取最新进度并整理建议。": {
+    "ja": "依頼後、AI Agent が最新の進捗を読み取り、提案を整理します。",
+    "en": "After your request, AI Agent reviews your latest progress and prepares suggestions."
   },
   "收集 → 分析 → 写入": {
     "ja": "収集 → 分析 → 保存",
     "en": "Collect → Analyze → Save"
   },
-  "Codex 研究招聘来源，结合个人履历整理内容，再导入这个工作区。网页不调用 AI，也不会自动发送申请。": {
-    "ja": "Codex が求人の出典を調査し、プロフィールを基に内容を整理して、このワークスペースにインポートします。ウェブ画面から AI を呼び出したり、自動応募したりはしません。",
-    "en": "Codex researches job sources, prepares content using your profile and imports it here. This website does not call AI or submit applications automatically."
+  "AI Agent 研究招聘来源，结合个人履历整理内容，再导入这个工作区。网页不调用 AI，也不会自动发送申请。": {
+    "ja": "AI Agent が求人の出典を調査し、プロフィールを基に内容を整理して、このワークスペースにインポートします。ウェブ画面から AI を呼び出したり、自動応募したりはしません。",
+    "en": "AI Agent researches job sources, prepares content using your profile and imports it here. This website does not call AI or submit applications automatically."
   },
   "添加职位，或请求收集适合的机会。": {
     "ja": "求人を追加するか、希望に合う求人の収集を依頼します。",
@@ -755,21 +755,21 @@
     "ja": "企業の詳細画面から準備を依頼します。",
     "en": "Request preparation from a company's detail page."
   },
-  "把下面的指令交给 Codex 处理。": {
-    "ja": "下の指示を Codex に渡します。",
-    "en": "Give the instructions below to Codex."
+  "把下面的指令交给 AI Agent 处理。": {
+    "ja": "下の指示を AI Agent に渡します。",
+    "en": "Give the instructions below to AI Agent."
   },
   "核对生成的材料，再自行投递。": {
     "ja": "生成された資料を確認し、自分で応募します。",
     "en": "Review the generated materials, then apply yourself."
   },
-  "已复制 Codex 工作指令": {
-    "ja": "Codex への指示をコピーしました",
-    "en": "Codex instructions copied"
+  "已复制 AI Agent 工作指令": {
+    "ja": "AI Agent への指示をコピーしました",
+    "en": "AI Agent instructions copied"
   },
-  "复制给 Codex 的指令": {
-    "ja": "Codex への指示をコピー",
-    "en": "Copy instructions for Codex"
+  "复制给 AI Agent 的指令": {
+    "ja": "AI Agent への指示をコピー",
+    "en": "Copy instructions for AI Agent"
   },
   "查看指令": {
     "ja": "指示を見る",
@@ -1303,9 +1303,9 @@
     "ja": "次の一歩を設定",
     "en": "Set next step"
   },
-  "已复制，粘贴到 Codex 即可调用。": {
-    "ja": "コピーしました。Codex に貼り付けて使えます。",
-    "en": "Copied. Paste into Codex to use it."
+  "已复制，粘贴到 AI Agent 即可调用。": {
+    "ja": "コピーしました。AI Agent に貼り付けて使えます。",
+    "en": "Copied. Paste into AI Agent to use it."
   },
   "未能复制，请展开技能后手动复制调用指令。": {
     "ja": "コピーできませんでした。技能を開き、指示を手動でコピーしてください。",
@@ -1415,9 +1415,9 @@
     "ja": "回答の講評",
     "en": "Answer review"
   },
-  "回答已保存，点评请求已交给 Codex。处理完成后，建议会出现在下方。": {
-    "ja": "回答を保存し、Codex に講評を依頼しました。処理後に下に提案が表示されます。",
-    "en": "Answer saved and sent to Codex for review. Suggestions will appear below when ready."
+  "回答已保存，点评请求已交给 AI Agent。处理完成后，建议会出现在下方。": {
+    "ja": "回答を保存し、AI Agent に講評を依頼しました。処理後に下に提案が表示されます。",
+    "en": "Answer saved and sent to AI Agent for review. Suggestions will appear below when ready."
   },
   "本次回答已保存。你可以查看历史，或继续提交点评。": {
     "ja": "今回の回答を保存しました。履歴の確認や講評の依頼ができます。",
@@ -1427,9 +1427,9 @@
     "ja": "この回答版の講評を依頼しました。",
     "en": "Review requested for this answer version."
   },
-  "指令已复制，可以发给当前 Codex 对话处理。": {
-    "ja": "指示をコピーしました。現在の Codex チャットに貼り付けてください。",
-    "en": "Instructions copied. Paste them into your current Codex chat."
+  "指令已复制，可以发给当前 AI Agent 对话处理。": {
+    "ja": "指示をコピーしました。現在の AI Agent チャットに貼り付けてください。",
+    "en": "Instructions copied. Paste them into your current AI Agent chat."
   },
   "练习公司": {
     "ja": "練習する企業",
@@ -1447,13 +1447,13 @@
     "ja": "まずこの企業の質問セットを準備しよう",
     "en": "Prepare a question set for this company first"
   },
-  "Codex 会结合公司特点、岗位要求和你的经历整理练习题。": {
-    "ja": "Codex が企業の特徴、求人要件、あなたの経験を基に質問を整理します。",
-    "en": "Codex prepares questions based on the company, role and your experience."
+  "AI Agent 会结合公司特点、岗位要求和你的经历整理练习题。": {
+    "ja": "AI Agent が企業の特徴、求人要件、あなたの経験を基に質問を整理します。",
+    "en": "AI Agent prepares questions based on the company, role and your experience."
   },
-  "已请求公司准备，等待 Codex 写入题组。": {
-    "ja": "企業別の準備を依頼しました。Codex の質問セット保存を待っています。",
-    "en": "Company preparation requested. Waiting for Codex to save the questions."
+  "已请求公司准备，等待 AI Agent 写入题组。": {
+    "ja": "企業別の準備を依頼しました。AI Agent の質問セット保存を待っています。",
+    "en": "Company preparation requested. Waiting for AI Agent to save the questions."
   },
   "请求公司准备": {
     "ja": "企業別の準備を依頼",
@@ -1559,9 +1559,9 @@
     "ja": "今回の回答を保存",
     "en": "Save answer"
   },
-  "保存并请 Codex 点评": {
-    "ja": "保存して Codex に講評を依頼",
-    "en": "Save & request Codex feedback"
+  "保存并请 AI Agent 点评": {
+    "ja": "保存して AI Agent に講評を依頼",
+    "en": "Save & request AI Agent feedback"
   },
   "回答记录与点评": {
     "ja": "回答履歴・講評",
@@ -1643,21 +1643,21 @@
     "ja": "もう一度答えて、次の版を保存",
     "en": "Try again and save a new version"
   },
-  "等待 Codex 点评": {
-    "ja": "Codex の講評を待っています",
-    "en": "Waiting for Codex feedback"
+  "等待 AI Agent 点评": {
+    "ja": "AI Agent の講評を待っています",
+    "en": "Waiting for AI Agent feedback"
   },
   "这次回答还没有点评": {
     "ja": "この回答の講評はまだありません",
     "en": "No feedback for this answer yet"
   },
-  "请求已加入任务队列。可以复制指令发给 Codex 现在处理，也会由每日任务处理；结果写回后自动显示。": {
-    "ja": "処理待ちに追加しました。指示を Codex に渡して今すぐ処理することも、日次タスクに任せることもできます。保存された結果は自動表示されます。",
-    "en": "Your request is queued. Copy the instructions to Codex to process now, or wait for the daily task. Results appear automatically once saved."
+  "请求已加入任务队列。可以复制指令发给 AI Agent 现在处理，也会由每日任务处理；结果写回后自动显示。": {
+    "ja": "処理待ちに追加しました。指示を AI Agent に渡して今すぐ処理することも、日次タスクに任せることもできます。保存された結果は自動表示されます。",
+    "en": "Your request is queued. Copy the instructions to AI Agent to process now, or wait for the daily task. Results appear automatically once saved."
   },
-  "提交后，Codex 会针对这份已保存的回答分析，而不是评价尚未保存的编辑内容。": {
-    "ja": "送信後、Codex はこの保存済み回答を分析します。未保存の編集内容は対象外です。",
-    "en": "Codex will review this saved answer, not your unsaved edits."
+  "提交后，AI Agent 会针对这份已保存的回答分析，而不是评价尚未保存的编辑内容。": {
+    "ja": "送信後、AI Agent はこの保存済み回答を分析します。未保存の編集内容は対象外です。",
+    "en": "AI Agent will review this saved answer, not your unsaved edits."
   },
   "请求点评这个版本": {
     "ja": "この版の講評を依頼",
@@ -3468,11 +3468,11 @@
     "en": "Done"
   },
   "收起导航栏": {
-    "ja": "ナビゲーションをたたむ",
+    "ja": "メニューを閉じる",
     "en": "Collapse sidebar"
   },
   "展开导航栏": {
-    "ja": "ナビゲーションを開く",
+    "ja": "メニューを開く",
     "en": "Expand sidebar"
   },
   "{0} 想要访问你的就职手帖": {
@@ -4154,5 +4154,401 @@
   "显示语言": {
     "ja": "表示言語",
     "en": "Display language"
+  },
+  "概要": {
+    "ja": "概要",
+    "en": "Overview"
+  },
+  "工作经历与项目": {
+    "ja": "職歴・プロジェクト",
+    "en": "Experience & projects"
+  },
+  "技能与语言": {
+    "ja": "スキル・語学",
+    "en": "Skills & languages"
+  },
+  "基本信息": {
+    "ja": "基本情報",
+    "en": "Basics"
+  },
+  "个人信息": {
+    "ja": "個人情報",
+    "en": "Personal"
+  },
+  "求职方向": {
+    "ja": "求職方向",
+    "en": "Preferences"
+  },
+  "链接": {
+    "ja": "リンク",
+    "en": "Links"
+  },
+  "待补充": {
+    "ja": "未記入",
+    "en": "To be added"
+  },
+  "管理工作经历、成果与技能；针对公司的材料在「个性化简历」中生成。": {
+    "ja": "職歴・実績・スキルを管理します。応募先に合わせた書類は「個別履歴書」で作成します。",
+    "en": "Manage experience, achievements and skills. Company-specific documents are created under Personalized resumes."
+  },
+  "补充基本资料、工作经历和求职条件，后续材料都从这里引用。": {
+    "ja": "基本情報、職歴、希望条件を追加しよう。以降の書類はここから引用されます。",
+    "en": "Add basics, employment and preferences; every later document draws from here."
+  },
+  "核对 Agent 整理的结果，再决定是否导入。": {
+    "ja": "Agent が整理した結果を確認してから取り込みを判断しよう。",
+    "en": "Check what the Agent prepared before importing it."
+  },
+  "为{0}设定下一步": {
+    "ja": "{0} の次の一歩を決める",
+    "en": "Set the next step for {0}"
+  },
+  "写下这家公司接下来要做的事和日期，首页会提醒。": {
+    "ja": "この企業で次にやることと期日を書くと、ここに表示されます。",
+    "en": "Write down what to do next for this company and when; it will show up here."
+  },
+  "为{0}生成个性化简历": {
+    "ja": "{0} 向けの個別履歴書を作る",
+    "en": "Create a personalized resume for {0}"
+  },
+  "按岗位要求调整职业定位和经历顺序，保留可核对的版本。": {
+    "ja": "求人要件に合わせて職業定位と経歴の順序を調整し、確認できる版を残そう。",
+    "en": "Adjust the headline and ordering to the job requirements and keep a checkable version."
+  },
+  "让 AI Agent 生成面试题组，或自己整理常见问题。": {
+    "ja": "AI Agent に質問集を作ってもらうか、自分でよくある質問を整理しよう。",
+    "en": "Ask your AI Agent for a question set, or collect common questions yourself."
+  },
+  "仅发布上方内容。内部备注、来源、目标公司及工作区数据不公开。修改草稿后需创建新链接；旧链接可单独撤下。": {
+    "ja": "公開されるのは上の内容だけです。内部メモ、出典、応募先、ワークスペースのデータは公開されません。草稿を修正した場合は新しいリンクを作成してください。古いリンクは個別に取り下げられます。",
+    "en": "Only the content above is published. Internal notes, sources, target company and workspace data stay private. After editing the draft, create a new link; old links can be revoked individually."
+  },
+  "仅链接访问": {
+    "ja": "リンク限定",
+    "en": "Unlisted"
+  },
+  "仅链接访问 · 请求搜索引擎不收录": {
+    "ja": "リンク限定 · 検索エンジンに登録しない",
+    "en": "Unlisted · ask search engines not to index"
+  },
+  "以下内容会出现在公开预览中": {
+    "ja": "以下の内容が公開プレビューに表示されます",
+    "en": "The following appears in the public preview"
+  },
+  "任何获得链接的人都能查看。仅链接访问不提供密码保护。": {
+    "ja": "リンクを知っている人は誰でも閲覧できます。リンク限定にパスワード保護はありません。",
+    "en": "Anyone with the link can view it. Unlisted links are not password protected."
+  },
+  "保存草稿": {
+    "ja": "草稿を保存",
+    "en": "Save draft"
+  },
+  "允许收录": {
+    "ja": "公開（検索可）",
+    "en": "Public"
+  },
+  "公司、角色或说明": {
+    "ja": "企業・役割・説明",
+    "en": "Company, role or note"
+  },
+  "公开 · 允许搜索引擎收录": {
+    "ja": "公開 · 検索エンジンの登録を許可",
+    "en": "Public · allow search engines to index"
+  },
+  "公开方式": {
+    "ja": "公開方法",
+    "en": "Visibility"
+  },
+  "公开简历预览": {
+    "ja": "公開履歴書プレビュー",
+    "en": "Public resume preview"
+  },
+  "公开联系链接": {
+    "ja": "公開する連絡先リンク",
+    "en": "Public contact links"
+  },
+  "公开链接": {
+    "ja": "公開リンク",
+    "en": "Public links"
+  },
+  "公开链接（{0}）": {
+    "ja": "公開リンク（{0}）",
+    "en": "Public links ({0})"
+  },
+  "关联来源 {0} 条，仅保存在工作区。": {
+    "ja": "関連する出典 {0} 件。ワークスペース内にのみ保存されます。",
+    "en": "{0} linked sources, stored only in this workspace."
+  },
+  "关闭预览": {
+    "ja": "プレビューを閉じる",
+    "en": "Close preview"
+  },
+  "内部备注（不公开）": {
+    "ja": "内部メモ（非公開）",
+    "en": "Internal notes (private)"
+  },
+  "创建发布快照": {
+    "ja": "公開スナップショットを作成",
+    "en": "Create publication snapshot"
+  },
+  "到期时间（本地时间，留空永久有效）": {
+    "ja": "有効期限（ローカル時間、空欄で無期限）",
+    "en": "Expiry (local time, blank for no expiry)"
+  },
+  "刷新": {
+    "ja": "更新",
+    "en": "Refresh"
+  },
+  "副本": {
+    "ja": "コピー",
+    "en": "copy"
+  },
+  "发布预览": {
+    "ja": "公開プレビュー",
+    "en": "Publish preview"
+  },
+  "取消编辑": {
+    "ja": "編集を取り消す",
+    "en": "Cancel editing"
+  },
+  "可见性": {
+    "ja": "公開範囲",
+    "en": "Visibility"
+  },
+  "复制 AI 生成请求": {
+    "ja": "AI への生成依頼をコピー",
+    "en": "Copy AI generation request"
+  },
+  "复制为新简历": {
+    "ja": "新しい履歴書として複製",
+    "en": "Duplicate as new resume"
+  },
+  "复制本地链接": {
+    "ja": "ローカルリンクをコピー",
+    "en": "Copy local link"
+  },
+  "导入 AI 生成的 JSON": {
+    "ja": "AI 生成の JSON を取り込む",
+    "en": "Import AI-generated JSON"
+  },
+  "已创建发布快照。本机链接可用于预览。": {
+    "ja": "公開スナップショットを作成しました。ローカルリンクでプレビューできます。",
+    "en": "Publication snapshot created. The local link can be used for preview."
+  },
+  "已导入为新草稿，请检查并保存。": {
+    "ja": "新しい草稿として取り込みました。確認して保存してください。",
+    "en": "Imported as a new draft. Review and save it."
+  },
+  "已撤下": {
+    "ja": "取り下げ済み",
+    "en": "Revoked"
+  },
+  "当前服务在本机：创建的链接仅可本地预览，尚未部署到互联网。": {
+    "ja": "現在はローカル実行のため、作成したリンクはローカルでのみプレビューできます。インターネットには公開されていません。",
+    "en": "This service runs locally: created links can only be previewed here and are not on the internet yet."
+  },
+  "我已检查以上公开内容和联系方式": {
+    "ja": "上記の公開内容と連絡先を確認しました",
+    "en": "I have checked the public content and contact details above"
+  },
+  "打开本地公开页": {
+    "ja": "ローカル公開ページを開く",
+    "en": "Open local public page"
+  },
+  "撤下链接": {
+    "ja": "リンクを取り下げる",
+    "en": "Revoke link"
+  },
+  "文件不能超过 500 KB": {
+    "ja": "ファイルは 500 KB 以下にしてください",
+    "en": "File must be 500 KB or smaller"
+  },
+  "新建简历": {
+    "ja": "新しい履歴書",
+    "en": "New resume"
+  },
+  "显示名称": {
+    "ja": "表示名",
+    "en": "Display name"
+  },
+  "暂无公开链接。先在草稿中选择「预览与发布」。": {
+    "ja": "公開リンクはまだありません。草稿から「プレビューと公開」を選んでください。",
+    "en": "No public links yet. Choose \"Preview & publish\" from a draft first."
+  },
+  "有效期": {
+    "ja": "有効期限",
+    "en": "Expires"
+  },
+  "未填写目标岗位": {
+    "ja": "目標職種は未入力",
+    "en": "No target role"
+  },
+  "条目": {
+    "ja": "項目",
+    "en": "Item"
+  },
+  "永久有效": {
+    "ja": "無期限",
+    "en": "No expiry"
+  },
+  "添加条目": {
+    "ja": "項目を追加",
+    "en": "Add item"
+  },
+  "添加章节": {
+    "ja": "セクションを追加",
+    "en": "Add section"
+  },
+  "添加联系链接": {
+    "ja": "連絡先リンクを追加",
+    "en": "Add contact link"
+  },
+  "目标公司（不公开）": {
+    "ja": "応募先企業（非公開）",
+    "en": "Target company (private)"
+  },
+  "目标岗位（不公开）": {
+    "ja": "目標職種（非公開）",
+    "en": "Target role (private)"
+  },
+  "移除条目": {
+    "ja": "項目を削除",
+    "en": "Remove item"
+  },
+  "移除章节": {
+    "ja": "セクションを削除",
+    "en": "Remove section"
+  },
+  "移除链接": {
+    "ja": "リンクを削除",
+    "en": "Remove link"
+  },
+  "章节标题": {
+    "ja": "セクション見出し",
+    "en": "Section heading"
+  },
+  "简历": {
+    "ja": "履歴書",
+    "en": "Resume"
+  },
+  "简历 / 目标岗位": {
+    "ja": "履歴書 / 目標職種",
+    "en": "Resume / target role"
+  },
+  "简历章节": {
+    "ja": "セクション",
+    "en": "Section"
+  },
+  "简历草稿（{0}）": {
+    "ja": "草稿（{0}）",
+    "en": "Drafts ({0})"
+  },
+  "简历详情": {
+    "ja": "履歴書の詳細",
+    "en": "Resume details"
+  },
+  "简历语言": {
+    "ja": "履歴書の言語",
+    "en": "Resume language"
+  },
+  "管理名称（不公开）": {
+    "ja": "管理名（非公開）",
+    "en": "Internal name (private)"
+  },
+  "管理每一份简历的公开链接。当前链接在本机运行，互联网发布需要独立的公开服务。归档草稿不会撤下链接。": {
+    "ja": "各履歴書の公開リンクを管理します。現在のリンクはローカルで動作し、インターネット公開には別の公開サービスが必要です。草稿をアーカイブしてもリンクは取り下げられません。",
+    "en": "Manage public links for each resume. Links currently run locally; internet publishing needs a separate public service. Archiving a draft does not revoke its links."
+  },
+  "经历要点（每行一项）": {
+    "ja": "要点（1行に1項目）",
+    "en": "Bullet points (one per line)"
+  },
+  "编辑简历草稿": {
+    "ja": "履歴書草稿を編集",
+    "en": "Edit resume draft"
+  },
+  "网址或 mailto 链接": {
+    "ja": "URL または mailto リンク",
+    "en": "URL or mailto link"
+  },
+  "职业标题": {
+    "ja": "職業タイトル",
+    "en": "Headline"
+  },
+  "草稿": {
+    "ja": "草稿",
+    "en": "Draft"
+  },
+  "草稿已保存，已有公开链接保持原样。": {
+    "ja": "草稿を保存しました。既存の公開リンクはそのままです。",
+    "en": "Draft saved. Existing public links are unchanged."
+  },
+  "还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。": {
+    "ja": "個別履歴書はまだありません。新しく作るか、AI Agent に MCP 経由で保存してもらいましょう。",
+    "en": "No personalized resumes yet. Create one, or let your AI Agent save one via MCP."
+  },
+  "链接已撤下。已被他人保存的副本无法收回。": {
+    "ja": "リンクを取り下げました。他の人が保存したコピーは回収できません。",
+    "en": "Link revoked. Copies others have already saved cannot be recalled."
+  },
+  "预览与发布": {
+    "ja": "プレビューと公開",
+    "en": "Preview & publish"
+  },
+  "成果与案例": {
+    "ja": "実績・事例",
+    "en": "Achievements"
+  },
+  "资料与版本": {
+    "ja": "資料・履歴",
+    "en": "Documents"
+  },
+  "邮箱": {
+    "ja": "メール",
+    "en": "Email"
+  },
+  "电话": {
+    "ja": "電話番号",
+    "en": "Phone"
+  },
+  "出生年月": {
+    "ja": "生年月",
+    "en": "Birth month"
+  },
+  "打印 / 保存为 PDF": {
+    "ja": "印刷 / PDF に保存",
+    "en": "Print / save as PDF"
+  },
+  "打印模板": {
+    "ja": "印刷テンプレート",
+    "en": "Print template"
+  },
+  "应募公司（可选，印在标题旁）": {
+    "ja": "応募先（任意、見出しの横に印字）",
+    "en": "Company (optional, printed next to the title)"
+  },
+  "包含待确认的记录（{0} 条）": {
+    "ja": "要確認の記録も含める（{0} 件）",
+    "en": "Include unconfirmed records ({0})"
+  },
+  "下载 HTML": {
+    "ja": "HTML をダウンロード",
+    "en": "Download HTML"
+  },
+  "内容来自当前语言的结构化记录（基本资料、工作经历、学历、项目、技能、语言、求职方向），引用 {0} 条。修改记录后回到这里即可重新生成；电话、生年月日等空栏请在基本资料中补充或打印后手写。": {
+    "ja": "現在の言語の構造化レコード（基本情報、職歴、学歴、プロジェクト、スキル、語学、求職方向）から生成しています。引用 {0} 件。レコードを修正してから戻れば再生成されます。電話番号・生年月日などの空欄は基本情報に追加するか、印刷後に手書きしてください。",
+    "en": "Generated from the structured records in the current language (basics, employment, education, projects, skills, languages, preferences), {0} records used. Edit the records and come back to regenerate; fill blanks such as phone or birth date in basics or by hand after printing."
+  },
+  "目标公司": {
+    "ja": "応募先",
+    "en": "Target company"
+  },
+  "不指定公司": {
+    "ja": "企業を指定しない",
+    "en": "No specific company"
+  },
+  "从履历新建": {
+    "ja": "プロフィールから作成",
+    "en": "Create from profile"
   }
 }

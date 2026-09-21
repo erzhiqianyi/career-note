@@ -4,15 +4,29 @@ import { useEffect, useState } from 'react';
 import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil, ChevronRight } from 'lucide-react';
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import { api } from '@/lib/career';
+import { useLocale } from './locale-provider';
 import {
   blankResume,
   personalizedResumeSchema,
+  resumeFromEntries,
   resumeHTML,
   type PersonalizedResume,
   type ResumePublication,
 } from '@/lib/personalized-resume';
+import type { ResumeEntry } from '@/lib/resume';
 
-export default function PersonalizedResumes() {
+export default function PersonalizedResumes({
+  entries = [],
+  jobs = [],
+}: {
+  entries?: ResumeEntry[];
+  jobs?: { id: string; company: string; role: string; status: string }[];
+}) {
+  const { t, locale } = useLocale();
+  const resumeLanguage = locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'zh';
+  const [newFor, setNewFor] = useState('');
+  const openJobs = jobs.filter((j) => !['未通过', '已撤回', '内定'].includes(j.status));
+  const hasRecords = entries.some((e) => !e.archived && (e.language || 'ja') === resumeLanguage && e.kind !== 'basics');
   const [drafts, setDrafts] = useState<PersonalizedResume[]>([]),
     [publications, setPublications] = useState<ResumePublication[]>([]);
   const [draft, setDraft] = useRecordPage<PersonalizedResume>('#personalized', 'edit', id => id === 'new' ? blankResume() : drafts.find(d => d.id === id) || null, d => d.revision === 0 ? 'new' : d.id);
@@ -58,12 +72,12 @@ export default function PersonalizedResumes() {
     )) as PersonalizedResume;
     await refresh();
     setDraft(null);
-    setNotice('草稿已保存，已有公开链接保持原样。');
+    setNotice(t('草稿已保存，已有公开链接保持原样。'));
     return saved;
   };
   const copy = async (value: string) => {
     await navigator.clipboard.writeText(value);
-    setNotice('已复制');
+    setNotice(t('已复制'));
   };
   const field = (
     key: 'title' | 'targetRole' | 'targetCompany',
@@ -82,21 +96,17 @@ export default function PersonalizedResumes() {
       {!draft && !preview && !selected && !publication && <div className="list-toolbar resume-tabs">
         <div className="toolbar">
           <button onClick={() => setTab('drafts')}>
-            简历草稿（{drafts.length}）
+            {t('简历草稿（{0}）', [drafts.length])}
           </button>
           <button onClick={() => setTab('public')}>
-            公开链接（
-            {
-              publications.filter(
+            {t('公开链接（{0}）', [publications.filter(
                 (p) =>
                   !p.revokedAt &&
                   (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()),
-              ).length
-            }
-            ）
+              ).length])}
           </button>
           <button disabled={busy} onClick={() => act(refresh)}>
-            刷新
+            {t('刷新')}
           </button>
         </div>
       </div>
@@ -111,13 +121,20 @@ export default function PersonalizedResumes() {
         <>
           <div className="list-toolbar">
             <div className="toolbar">
+              {openJobs.length > 0 && (
+                <select aria-label={t('目标公司')} value={newFor} onChange={(e) => setNewFor(e.target.value)}>
+                  <option value="">{t('不指定公司')}</option>
+                  {openJobs.map((j) => <option key={j.id} value={j.id}>{j.company}{j.role ? ' · ' + j.role : ''}</option>)}
+                </select>
+              )}
               <button className="primary"
                 onClick={() => {
-                  setDraft(blankResume());
+                  const job = openJobs.find((j) => j.id === newFor);
+                  setDraft(hasRecords ? resumeFromEntries(entries, resumeLanguage, { company: job?.company, role: job?.role }) : blankResume());
                   setPreview(null);
                 }}
               >
-                新建简历
+                {hasRecords ? t('从履历新建') : t('新建简历')}
               </button>
               <button
                 onClick={() =>
@@ -128,10 +145,10 @@ export default function PersonalizedResumes() {
                   )
                 }
               >
-                复制 AI 生成请求
+                {t('复制 AI 生成请求')}
               </button>
               <label className="resume-import">
-                导入 AI 生成的 JSON
+                {t('导入 AI 生成的 JSON')}
                 <input
                   type="file"
                   accept=".json,application/json"
@@ -141,7 +158,7 @@ export default function PersonalizedResumes() {
                     if (f)
                       void act(async () => {
                         if (f.size > 500000)
-                          throw new Error('文件不能超过 500 KB');
+                          throw new Error(t('文件不能超过 500 KB'));
                         const raw = JSON.parse(await f.text());
                         delete raw.updatedAt;
                         setDraft(
@@ -151,7 +168,7 @@ export default function PersonalizedResumes() {
                             revision: 0,
                           }),
                         );
-                        setNotice('已导入为新草稿，请检查并保存。');
+                        setNotice(t('已导入为新草稿，请检查并保存。'));
                       });
                     e.target.value = '';
                   }}
@@ -161,29 +178,29 @@ export default function PersonalizedResumes() {
           </div>
           {!drafts.length && (
             <div className="panel">
-              还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。
+              {t('还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。')}
             </div>
           )}
           {drafts.length > 0 && (
             <div className="panel dt-panel">
               <DataTable
-                label="个性化简历"
+                label={t('个性化简历')}
                 columns={[
-                  { key: 'title', label: '简历 / 目标岗位', width: 'minmax(0, 1fr)' },
-                  { key: 'lang', label: '语言', width: '56px' },
-                  { key: 'state', label: '状态', width: '72px' },
-                  { key: 'ops', label: '操作', width: '40px', align: 'end' },
+                  { key: 'title', label: t('简历 / 目标岗位'), width: 'minmax(0, 1fr)' },
+                  { key: 'lang', label: t('语言'), width: '56px' },
+                  { key: 'state', label: t('状态'), width: '72px' },
+                  { key: 'ops', label: t('操作'), width: '40px', align: 'end' },
                 ]}
               >
                 {drafts.map((d) => {
                   return (
                     <DataRow key={d.id} className={d.archived ? 'dt-dim' : ''}>
-                      <DataTitle title={d.title} meta={`${d.targetRole || '未填写目标岗位'} · v${d.revision}`} onClick={() => setSelected(d)} />
-                      <DataCell label="语言">{d.language.toUpperCase()}</DataCell>
-                      <DataCell label="状态">
-                        <span className={'badge ' + (d.archived ? 'gray' : 'green')}>{d.archived ? '已归档' : '草稿'}</span>
+                      <DataTitle title={d.title} meta={`${d.targetRole || t('未填写目标岗位')} · v${d.revision}`} onClick={() => setSelected(d)} />
+                      <DataCell label={t('语言')}>{d.language.toUpperCase()}</DataCell>
+                      <DataCell label={t('状态')}>
+                        <span className={'badge ' + (d.archived ? 'gray' : 'green')}>{d.archived ? t('已归档') : t('草稿')}</span>
                       </DataCell>
-                      <DataActions><button className="icon-button" title="打开" aria-label={`打开 ${d.title}`} onClick={() => setSelected(d)}><ChevronRight size={16} /></button></DataActions>
+                      <DataActions><button className="icon-button" title={t('打开')} aria-label={t('打开') + ' ' + d.title} onClick={() => setSelected(d)}><ChevronRight size={16} /></button></DataActions>
                     </DataRow>
                   );
                 })}
@@ -193,20 +210,20 @@ export default function PersonalizedResumes() {
         </>
       )}
       {selected && (() => { const d = drafts.find(item => item.id === selected.id) || selected; const edit = () => setDraft(structuredClone(d)); return <section className="panel record-page"><RecordBack onBack={() => setSelected(null)} /><h2>{d.title}</h2><p>{d.targetRole} · {d.language.toUpperCase()} · v{d.revision}</p><div className="record-detail-actions">                      <DataActions>
-                        <button className="icon-button" onClick={edit} title="编辑" aria-label={`编辑 ${d.title}`}>
+                        <button className="icon-button" onClick={edit} title={t('编辑')} aria-label={t('编辑') + ' ' + d.title}>
                           <Pencil size={16} />
                         </button>
 
                         <button
                           className="icon-button"
-                          title="复制为新简历"
-                          aria-label={`复制为新简历 ${d.title}`}
+                          title={t('复制为新简历')}
+                          aria-label={t('复制为新简历') + ' ' + d.title}
                           onClick={() => {
                             setDraft({
                               ...structuredClone(d),
                               id: crypto.randomUUID(),
                               revision: 0,
-                              title: d.title + ' · 副本',
+                              title: d.title + ' · ' + t('副本'),
                               archived: false,
                             });
                             setPreview(null);
@@ -216,8 +233,8 @@ export default function PersonalizedResumes() {
                         </button>
                         <button
                           className="icon-button"
-                          title="预览与发布"
-                          aria-label={`预览与发布 ${d.title}`}
+                          title={t('预览与发布')}
+                          aria-label={t('预览与发布') + ' ' + d.title}
                           onClick={() => {
                             setPreview(d);
                             setConfirmed(false);
@@ -229,8 +246,8 @@ export default function PersonalizedResumes() {
                         <button
                           className="icon-button"
                           disabled={busy}
-                          title={d.archived ? '恢复' : '归档'}
-                          aria-label={`${d.archived ? '恢复' : '归档'} ${d.title}`}
+                          title={d.archived ? t('恢复') : t('归档')}
+                          aria-label={(d.archived ? t('恢复') : t('归档')) + ' ' + d.title}
                           onClick={() =>
                             act(async () => {
                               await save({ ...d, archived: !d.archived });
@@ -240,17 +257,17 @@ export default function PersonalizedResumes() {
                           {d.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                         </button>
 
-                      </DataActions></div><iframe title="简历详情" sandbox="" srcDoc={resumeHTML(d.content, d.language)} className="resume-public-preview" /></section>; })()}
-      {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? '允许收录' : '仅链接访问'}</p><div className="record-detail-actions">                      <DataActions>
+                      </DataActions></div><iframe title={t('简历详情')} sandbox="" srcDoc={resumeHTML(d.content, d.language)} className="resume-public-preview" /></section>; })()}
+      {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</p><div className="record-detail-actions">                      <DataActions>
                         {active ? (
                           <>
-                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title="打开本地公开页" aria-label={`打开本地公开页 ${p.title}`}>
+                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title={t('打开本地公开页')} aria-label={t('打开本地公开页') + ' ' + p.title}>
                               <ExternalLink size={16} />
                             </a>
                             <button
                               className="icon-button"
-                              title="复制本地链接"
-                              aria-label={`复制本地链接 ${p.title}`}
+                              title={t('复制本地链接')}
+                              aria-label={t('复制本地链接') + ' ' + p.title}
                               onClick={() => act(() => copy(new URL(p.path, window.location.origin).href))}
                             >
                               <Copy size={16} />
@@ -258,13 +275,13 @@ export default function PersonalizedResumes() {
                             <button
                               className="icon-button danger"
                               disabled={busy}
-                              title="撤下链接"
-                              aria-label={`撤下链接 ${p.title}`}
+                              title={t('撤下链接')}
+                              aria-label={t('撤下链接') + ' ' + p.title}
                               onClick={() =>
                                 act(async () => {
                                   await api('resume-publications/revoke', { id: p.id });
                                   await refresh();
-                                  setNotice('链接已撤下。已被他人保存的副本无法收回。');
+                                  setNotice(t('链接已撤下。已被他人保存的副本无法收回。'));
                                 })
                               }
                             >
@@ -286,13 +303,13 @@ export default function PersonalizedResumes() {
           }}
         >
           <RecordBack onBack={() => setDraft(null)} />
-          <h2>编辑简历草稿</h2>
+          <h2>{t('编辑简历草稿')}</h2>
           <div className="personalized-fields">
-            {field('title', '管理名称（不公开）')}
-            {field('targetRole', '目标岗位（不公开）')}
-            {field('targetCompany', '目标公司（不公开）')}
+            {field('title', t('管理名称（不公开）'))}
+            {field('targetRole', t('目标岗位（不公开）'))}
+            {field('targetCompany', t('目标公司（不公开）'))}
             <label>
-              简历语言
+              {t('简历语言')}
               <select
                 value={draft.language}
                 onChange={(e) =>
@@ -308,11 +325,11 @@ export default function PersonalizedResumes() {
               </select>
             </label>
           </div>
-          <h3>以下内容会出现在公开预览中</h3>
+          <h3>{t('以下内容会出现在公开预览中')}</h3>
           {(['name', 'headline', 'location', 'summary'] as const).map(
             (k, i) => (
               <label key={k}>
-                {['姓名', '职业标题', '所在地', '职业摘要'][i]}
+                {t(['姓名', '职业标题', '所在地', '职业摘要'][i])}
                 <textarea
                   required={k === 'name'}
                   rows={k === 'summary' ? 4 : 1}
@@ -327,11 +344,11 @@ export default function PersonalizedResumes() {
               </label>
             ),
           )}
-          <h3>公开联系链接</h3>
+          <h3>{t('公开联系链接')}</h3>
           {draft.content.links.map((l, i) => (
             <div className="personalized-fields" key={i}>
               <label>
-                显示名称
+                {t('显示名称')}
                 <input
                   value={l.label}
                   required
@@ -346,7 +363,7 @@ export default function PersonalizedResumes() {
                 />
               </label>
               <label>
-                网址或 mailto 链接
+                {t('网址或 mailto 链接')}
                 <input
                   value={l.url}
                   required
@@ -372,7 +389,7 @@ export default function PersonalizedResumes() {
                   })
                 }
               >
-                移除链接
+                {t('移除链接')}
               </button>
             </div>
           ))}
@@ -388,13 +405,13 @@ export default function PersonalizedResumes() {
               })
             }
           >
-            添加联系链接
+            {t('添加联系链接')}
           </button>
           {draft.content.sections.map((s, si) => (
             <fieldset key={si}>
-              <legend>简历章节 {si + 1}</legend>
+              <legend>{t('简历章节')} {si + 1}</legend>
               <label>
-                章节标题
+                {t('章节标题')}
                 <input
                   required
                   value={s.heading}
@@ -410,18 +427,18 @@ export default function PersonalizedResumes() {
               </label>
               {s.items.map((item, ii) => (
                 <fieldset key={ii}>
-                  <legend>条目 {ii + 1}</legend>
+                  <legend>{t('条目')} {ii + 1}</legend>
                   {(['title', 'subtitle', 'period', 'bullets'] as const).map(
                     (k, ki) => (
                       <label key={k}>
-                        {
+                        {t(
                           [
                             '标题',
                             '公司、角色或说明',
                             '时间',
                             '经历要点（每行一项）',
-                          ][ki]
-                        }
+                          ][ki],
+                        )}
                         <textarea
                           required={k === 'title'}
                           rows={k === 'bullets' ? 4 : 1}
@@ -456,7 +473,7 @@ export default function PersonalizedResumes() {
                       });
                     }}
                   >
-                    移除条目
+                    {t('移除条目')}
                   </button>
                 </fieldset>
               ))}
@@ -476,7 +493,7 @@ export default function PersonalizedResumes() {
                   });
                 }}
               >
-                添加条目
+                {t('添加条目')}
               </button>{' '}
               <button
                 type="button"
@@ -492,7 +509,7 @@ export default function PersonalizedResumes() {
                   })
                 }
               >
-                移除章节
+                {t('移除章节')}
               </button>
             </fieldset>
           ))}
@@ -505,16 +522,16 @@ export default function PersonalizedResumes() {
                   ...draft.content,
                   sections: [
                     ...draft.content.sections,
-                    { heading: '工作经历', items: [] },
+                    { heading: t('工作经历'), items: [] },
                   ],
                 },
               })
             }
           >
-            添加章节
+            {t('添加章节')}
           </button>
           <label>
-            内部备注（不公开）
+            {t('内部备注（不公开）')}
             <textarea
               rows={3}
               value={draft.privateNotes}
@@ -523,13 +540,13 @@ export default function PersonalizedResumes() {
               }
             />
           </label>
-          <p>关联来源 {draft.sourceRefs.length} 条，仅保存在工作区。</p>
+          <p>{t('关联来源 {0} 条，仅保存在工作区。', [draft.sourceRefs.length])}</p>
           <div className="toolbar">
             <button disabled={busy} type="submit">
-              保存草稿
+              {t('保存草稿')}
             </button>
             <button type="button" onClick={() => setDraft(null)}>
-              取消编辑
+              {t('取消编辑')}
             </button>
           </div>
         </form>
@@ -538,30 +555,30 @@ export default function PersonalizedResumes() {
         <div className="panel">
           <RecordBack onBack={() => setPreview(null)} />
           <h2>
-            发布预览 · {preview.title} · v{preview.revision}
+            {t('发布预览')} · {preview.title} · v{preview.revision}
           </h2>
           <iframe
-            title="公开简历预览"
+            title={t('公开简历预览')}
             sandbox=""
             srcDoc={resumeHTML(preview.content, preview.language)}
             className="resume-public-preview"
           />
           <p>
-            仅发布上方内容。内部备注、来源、目标公司及工作区数据不公开。修改草稿后需创建新链接；旧链接可单独撤下。
+            {t('仅发布上方内容。内部备注、来源、目标公司及工作区数据不公开。修改草稿后需创建新链接；旧链接可单独撤下。')}
           </p>
           <label>
-            公开方式
+            {t('公开方式')}
             <select
               value={mode}
               onChange={(e) => setMode(e.target.value as typeof mode)}
             >
-              <option value="unlisted">仅链接访问 · 请求搜索引擎不收录</option>
-              <option value="public">公开 · 允许搜索引擎收录</option>
+              <option value="unlisted">{t('仅链接访问 · 请求搜索引擎不收录')}</option>
+              <option value="public">{t('公开 · 允许搜索引擎收录')}</option>
             </select>
           </label>
-          <p>任何获得链接的人都能查看。仅链接访问不提供密码保护。</p>
+          <p>{t('任何获得链接的人都能查看。仅链接访问不提供密码保护。')}</p>
           <label>
-            到期时间（本地时间，留空永久有效）
+            {t('到期时间（本地时间，留空永久有效）')}
             <input
               type="datetime-local"
               value={expiry}
@@ -574,9 +591,9 @@ export default function PersonalizedResumes() {
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
             />
-            我已检查以上公开内容和联系方式
+            {t('我已检查以上公开内容和联系方式')}
           </label>
-          <p>当前服务在本机：创建的链接仅可本地预览，尚未部署到互联网。</p>
+          <p>{t('当前服务在本机：创建的链接仅可本地预览，尚未部署到互联网。')}</p>
           <div className="toolbar">
             <button
               disabled={
@@ -593,36 +610,36 @@ export default function PersonalizedResumes() {
                   await refresh();
                   setPreview(null);
                   setTab('public');
-                  setNotice('已创建发布快照。本机链接可用于预览。');
+                  setNotice(t('已创建发布快照。本机链接可用于预览。'));
                 })
               }
             >
-              创建发布快照
+              {t('创建发布快照')}
             </button>
-            <button onClick={() => setPreview(null)}>关闭预览</button>
+            <button onClick={() => setPreview(null)}>{t('关闭预览')}</button>
           </div>
         </div>
       )}
       {tab === 'public' && !draft && !preview && !selected && !publication && (
         <>
           <div className="inline-note">
-            管理每一份简历的公开链接。当前链接在本机运行，互联网发布需要独立的公开服务。归档草稿不会撤下链接。
+            {t('管理每一份简历的公开链接。当前链接在本机运行，互联网发布需要独立的公开服务。归档草稿不会撤下链接。')}
           </div>
           {!publications.length && (
             <div className="panel">
-              暂无公开链接。先在草稿中选择「预览与发布」。
+              {t('暂无公开链接。先在草稿中选择「预览与发布」。')}
             </div>
           )}
           {publications.length > 0 && (
             <div className="panel dt-panel">
               <DataTable
-                label="公开链接"
+                label={t('公开链接')}
                 columns={[
-                  { key: 'title', label: '简历', width: 'minmax(200px, 1.6fr)' },
-                  { key: 'mode', label: '可见性', width: '92px', hide: 'phone' },
-                  { key: 'expires', label: '有效期', width: 'minmax(120px, 0.8fr)', hide: 'tablet' },
-                  { key: 'state', label: '状态', width: '72px' },
-                  { key: 'ops', label: '操作', width: '108px', align: 'end' },
+                  { key: 'title', label: t('简历'), width: 'minmax(200px, 1.6fr)' },
+                  { key: 'mode', label: t('可见性'), width: '92px', hide: 'phone' },
+                  { key: 'expires', label: t('有效期'), width: 'minmax(120px, 0.8fr)', hide: 'tablet' },
+                  { key: 'state', label: t('状态'), width: '72px' },
+                  { key: 'ops', label: t('操作'), width: '108px', align: 'end' },
                 ]}
               >
                 {publications.map((p) => {
@@ -631,14 +648,14 @@ export default function PersonalizedResumes() {
                   return (
                     <DataRow key={p.id} className={active ? '' : 'dt-dim'}>
                       <DataTitle title={p.title} meta={`v${p.draftRevision}`} onClick={() => setPublication(p)} />
-                      <DataCell label="可见性" hide="phone">{p.mode === 'public' ? '允许收录' : '仅链接访问'}</DataCell>
-                      <DataCell label="有效期" hide="tablet" className="num">
-                        {p.expiresAt ? new Date(p.expiresAt).toLocaleString() : '永久有效'}
+                      <DataCell label={t('可见性')} hide="phone">{p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</DataCell>
+                      <DataCell label={t('有效期')} hide="tablet" className="num">
+                        {p.expiresAt ? new Date(p.expiresAt).toLocaleString() : t('永久有效')}
                       </DataCell>
-                      <DataCell label="状态">
-                        <span className={'badge ' + (active ? 'green' : 'gray')}>{p.revokedAt ? '已撤下' : expired ? '已过期' : '有效'}</span>
+                      <DataCell label={t('状态')}>
+                        <span className={'badge ' + (active ? 'green' : 'gray')}>{p.revokedAt ? t('已撤下') : expired ? t('已过期') : t('有效')}</span>
                       </DataCell>
-                      <DataActions><button className="icon-button" aria-label={`打开 ${p.title}`} onClick={() => setPublication(p)}><ChevronRight size={16} /></button></DataActions>
+                      <DataActions><button className="icon-button" aria-label={t('打开') + ' ' + p.title} onClick={() => setPublication(p)}><ChevronRight size={16} /></button></DataActions>
                     </DataRow>
                   );
                 })}

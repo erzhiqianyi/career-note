@@ -112,6 +112,17 @@ export async function writeResume(
   profileKey: string,
   input: unknown,
 ) {
+  // Agents read documents without the body (summary view); archiving or restoring such a record may omit content.
+  if (input && typeof input === 'object' && (input as { kind?: string }).kind === 'document') {
+    const raw = input as { id?: string; data?: Record<string, string> };
+    if (raw.data && raw.data.content === undefined && typeof raw.id === 'string') {
+      const previous = await db
+        .prepare('SELECT body FROM resume_entries WHERE owner=? AND id=?')
+        .bind(owner, raw.id)
+        .first<{ body: string }>();
+      if (previous) raw.data = { ...raw.data, content: (JSON.parse(previous.body) as ResumeEntry).data.content || '' };
+    }
+  }
   let entry;
   try {
     entry = validateResume(input);
@@ -145,10 +156,12 @@ export async function writeResume(
     return { status: 409, value: { error: '记录已更新，请刷新后重新编辑' } };
   if (old && old.kind !== entry.kind)
     return { status: 400, value: { error: '记录类型不可更改' } };
+  const canonical = (data: Record<string, string>) =>
+    JSON.stringify(Object.fromEntries(Object.entries(data).filter(([, v]) => v).sort(([a], [b]) => a.localeCompare(b))));
   if (
     old &&
     entry.kind === 'document' &&
-    JSON.stringify(old.data) !== JSON.stringify(entry.data)
+    canonical(old.data) !== canonical(entry.data)
   )
     return { status: 400, value: { error: '请保存为新的文档版本' } };
   if (entry.parentId) {
