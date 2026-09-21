@@ -18,6 +18,7 @@ export const publicResumeSchema = z
     name: z.string().trim().min(1).max(200),
     headline: text,
     summary: text,
+    readings: z.record(z.string(), z.string().trim().min(1).max(100)).default({}),
     location: text,
     links: z.array(link).max(12),
     sections: z
@@ -94,6 +95,7 @@ export const blankResume = (): PersonalizedResume => ({
     name: '',
     headline: '',
     summary: '',
+    readings: {},
     location: '',
     links: [],
     sections: [],
@@ -113,7 +115,14 @@ const escape = (s: string) =>
 export function resumeHTML(raw: PublicResume, language: string) {
   const c = publicResumeSchema.parse(raw),
     e = escape;
-  return `<!doctype html><html lang="${['ja', 'en', 'zh'].includes(language) ? language : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(c.name)} — ${e(c.headline)}</title><style>body{font:16px/1.75 system-ui,sans-serif;color:#243046;background:#f3f5f8;margin:0}main{max-width:800px;margin:32px auto;padding:48px;background:white}h1{font-size:32px;margin:0}h2{font-size:20px;border-bottom:1px solid #ccd3dd;padding-bottom:8px;margin-top:32px}h3{font-size:17px;margin-bottom:0}p{white-space:pre-wrap}a{color:#28559c}small{color:#59677b}li{white-space:pre-wrap;margin-bottom:6px}nav a{margin-right:16px}@media(max-width:600px){main{margin:0;padding:24px}}@media print{body{background:white}main{margin:0;padding:0}article{break-inside:avoid}a{color:inherit}}</style></head><body><main><h1>${e(c.name)}</h1><p>${e(c.headline)}</p><small>${e(c.location)}</small><nav>${c.links.map((l) => `<a href="${e(l.url)}" rel="noopener noreferrer">${e(l.label)}</a>`).join('')}</nav><p>${e(c.summary)}</p>${c.sections.map((s) => `<section><h2>${e(s.heading)}</h2>${s.items.map((i) => `<article><h3>${e(i.title)}</h3><small>${e(i.subtitle)} · ${e(i.period)}</small><ul>${i.bullets.map((b) => `<li>${e(b)}</li>`).join('')}</ul></article>`).join('')}</section>`).join('')}</main></body></html>`;
+  const ruby = (value: string) => {
+    if (language !== 'ja' || !Object.keys(c.readings).length) return e(value);
+    let out = e(value);
+    for (const [word, reading] of Object.entries(c.readings).sort((a, b) => b[0].length - a[0].length))
+      out = out.split(e(word)).join(`<ruby>${e(word)}<rt>${e(reading)}</rt></ruby>`);
+    return out;
+  };
+  return `<!doctype html><html lang="${['ja', 'en', 'zh'].includes(language) ? language : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(c.name)} — ${e(c.headline)}</title><style>body{font:16px/1.75 system-ui,sans-serif;color:#243046;background:#f3f5f8;margin:0}main{max-width:800px;margin:32px auto;padding:48px;background:white}h1{font-size:32px;margin:0}h2{font-size:20px;border-bottom:1px solid #ccd3dd;padding-bottom:8px;margin-top:32px}h3{font-size:17px;margin-bottom:0}p{white-space:pre-wrap}a{color:#28559c}small{color:#59677b}li{white-space:pre-wrap;margin-bottom:6px}nav a{margin-right:16px}ruby rt{font-size:.55em;color:#68758a;font-weight:400}@media(max-width:600px){main{margin:0;padding:24px}}@media print{body{background:white}main{margin:0;padding:0}article{break-inside:avoid}a{color:inherit}}</style></head><body><main><h1>${ruby(c.name)}</h1><p>${ruby(c.headline)}</p><small>${ruby(c.location)}</small><nav>${c.links.map((l) => `<a href="${e(l.url)}" rel="noopener noreferrer">${e(l.label)}</a>`).join('')}</nav><p>${ruby(c.summary)}</p>${c.sections.map((s) => `<section><h2>${ruby(s.heading)}</h2>${s.items.map((i) => `<article><h3>${ruby(i.title)}</h3><small>${ruby(i.subtitle)} · ${e(i.period)}</small><ul>${i.bullets.map((b) => `<li>${ruby(b)}</li>`).join('')}</ul></article>`).join('')}</section>`).join('')}</main></body></html>`;
 }
 
 type SourceEntry = {
@@ -211,6 +220,7 @@ export function resumeFromEntries(
       name: basics.name || '',
       headline: basics.headline || '',
       summary: basics.summary || '',
+      readings: {},
       location: basics.location || '',
       links,
       sections,

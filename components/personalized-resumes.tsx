@@ -79,6 +79,19 @@ export default function PersonalizedResumes({
     await navigator.clipboard.writeText(value);
     setNotice(t('已复制'));
   };
+  const annotateJapanese = (d: PersonalizedResume) => {
+    const source = [d.content.name, d.content.headline, d.content.location, d.content.summary,
+      ...d.content.sections.flatMap((s) => [s.heading, ...s.items.flatMap((i) => [i.title, i.subtitle, ...i.bullets])])].join(' ');
+    const common: Record<string, string> = {
+      株式会社カウリス: 'かぶしきがいしゃカウリス', 職務経歴: 'しょくむけいれき', 職務: 'しょくむ', 経歴: 'けいれき',
+      開発: 'かいはつ', 設計: 'せっけい', 実装: 'じっそう', 運用: 'うんよう', 保守: 'ほしゅ', 要件: 'ようけん',
+      経験: 'けいけん', 技術: 'ぎじゅつ', 業務: 'ぎょうむ', 課題: 'かだい', 改善: 'かいぜん', 導入: 'どうにゅう',
+      検証: 'けんしょう', 自動化: 'じどうか', 性能: 'せいのう', 障害対応: 'しょうがいたいおう',
+      日本語: 'にほんご', 英語: 'えいご', 中国語: 'ちゅうごくご', 現在: 'げんざい', 東京: 'とうきょう',
+      学歴: 'がくれき', 語学: 'ごがく', 個人: 'こじん', プロジェクト: 'プロジェクト',
+    };
+    return { ...d, content: { ...d.content, readings: Object.fromEntries(Object.entries(common).filter(([word]) => source.includes(word))) } };
+  };
   const field = (
     key: 'title' | 'targetRole' | 'targetCompany',
     label: string,
@@ -326,6 +339,14 @@ export default function PersonalizedResumes({
             </label>
           </div>
           <h3>{t('以下内容会出现在公开预览中')}</h3>
+          {draft.language === 'ja' && (
+            <div className="inline-note">
+              <button type="button" onClick={() => setDraft(annotateJapanese(draft))}>
+                {t('为已有日语内容标注假名')}
+              </button>
+              <span>{t('只标注当前词表中可确认的词；后续可替换为 AI 或第三方读音服务。')}</span>
+            </div>
+          )}
           {(['name', 'headline', 'location', 'summary'] as const).map(
             (k, i) => (
               <label key={k}>
