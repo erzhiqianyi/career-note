@@ -86,6 +86,7 @@ OAuth と MCP の公開アドレスは API 側（`CAREER_PUBLIC_ORIGIN`）、同
 
 - [.github/workflows/api-deploy.yml](../.github/workflows/api-deploy.yml)：`worker/`、`lib/`、`wrangler.toml` などが変わったとき。`npm test` → `typecheck` → `npm run wrangler:config` → `wrangler deploy --config wrangler.deploy.toml` → `GET /api/career/auth/config` が `mode: strict` を返すか確認。
 - [.github/workflows/web-deploy.yml](../.github/workflows/web-deploy.yml)：画面側が変わったとき。`npm test` → `typecheck` → `check:public` → `NEXT_PUBLIC_CAREER_API_URL=https://$CAREER_API_HOST` で `npm run build` → `wrangler pages deploy dist/client` → `/` と `/oauth/authorize` を確認。
+- GA4 を有効にする場合は GitHub Actions の Variables に `NEXT_PUBLIC_GA_MEASUREMENT_ID`（例：`G-XXXXXXXXXX`）を設定する。これは公開サイトの静的 HTML にビルド時に埋め込まれるため、Cloudflare Pages の実行時環境変数だけを追加しても、既存のデプロイには反映されない。設定後に `web-deploy.yml` を再実行する。
 - どちらも Actions 画面から `workflow_dispatch` で手動実行できます。[ci.yml](../.github/workflows/ci.yml) は従来どおり PR と main の検証だけを行います。Variables が未設定なら最初のステップで止まり、どれが足りないかを表示します。
 
 ホスト名を変える場合は、GitHub Variables と Worker secrets（`CAREER_WEB_ORIGIN` / `CAREER_PUBLIC_ORIGIN`）、Firebase の Authorized domains を揃えて更新します。コードの変更は不要です。
@@ -100,6 +101,8 @@ npx wrangler deploy --config wrangler.deploy.toml
 NEXT_PUBLIC_CAREER_API_URL=https://career-api.example.com npm run build
 npx wrangler pages deploy dist/client --project-name career-note --branch main
 ```
+
+GA4 を手動ビルドで有効にする場合は、API の設定と同じビルド環境で `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX` も渡す。
 
 ## 公開後の注意
 
