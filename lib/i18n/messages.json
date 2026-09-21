@@ -4566,5 +4566,21 @@
   "通用准备资料": {
     "ja": "共通の準備資料",
     "en": "General materials"
+  },
+  "未作成": {
+    "ja": "未作成",
+    "en": "Not yet"
+  },
+  "练习 {0} / {1} 题": {
+    "ja": "練習 {0} / {1} 問",
+    "en": "Practised {0} / {1}"
+  },
+  "查看题目": {
+    "ja": "質問を見る",
+    "en": "View questions"
+  },
+  "自我介绍、志望动机、条件确认等大多数公司都会问的问题。": {
+    "ja": "自己紹介、志望動機、条件確認など、多くの企業で聞かれる質問。",
+    "en": "Self-introduction, motivation and conditions: questions most companies ask."
   }
 }

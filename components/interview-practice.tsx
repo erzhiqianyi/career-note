@@ -14,7 +14,7 @@ import {
   Save,
   Sparkles,
 } from 'lucide-react';
-import { api, materialKinds, type Attempt, type Material, type Profile, type State } from '@/lib/career';
+import { api, materialKinds, type Attempt, type Material, type Profile, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 const profileLabels: Record<string, string> = {
   summary: '个人概要',
@@ -40,13 +40,24 @@ export default function InterviewPractice({
   data,
   reload,
   openMaterial,
+  openReport,
+  requestPreparation,
+  requestAnalysis,
+  pendingJobIds = [],
+  pendingAnalysis = false,
+  requesting = false,
 }: {
   data: State;
   reload: () => Promise<void>;
   openMaterial: (material: Material) => void;
+  openReport?: (report: Report) => void;
+  requestPreparation?: (jobId: string) => void;
+  requestAnalysis?: () => void;
+  pendingJobIds?: string[];
+  pendingAnalysis?: boolean;
+  requesting?: boolean;
 }) {
   const { t: tr, locale } = useLocale();
-  const [materialKind, setMaterialKind] = useState('全部');
   const day = (v: string) => (v ? v.slice(0, 10).replaceAll('-', '.') : '—');
   // 准备资料（企业研究、志望动机、面试准备等）和练习题同属一家公司的面试准备，放在同一页。
   const materials = data.materials || [];
@@ -188,31 +199,76 @@ export default function InterviewPractice({
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   }
   if (!company && !practiceRecord && !guide && !help) {
-    const jobs = data.jobs.filter(j => (j.company + ' ' + j.role).toLowerCase().includes(search.toLowerCase()));
+    const closed = ['未通过', '已撤回'];
+    const jobs = data.jobs
+      .filter(j => (j.company + ' ' + j.role).toLowerCase().includes(search.toLowerCase()))
+      .slice()
+      .sort((a, b) => Number(closed.includes(a.status)) - Number(closed.includes(b.status)) || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    const progress = (jobId: string) => {
+      const latest = data.questionSets.filter(p => p.jobId === jobId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      const answered = latest ? new Set(data.attempts.filter(a => a.questionSetId === latest.id).map(a => a.questionId)).size : 0;
+      return latest ? { answered, total: latest.questions.length } : null;
+    };
+    const bankAnswered = new Set(data.attempts.filter(a => builtinQuestionSets.some(p => p.id === a.questionSetId)).map(a => a.questionSetId + '|' + a.questionId)).size;
+    const bankTotal = builtinQuestionSets.reduce((n, p) => n + p.questions.length, 0);
+    const reports = (data.reports || []).slice().sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+    // 每家公司一张卡：资料按种类排列，缺的种类直接看得见；练习进度和请求准备都在同一处。
+    const materialRows = (rows: Material[]) => <ul className="prep-materials">
+      {materialKinds.map(kind => {
+        const items = rows.filter(m => m.kind === kind);
+        return <li key={kind} className={items.length ? '' : 'is-missing'}>
+          <span className="prep-kind">{tr(kind)}</span>
+          {items.length ? <span className="prep-items">{items.map(m => <button key={m.id} className="text-button" onClick={() => openMaterial(m)}>{m.title}<small>{day(m.createdAt)}{m.reviewStatus && m.reviewStatus !== '待核对' ? ' · ' + tr(m.reviewStatus) : ''}</small></button>)}</span> : <span className="prep-items muted">{tr('未作成')}</span>}
+        </li>;
+      })}
+      {rows.filter(m => !(materialKinds as readonly string[]).includes(m.kind)).map(m => <li key={m.id}><span className="prep-kind">{tr(m.kind)}</span><span className="prep-items"><button className="text-button" onClick={() => openMaterial(m)}>{m.title}<small>{day(m.createdAt)}</small></button></span></li>)}
+    </ul>;
+    const commonMaterials = materialsFor('');
     return <div className="practice-workspace">
-      <div className="list-toolbar"><label className="search"><input aria-label={tr('搜索公司或职位')} placeholder={tr('搜索公司或职位')} value={search} onChange={e => setSearch(e.target.value)} /></label><span className="list-count muted">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span><button className="secondary" onClick={() => setCompany(BANK_JOB_ID)}>{tr('通用题库')}</button></div>
-      <section className="panel dt-panel"><DataTable label={tr('练习公司')} columns={[
-        {key:'company',label:tr('公司 / 职位'),width:'minmax(0,1fr)'},
-        {key:'materials',label:tr('准备资料'),width:'96px',hide:'phone'},
-        {key:'progress',label:tr('练习进度'),width:'120px'},
-        {key:'open',label:tr('操作'),width:'40px',align:'end'},
-      ]}>{jobs.map(job => {
-        const latest = data.questionSets.filter(p => p.jobId === job.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt))[0];
-        const answered = new Set(data.attempts.filter(a => a.questionSetId === latest?.id).map(a => a.questionId));
-        const count = materialsFor(job.id).length;
-        return <DataRow key={job.id}><DataTitle title={job.company} meta={job.role} onClick={() => setCompany(job.id)} /><DataCell label={tr('准备资料')} hide="phone" className="num">{count ? tr('{0} 份', [String(count)]) : <span className="muted">—</span>}</DataCell><DataCell label={tr('练习进度')}>{latest ? tr('{0} / {1} 题', [String(answered.size),String(latest.questions.length)]) : <span className="badge pending">{tr('待准备题目')}</span>}</DataCell><DataActions><button className="icon-button" aria-label={tr('开始面试练习') + ' · ' + job.company} onClick={() => setCompany(job.id)}><ChevronRight size={16} /></button></DataActions></DataRow>;
-      })}</DataTable>{!jobs.length && <div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div>}</section>
-      {(() => {
-        const rows = materials.filter(m => materialKind === '全部' || m.kind === materialKind).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        return <section className="panel dt-panel practice-materials">
-          <div className="section-head"><h2>{tr('所有准备资料')}</h2>
-            <select aria-label={tr('筛选准备资料类型')} value={materialKind} onChange={e => setMaterialKind(e.target.value)}>
-              {['全部', ...materialKinds].map(k => <option key={k} value={k}>{k === '全部' ? tr('全部类型') : tr(k)}</option>)}
-            </select>
+      <div className="list-toolbar"><label className="search"><input aria-label={tr('搜索公司或职位')} placeholder={tr('搜索公司或职位')} value={search} onChange={e => setSearch(e.target.value)} /></label><span className="list-count muted">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span></div>
+      {jobs.map(job => {
+        const rows = materialsFor(job.id);
+        const p = progress(job.id);
+        const pending = pendingJobIds.includes(job.id);
+        return <section key={job.id} className={'panel prep-company' + (closed.includes(job.status) ? ' is-closed' : '')}>
+          <div className="prep-company-head">
+            <div>
+              <h2><button className="text-button prep-company-name" onClick={() => setCompany(job.id)}>{job.company}</button></h2>
+              <p className="muted">{job.role}{job.status ? <> · <span className="badge">{tr(job.status)}</span></> : null}{job.nextAction ? <> · {job.nextAction}{job.nextDate ? '（' + day(job.nextDate) + '）' : ''}</> : null}</p>
+            </div>
+            <div className="prep-company-actions">
+              <span className={'prep-progress' + (p ? '' : ' muted')}>{p ? tr('练习 {0} / {1} 题', [String(p.answered), String(p.total)]) : tr('待准备题目')}</span>
+              <button className={p ? 'primary' : 'secondary'} onClick={() => setCompany(job.id)}><ChevronRight size={16} />{tr(p ? '开始面试练习' : '查看题目')}</button>
+            </div>
           </div>
-          {rows.length ? materialTable(rows, tr('准备资料'), true) : <div className="empty"><p>{tr(materials.length ? '没有符合条件的资料' : '暂无准备资料')}</p><p className="muted">{tr('在公司详情中，把准备任务交给 AI Agent。')}</p></div>}
+          {materialRows(rows)}
+          {(!rows.length || !p) && requestPreparation && <div className="prep-company-foot">
+            {pending ? <span className="muted">{tr('已加入待处理队列，等待 AI Agent 生成。')}</span> : <button className="text-button" disabled={requesting} onClick={() => requestPreparation(job.id)}><Sparkles size={15} />{tr('交给 AI Agent 准备')}</button>}
+          </div>}
         </section>;
-      })()}
+      })}
+      {!jobs.length && <section className="panel"><div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div></section>}
+      <section className="panel prep-company prep-common">
+        <div className="prep-company-head">
+          <div><h2>{tr('通用题库（不限公司）')}</h2><p className="muted">{tr('自我介绍、志望动机、条件确认等大多数公司都会问的问题。')}</p></div>
+          <div className="prep-company-actions">
+            <span className="prep-progress">{tr('练习 {0} / {1} 题', [String(bankAnswered), String(bankTotal)])}</span>
+            <button className="secondary" onClick={() => setCompany(BANK_JOB_ID)}><ChevronRight size={16} />{tr('通用题库')}</button>
+          </div>
+        </div>
+        {commonMaterials.length > 0 && materialRows(commonMaterials)}
+      </section>
+      <section className="panel prep-company prep-reports">
+        <div className="prep-company-head">
+          <div><h2>{tr('每日分析')}</h2><p className="muted">{tr('结合投递进度、职位要求与准备缺口，整理当日分析和优先事项。')}</p></div>
+          {requestAnalysis && <div className="prep-company-actions">
+            {pendingAnalysis ? <span className="muted">{tr('已加入待处理队列，等待 AI Agent 生成。')}</span> : <button className="secondary" disabled={requesting} onClick={requestAnalysis}><Sparkles size={16} />{tr('请求今日分析')}</button>}
+          </div>}
+        </div>
+        {reports.length ? <ul className="prep-materials prep-report-list">
+          {reports.slice(0, 10).map(r => <li key={r.id}><span className="prep-kind num">{day(r.date)}</span><span className="prep-items"><button className="text-button" onClick={() => openReport?.(r)}>{r.title}</button></span></li>)}
+        </ul> : <p className="muted">{tr('还没有每日分析')}</p>}
+      </section>
     </div>;
   }
   return (

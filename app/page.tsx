@@ -104,7 +104,6 @@ const nav = [
   { label: '我的履历', icon: UserRound },
   { label: '个性化简历', icon: FileText },
   { label: '面试准备', icon: CalendarDays },
-  { label: '每日分析', icon: Sparkles },
   { label: 'Agent 协作', icon: Workflow },
   { label: '系统设置', icon: Settings },
 ];
@@ -116,7 +115,7 @@ const phoneTabs = [
   { label: '面试准备', short: '面试', icon: CalendarDays },
   { label: '我的履历', short: '履历', icon: UserRound },
 ];
-const drawerPages = ['个性化简历', '每日分析'];
+const drawerPages = ['个性化简历'];
 const drawerSettings = ['求职平台', 'Agent 协作', '系统设置'];
 const subPages: Record<string, { parent: string; hash: string }> = {
   技能库: { parent: 'Agent 协作', hash: '#skills' },
@@ -139,7 +138,7 @@ const hashes: Record<string, string> = {
   '#resume': '我的履历',
   '#personalized': '个性化简历',
   '#materials': '面试准备',
-  '#reports': '每日分析',
+  '#reports': '面试准备',
   '#documents': '面试准备',
   '#agents': 'Agent 协作',
   ...Object.fromEntries(
@@ -346,7 +345,7 @@ export default function Home() {
           setActive('公司与投递');
           setSelected(data?.jobs.find((item) => encodeURIComponent(item.id) === detailMatch[1])?.id || '');
         } else {
-          const target = hash.startsWith('#documents/view/') && data?.reports.some(r => encodeURIComponent(r.id) === hash.slice('#documents/view/'.length)) ? '每日分析' : hashes[hash] || hashes[hash.split('/')[0]];
+          const target = hash.startsWith('#documents/view/') && data?.reports.some(r => encodeURIComponent(r.id) === hash.slice('#documents/view/'.length)) ? '面试准备' : hashes[hash] || hashes[hash.split('/')[0]];
           if (target) { setActive(target); setSelected(''); }
         }
       }
@@ -753,7 +752,7 @@ export default function Home() {
     if (firstJob && hasEmployment) steps.push(['为{0}生成个性化简历', '按岗位要求调整职业定位和经历顺序，保留可核对的版本。', '个性化简历', firstJob.company]);
     if (unpracticed) steps.push(['练一题自我介绍', '先用自己的话回答，再交给 AI Agent 点评。', '面试准备']);
     else if (firstJob && !data.questionSets.length) steps.push(['整理公司准备资料', '让 AI Agent 生成面试题组，或自己整理常见问题。', '面试准备']);
-    if (!todayReport) steps.push(['整理每日分析', '从匹配点和准备缺口中，确定下一步行动。', '每日分析']);
+    if (!todayReport) steps.push(['整理每日分析', '从匹配点和准备缺口中，确定下一步行动。', '面试准备']);
     return steps.slice(0, 3).map((step, i) => [String(i + 1).padStart(2, '0'), ...step] as [string, string, string, string, string?]);
   })();
   if (!authConfig || (authConfig.mode !== 'off' && !loggedIn)) {
@@ -1088,17 +1087,7 @@ export default function Home() {
             </div>
           )}
           {(() => {
-            const action =
-              active === '每日分析' ? (
-                <button
-                  className="primary"
-                  disabled={busy || !data}
-                  onClick={() => void request('每日分析')}
-                >
-                  <Sparkles size={17} />
-                  {tr('请求今日分析')}
-                </button>
-              ) : null;
+            const action = null;
             if (active === '公司与投递' && !job) {
               // Filters and list actions live in the page header so the list panel holds only rows.
               return (
@@ -1180,6 +1169,12 @@ export default function Home() {
                   data={data}
                   reload={reload}
                   openMaterial={(m) => setDoc(m)}
+                  openReport={(r) => setDoc(r)}
+                  requestPreparation={(jobId) => void request('公司准备', jobId)}
+                  requestAnalysis={() => void request('每日分析')}
+                  pendingJobIds={pending.filter((t) => t.kind === '公司准备').map((t) => t.jobId)}
+                  pendingAnalysis={pending.some((t) => t.kind === '每日分析')}
+                  requesting={busy}
                 />
               </div>
               {active === '今日准备' && (
@@ -1638,49 +1633,6 @@ export default function Home() {
                 />
               )}
               {active === '个性化简历' && <PersonalizedResumes entries={data.resume || []} jobs={data.jobs} />}
-              {active === '每日分析' && (
-                <section className="panel dt-panel">
-                  {data.reports.length > 0 && (
-                    <DataTable
-                      label={tr('每日分析')}
-                      columns={[
-                        { key: 'title', label: tr('标题'), width: 'minmax(0, 1fr)' },
-                        { key: 'date', label: tr('日期'), width: '96px' },
-                        { key: 'open', label: tr('操作'), width: '44px', align: 'end' },
-                      ]}
-                    >
-                      {data.reports
-                        .slice()
-                        .sort(
-                          (a, b) =>
-                            b.date.localeCompare(a.date) ||
-                            b.createdAt.localeCompare(a.createdAt),
-                        )
-                        .map((r) => (
-                          <DataRow key={r.id}>
-                            <DataTitle
-                              title={r.title}
-                                                            onClick={() => setDoc(r)}
-                            />
-                            <DataCell label={tr('日期')} className="num">{day(r.date)}</DataCell>
-                            <DataActions>
-                              <button className="icon-button" onClick={() => setDoc(r)} title={tr('打开')} aria-label={tr('打开')}>
-                                <ChevronRight size={16} />
-                              </button>
-                            </DataActions>
-                          </DataRow>
-                        ))}
-                    </DataTable>
-                  )}
-                  {!data.reports.length && (
-                    <Empty title={tr('还没有每日分析')}>
-                      <p>
-                        {tr('请求分析后，由 AI Agent 读取最新进度并整理建议。')}
-                      </p>
-                    </Empty>
-                  )}
-                </section>
-              )}
               {active === 'Agent 协作' && (
                 <>
                   <AgentConnection onAdd={() => go(mcpSetupPage)} />
