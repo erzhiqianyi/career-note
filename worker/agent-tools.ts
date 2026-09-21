@@ -51,6 +51,14 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       handler: (_args, ctx) => api(ctx, 'state?resumeView=summary'),
     },
     {
+      name: 'career_get_attempt_audio',
+      scope: 'career:read',
+      description: 'Get a short-lived (15 min) download URL for the recording of one saved interview answer (attempt id from career_get_context; attempts with audio carry an `audio` field). Download it with curl and transcribe it locally (e.g. whisper) before reviewing pronunciation, pace or pauses; the transcript never replaces the user’s saved answer text.',
+      inputSchema: { attemptId: z.string().min(1) },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: ({ attemptId }, ctx) => api(ctx, 'attempts/audio-link', { attemptId }),
+    },
+    {
       name: 'career_get_resume',
       scope: 'career:read',
       description: 'Read structured resume entries and document version metadata, including archived entries, plus supported fields. Document data.content is omitted. Use career_get_resume_version with id and revision for one full version; career_resume_history lists revisions.',

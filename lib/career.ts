@@ -160,6 +160,28 @@ export async function api<T = unknown>(path: string, data?: unknown) {
     throw new Error((value as { error?: string }).error || '请求失败');
   return value as T;
 }
+async function authHeaders(extra: Record<string, string> = {}) {
+  authToken = await freshAuthToken();
+  const headers: Record<string, string> = { ...extra };
+  if (typeof authToken === 'string' && authToken.length > 0) headers.Authorization = `Bearer ${authToken}`;
+  return headers;
+}
+async function failure(response: Response) {
+  const value = (await response.json().catch(() => ({}))) as { error?: string };
+  return new Error(value.error || '请求失败');
+}
+/** Fetch a binary resource (a recording) with the session's credentials. */
+export async function apiBlob(path: string) {
+  const response = await fetch(apiUrl(path), { headers: await authHeaders() });
+  if (!response.ok) throw await failure(response);
+  return response.blob();
+}
+/** Upload raw bytes (a recording) with the session's credentials; the response is JSON. */
+export async function apiUpload<T = unknown>(path: string, blob: Blob) {
+  const response = await fetch(apiUrl(path), { method: 'POST', headers: await authHeaders({ 'Content-Type': blob.type || 'application/octet-stream' }), body: blob });
+  if (!response.ok) throw await failure(response);
+  return (await response.json()) as T;
+}
 export function download(
   name: string,
   content: string,
@@ -214,6 +236,8 @@ export type Attempt = {
   durationSeconds: number;
   profileRevision: number;
   createdAt: string;
+  /** Set once a recording of this answer has been uploaded; the bytes live in R2. */
+  audio?: { contentType: string; size: number; uploadedAt: string };
 };
 export type AnswerReview = {
   foreignApplicantNotes?: string;

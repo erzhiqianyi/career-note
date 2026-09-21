@@ -3,10 +3,6 @@
     "ja": "今日の準備",
     "en": "Today"
   },
-  "公司与投递": {
-    "ja": "企業・応募",
-    "en": "Companies & applications"
-  },
   "求职平台": {
     "ja": "求人サービス",
     "en": "Job platforms"
@@ -4582,5 +4578,313 @@
   "自我介绍、志望动机、条件确认等大多数公司都会问的问题。": {
     "ja": "自己紹介、志望動機、条件確認など、多くの企業で聞かれる質問。",
     "en": "Self-introduction, motivation and conditions: questions most companies ask."
+  },
+  "通用题库（模板）": {
+    "ja": "共通質問集（テンプレート）",
+    "en": "General question bank (template)"
+  },
+  "缺": {
+    "ja": "未作成：",
+    "en": "missing"
+  },
+  "查看": {
+    "ja": "見る",
+    "en": "View"
+  },
+  "等待生成": {
+    "ja": "生成待ち",
+    "en": "Queued"
+  },
+  "更早的 {0} 份": {
+    "ja": "以前の {0} 件",
+    "en": "{0} earlier"
+  },
+  "根据各公司的练习记录和准备缺口，整理当日优先事项。": {
+    "ja": "各企業の練習記録と準備の不足をもとに、今日の優先事項を整理します。",
+    "en": "Prioritises today from each company's practice record and preparation gaps."
+  },
+  "进行中": {
+    "ja": "進行中",
+    "en": "Active"
+  },
+  "有面试": {
+    "ja": "面接あり",
+    "en": "Has interview"
+  },
+  "面试 / 跟进": {
+    "ja": "面接 / フォロー",
+    "en": "Interview / follow-up"
+  },
+  "跟进": {
+    "ja": "フォロー",
+    "en": "Follow-up"
+  },
+  "停止录音": {
+    "ja": "録音を停止",
+    "en": "Stop recording"
+  },
+  "重新录音": {
+    "ja": "録り直す",
+    "en": "Record again"
+  },
+  "录音回答": {
+    "ja": "回答を録音",
+    "en": "Record answer"
+  },
+  "删除录音": {
+    "ja": "録音を削除",
+    "en": "Delete recording"
+  },
+  "正在读取录音…": {
+    "ja": "録音を読み込み中…",
+    "en": "Loading recording…"
+  },
+  "录下口述版本，保存时会和文字一起上传；AI Agent 可以下载后转写点评。": {
+    "ja": "口頭での回答を録音すると、保存時に文章と一緒にアップロードされます。AI Agent がダウンロードして文字起こしし、講評できます。",
+    "en": "Record the spoken version; it uploads with the text when you save, and the AI agent can download and transcribe it for feedback."
+  },
+  "浏览器没有允许使用麦克风。": {
+    "ja": "ブラウザでマイクの使用が許可されていません。",
+    "en": "The browser did not allow microphone access."
+  },
+  "公司信息": {
+    "ja": "企業情報",
+    "en": "Company"
+  },
+  "招聘信息": {
+    "ja": "求人情報",
+    "en": "Posting"
+  },
+  "总结分析": {
+    "ja": "まとめ",
+    "en": "Summary"
+  },
+  "反馈": {
+    "ja": "フィードバック",
+    "en": "Feedback"
+  },
+  "还没有通用准备资料。": {
+    "ja": "共通の準備資料はまだありません。",
+    "en": "No general preparation materials yet."
+  },
+  "还没有这家公司的准备资料。": {
+    "ja": "この企業の準備資料はまだありません。",
+    "en": "No preparation materials for this company yet."
+  },
+  "题目": {
+    "ja": "質問数",
+    "en": "Questions"
+  },
+  "回答版本": {
+    "ja": "回答バージョン",
+    "en": "Answer versions"
+  },
+  "含录音 {0}": {
+    "ja": "録音あり {0}",
+    "en": "{0} with audio"
+  },
+  "已点评": {
+    "ja": "講評済み",
+    "en": "Reviewed"
+  },
+  "每题进度": {
+    "ja": "質問ごとの進捗",
+    "en": "Progress by question"
+  },
+  "{0} 次 · 点评 {1}": {
+    "ja": "{0} 回 · 講評 {1}",
+    "en": "{0} tries · {1} reviewed"
+  },
+  "未练习": {
+    "ja": "未練習",
+    "en": "Not practised"
+  },
+  "提到这家公司的每日分析": {
+    "ja": "この企業に触れた日次分析",
+    "en": "Daily analyses mentioning this company"
+  },
+  "练习并请 AI Agent 点评后，这里会汇总进度和重练重点。": {
+    "ja": "練習して AI Agent の講評を受けると、進捗と練習の重点がここにまとまります。",
+    "en": "Practise and request feedback; progress and focus points will be summarised here."
+  },
+  "查看完整点评": {
+    "ja": "講評をすべて見る",
+    "en": "Open full feedback"
+  },
+  "还没有点评。保存回答后点「保存并请 AI Agent 点评」。": {
+    "ja": "講評はまだありません。回答を保存して「保存して AI Agent に講評を依頼」を押してください。",
+    "en": "No feedback yet. Save an answer and choose “Save and request feedback”."
+  },
+  "题目不存在": {
+    "ja": "質問が見つかりません",
+    "en": "Question not found"
+  },
+  "这一天没有安排或记录。": {
+    "ja": "この日には予定も記録もありません。",
+    "en": "Nothing scheduled or recorded on this day."
+  },
+  "五类资料齐全": {
+    "ja": "5 種類の資料が揃っています",
+    "en": "All five material types ready"
+  },
+  "今日简报": {
+    "ja": "今日のブリーフ",
+    "en": "Today's brief"
+  },
+  "今天还没有新内容": {
+    "ja": "今日はまだ新しい内容がありません",
+    "en": "Nothing new yet today"
+  },
+  "到期": {
+    "ja": "期限",
+    "en": "Due"
+  },
+  "Agent 分析": {
+    "ja": "Agent 分析",
+    "en": "Agent analysis"
+  },
+  "新职位": {
+    "ja": "新しい求人",
+    "en": "New jobs"
+  },
+  "新资料": {
+    "ja": "新しい資料",
+    "en": "New materials"
+  },
+  "新题组": {
+    "ja": "新しい質問セット",
+    "en": "New question sets"
+  },
+  "新点评": {
+    "ja": "新しい講評",
+    "en": "New feedback"
+  },
+  "Agent 任务": {
+    "ja": "Agent タスク",
+    "en": "Agent tasks"
+  },
+  "今天到期": {
+    "ja": "今日が期限",
+    "en": "Due today"
+  },
+  "当天到期": {
+    "ja": "この日が期限",
+    "en": "Due that day"
+  },
+  "新收集的职位": {
+    "ja": "新しく収集した求人",
+    "en": "Newly collected jobs"
+  },
+  "新准备资料": {
+    "ja": "新しい準備資料",
+    "en": "New preparation materials"
+  },
+  "我的练习": {
+    "ja": "自分の練習",
+    "en": "My practice"
+  },
+  "投递进展": {
+    "ja": "応募の進捗",
+    "en": "Application progress"
+  },
+  "{0} 题": {
+    "ja": "{0} 問",
+    "en": "{0} questions"
+  },
+  "含录音": {
+    "ja": "録音あり",
+    "en": "with audio"
+  },
+  "前一天": {
+    "ja": "前の日",
+    "en": "Previous day"
+  },
+  "后一天": {
+    "ja": "次の日",
+    "en": "Next day"
+  },
+  "回到今天": {
+    "ja": "今日に戻る",
+    "en": "Back to today"
+  },
+  "分析已排队，等待 AI Agent 生成。": {
+    "ja": "分析はキューに入っています。AI Agent の生成を待っています。",
+    "en": "Analysis queued; waiting for the AI agent."
+  },
+  "这一天没有新的内容。定时任务收集到的职位、资料和点评会出现在这里。": {
+    "ja": "この日は新しい内容がありません。定期タスクが集めた求人・資料・講評はここに表示されます。",
+    "en": "Nothing new on this day. Jobs, materials and feedback collected by scheduled tasks will show up here."
+  },
+  "共 {0} 项新内容，点开分类查看详情。": {
+    "ja": "新しい内容が {0} 件あります。分類を開いて詳細を確認してください。",
+    "en": "{0} new items. Open a category to see the details."
+  },
+  "查看{0}": {
+    "ja": "{0}を見る",
+    "en": "View {0}"
+  },
+  "最近 {0} 天": {
+    "ja": "直近 {0} 日",
+    "en": "Last {0} days"
+  },
+  "{0} 项": {
+    "ja": "{0} 件",
+    "en": "{0} items"
+  },
+  "关键词提示": {
+    "ja": "キーワードのヒント",
+    "en": "Keyword hints"
+  },
+  "简历里有，可以直接说": {
+    "ja": "履歴書にある。そのまま使える",
+    "en": "In your résumé — safe to say"
+  },
+  "招聘信息要求，简历没写——先想好怎么回应": {
+    "ja": "求人が求めているが履歴書にない。答え方を先に考える",
+    "en": "Asked for in the posting, missing from your résumé — decide how to respond"
+  },
+  "参考 · 招聘信息里对应的内容": {
+    "ja": "参考 · 求人情報の該当箇所",
+    "en": "Reference · matching lines from the posting"
+  },
+  "参考 · 你的经历里可以引用的": {
+    "ja": "参考 · 引用できる自分の経歴",
+    "en": "Reference · your own records to draw on"
+  },
+  "引用时区分雇主、客户项目和个人项目；数字按简历里的口径说。": {
+    "ja": "雇用主・顧客プロジェクト・個人開発を区別し、数字は履歴書の定義どおりに話す。",
+    "en": "Distinguish employer, client project and personal work; quote numbers the way the résumé defines them."
+  },
+  "准备阶段": {
+    "ja": "準備段階",
+    "en": "Preparation"
+  },
+  "资料 {0} / {1}": {
+    "ja": "資料 {0} / {1}",
+    "en": "Materials {0} / {1}"
+  },
+  "未开始": {
+    "ja": "未着手",
+    "en": "Not started"
+  },
+  "生成中": {
+    "ja": "生成待ち",
+    "en": "Generating"
+  },
+  "资料整理中": {
+    "ja": "資料作成中",
+    "en": "Materials in progress"
+  },
+  "待练习": {
+    "ja": "練習待ち",
+    "en": "Ready to practise"
+  },
+  "练习中": {
+    "ja": "練習中",
+    "en": "Practising"
+  },
+  "已练完": {
+    "ja": "練習完了",
+    "en": "Practised"
   }
 }

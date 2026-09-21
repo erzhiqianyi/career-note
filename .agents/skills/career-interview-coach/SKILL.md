@@ -12,7 +12,7 @@ description: 按岗位生成面试练习题组，或基于用户真实回答逐�
 - 题组按岗位、履历与轮次覆盖自我介绍、经历故事、技术取舍、动机与逆質問。一般 8–15 题，按用户范围调整；标明模拟，不冒充公司真题。
 - 按协议填 scenario、plan、sourceNotes、questions。每题包含日语问题、用户可理解的 meaning、出题理由 why、outline、followUps、category 和 30–300 秒建议时长。
 - 先构思，再表达。使用用户选择的辅助语言，不假定只能中文构思。海外背景和日语学习仅按本人情况考虑，专业能力与语言自然度分开。
-- 点评引用原回答，给最值得改进的 1–3 点及具体重练动作。revisedAnswer 是参考改写，不能添加没有依据的事实；纯文本不能测量发音、重音和实际语速。
+- 点评引用原回答，给最值得改进的 1–3 点及具体重练动作。revisedAnswer 是参考改写，不能添加没有依据的事实；纯文本不能测量发音、重音和实际语速。回答带 `audio` 时，用 `career_get_attempt_audio` 取下载链接，curl 下载后在本机转写（如 whisper）再补充发音、语速、停顿的观察；转写只作参考，不覆盖原回答。
 - candidateContext 非空的题组补充 foreignApplicantNotes 与 simpleAnswer。完整点评字段从 MCP contract 读取，保存新版本并读回与原回答的关联。
 
 ## 连接与保存

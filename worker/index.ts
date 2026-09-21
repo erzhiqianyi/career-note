@@ -29,6 +29,8 @@ type Env = {
   CAREER_WEB_ORIGIN?: string;
   CAREER_OAUTH_REFRESH_DAYS?: string;
   CAREER_CORS_ORIGINS?: string;
+  /** Recorded answers (R2). Optional: without it recording is refused with 503 and everything else works. */
+  CAREER_AUDIO?: R2Bucket;
 };
 
 type AuthContext = {
@@ -631,6 +633,87 @@ function ensureScopes(context: AuthContext, required: readonly string[]) {
   }
 }
 
+
+// Recorded answers live in R2 under the owner's uid; D1 only keeps the metadata on the attempt.
+const AUDIO_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/x-m4a'];
+const AUDIO_MAX_BYTES = 12 * 1024 * 1024;
+const AUDIO_LINK_TTL_MS = 15 * 60 * 1000;
+type AttemptAudio = { contentType: string; size: number; uploadedAt: string };
+
+function audioBucket(env: Env): R2Bucket {
+  if (!env.CAREER_AUDIO) throw new AppError(503, '录音存储未配置（CAREER_AUDIO）');
+  return env.CAREER_AUDIO;
+}
+function audioKey(uid: string, attemptId: string) {
+  return `${uid}/attempts/${attemptId}`;
+}
+function audioContentType(header: string | null) {
+  const type = (header || '').split(';')[0].trim().toLowerCase();
+  if (!AUDIO_TYPES.includes(type)) throw new AppError(400, '录音格式不支持，请使用 webm / ogg / mp4 / mp3 / wav');
+  return type;
+}
+
+async function saveAttemptAudio(db: Workspace, env: Env, uid: string, attemptId: string, request: Request) {
+  const attempt = await getRecord(db, 'attempts', attemptId);
+  if (!attempt) throw new AppError(404, '回答版本不存在');
+  const contentType = audioContentType(request.headers.get('content-type'));
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (declared > AUDIO_MAX_BYTES) throw new AppError(413, '录音超过 12 MB');
+  const body = await request.arrayBuffer();
+  if (!body.byteLength) throw new AppError(400, '录音为空');
+  if (body.byteLength > AUDIO_MAX_BYTES) throw new AppError(413, '录音超过 12 MB');
+  await audioBucket(env).put(audioKey(uid, attemptId), body, { httpMetadata: { contentType } });
+  const audio: AttemptAudio = { contentType, size: body.byteLength, uploadedAt: now() };
+  const saved = { ...attempt, audio };
+  await putRecord(db, 'attempts', saved);
+  return saved;
+}
+
+async function attemptAudioResponse(env: Env, key: string, contentType: string) {
+  const object = await audioBucket(env).get(key);
+  if (!object) throw new AppError(404, '录音文件不存在');
+  return new Response(object.body, { headers: {
+    'content-type': contentType,
+    'content-length': String(object.size),
+    'cache-control': 'private, no-store',
+    'x-content-type-options': 'nosniff',
+  } });
+}
+
+// Agents cannot receive audio through MCP, so they get a short-lived, unguessable download URL instead.
+const audioLinks = (connection: D1Database): Workspace => ({ connection, namespace: '' });
+async function createAudioLink(db: Workspace, env: Env, request: Request, uid: string, attemptId: string) {
+  const attempt = await getRecord(db, 'attempts', attemptId);
+  if (!attempt) throw new AppError(404, '回答版本不存在');
+  const audio = attempt.audio as AttemptAudio | undefined;
+  if (!audio) throw new AppError(404, '这个回答没有录音');
+  audioBucket(env);
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  const token = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  const expiresAt = new Date(Date.now() + AUDIO_LINK_TTL_MS).toISOString();
+  await putRecord(audioLinks(db.connection), 'audioLinks', { id: token, key: audioKey(uid, attemptId), contentType: audio.contentType, expiresAt });
+  return {
+    attemptId,
+    url: resolveOrigins(request, env).publicOrigin + '/api/career/attempts/audio/' + token,
+    expiresAt,
+    contentType: audio.contentType,
+    size: audio.size,
+    durationSeconds: attempt.durationSeconds,
+    language: attempt.language,
+  };
+}
+async function audioLinkResponse(rawDb: D1Database, env: Env, token: string) {
+  const links = audioLinks(rawDb);
+  const link = await getRecord(links, 'audioLinks', token);
+  if (!link) return jsonResponse({ error: '下载链接不存在或已过期' }, { status: 404 });
+  if (Date.parse(String(link.expiresAt)) < Date.now()) {
+    await rawDb.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(links, 'audioLinks'), token).run();
+    return jsonResponse({ error: '下载链接已过期，请重新获取' }, { status: 410 });
+  }
+  return attemptAudioResponse(env, String(link.key), String(link.contentType));
+}
+
 async function importBundle(db: Workspace, data: Record<string, unknown>, preview = false) {
   if (Number(data.schemaVersion) !== 1) throw new AppError(400, '需要 schemaVersion: 1 的 JSON 数据包');
 
@@ -884,6 +967,8 @@ const handler = async (
   await schemaReady;
   const publicMatch = new URL(request.url).pathname.match(/^\/api\/career\/public-resumes\/([a-f0-9-]{36})$/);
   if (publicMatch && request.method === 'GET') return publicResumeResponse(rawDb, publicMatch[1]);
+  const audioMatch = new URL(request.url).pathname.match(/^\/api\/career\/attempts\/audio\/([a-f0-9]{48})$/);
+  if (audioMatch && request.method === 'GET') return audioLinkResponse(rawDb, env, audioMatch[1]);
 
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -994,6 +1079,22 @@ const handler = async (
     return jsonResponse({ ok: true });
   }
 
+  if (pathname === '/api/career/attempts/audio') {
+    const id = validateString(url.searchParams.get('id'), 'id', { required: true, max: 120 });
+    if (method === 'GET') {
+      ensureScopes(context, ['career:read']);
+      const attempt = await getRecord(db, 'attempts', id);
+      const audio = attempt?.audio as AttemptAudio | undefined;
+      if (!attempt || !audio) throw new AppError(404, '这个回答没有录音');
+      return attemptAudioResponse(env, audioKey(context.uid, id), audio.contentType);
+    }
+    if (method === 'POST') {
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '录音只能由本人在应用中上传');
+      return jsonResponse(await saveAttemptAudio(db, env, context.uid, id, request));
+    }
+  }
+
   if (method !== 'POST') return jsonResponse({ error: '接口不存在' }, { status: 404 });
 
   const payload = (await request.json()) as Record<string, unknown>;
@@ -1048,6 +1149,10 @@ const handler = async (
     case '/api/career/attempts':
       ensureScopes(context, ['career:write']);
       result = await saveAttempt(db, payload);
+      break;
+    case '/api/career/attempts/audio-link':
+      ensureScopes(context, ['career:read']);
+      result = await createAudioLink(db, env, request, context.uid, validateString(payload.attemptId, 'attemptId', { required: true, max: 120 }));
       break;
     case '/api/career/import':
       ensureScopes(context, ['agent:write']);

@@ -31,29 +31,22 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
         contents: `
           import React from 'react';
           import { renderToStaticMarkup } from 'react-dom/server';
-          import OpportunityCard, { MatchBadge, jobAddedAt } from './components/opportunity-card';
           import InterviewPractice from './components/interview-practice';
           import { setTestRoute } from './components/record-page';
           import { translate, resolveLocale } from './lib/i18n';
           export { translate, resolveLocale };
-          export const card = renderToStaticMarkup(React.createElement(OpportunityCard, {
-            job: {company:'公司名称',role:'Original role',status:'面试中',location:'Tokyo',japanese:'N2',matchLevel:'优先准备',nextAction:'原文を保持',nextDate:'2026-09-10',history:[{status:'关注中',at:'2026-09-01T00:00:00Z'}]},
-            today:'2026-09-12',day:(v)=>v.slice(0,10),onOpen(){}
-          }));
-          export const matchBadge = renderToStaticMarkup(React.createElement(MatchBadge, {level:'优先准备'}));
-          export const addedAt = jobAddedAt({history:[{status:'关注中',at:'2026-09-01T00:00:00Z'}]});
           const practiceProps = {
             async reload(){},
             openMaterial(){},
-            data: {jobs:[{id:'demo',company:'Example'}],profile:{revision:0},tasks:[],reviews:[],attempts:[],
+            data: {today:'2026-09-12',materials:[],reports:[],jobs:[{id:'demo',company:'Example',role:'Original role',status:'面试中',nextAction:'原文を保持',nextDate:'2026-09-10',history:[]}],profile:{revision:0},tasks:[],reviews:[],attempts:[],
               questionSets:[{id:'pack',jobId:'demo',title:'Original title',createdAt:'2026-09-12',questions:[
                 {id:'q',title:'質問の原文',questionJa:'自己紹介をお願いします。',category:'自己紹介',targetSeconds:60}
               ]}]}
           };
           export const practice = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
-          setTestRoute('#interview/company/demo');
+          setTestRoute('#jobs/company/demo');
           export const practiceCompany = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
-          setTestRoute('#interview/question/pack%7Cq');
+          setTestRoute('#jobs/question/pack%7Cq');
           export const practiceDetail = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
         `,
         resolveDir: process.cwd(),
@@ -91,15 +84,10 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
     const compiled = { exports: {} };
     runInNewContext(result.outputFiles[0].text, { require, module: compiled, exports: compiled.exports });
     const output = compiled.exports;
-    assert.match(output.card, /公司名称/); // Personal company names are never translated.
-    assert.match(output.card, /原文を保持/);
-    assert.match(output.card, /badge blue/);
-    assert.ok(output.card.includes(output.translate(locale, '面试中')));
-    assert.ok(output.matchBadge.includes(output.translate(locale, '优先准备')));
-    assert.ok(!output.card.includes(output.translate(locale, '优先准备')));
-    assert.ok(output.card.includes(output.translate(locale, '查看职位详情')));
-    assert.match(output.addedAt, /2026-09-01/); // Added date comes from the first status entry.
-    assert.ok(output.card.includes(output.translate(locale, '已逾期')));
+    // Personal company names and the user's own next-step text are never translated; statuses and labels are.
+    assert.match(output.practice, /原文を保持/);
+    assert.ok(output.practice.includes(output.translate(locale, '面试中')));
+    assert.ok(output.practice.includes(output.translate(locale, '已逾期')));
     assert.match(output.practice, /Example/);
     assert.doesNotMatch(output.practice, /質問の原文/);
     assert.match(output.practiceCompany, /質問の原文/);

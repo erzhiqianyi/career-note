@@ -78,7 +78,7 @@ export default function SkillArchive() {
               setDocument('');
             };
             return (
-              <DataRow key={skill.name}>
+              <DataRow key={skill.name} onOpen={open}>
                 <DataTitle title={t(skill.title)} meta={<code>{skill.name}</code>} onClick={open} />
                 <DataCell hide="phone" className="ellipsis muted" title={t(skill.description)}>
                   {t(skill.description)}

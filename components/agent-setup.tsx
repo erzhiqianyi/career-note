@@ -131,14 +131,12 @@ function ClientSetup({
   tokens,
   refresh,
   day,
-  onBack,
   onDone,
 }: {
   client: McpClient;
   tokens: MpcTokenRecord[];
   refresh: () => Promise<void>;
   day: (value: string) => string;
-  onBack: () => void;
   onDone: () => void;
 }) {
   const { t } = useLocale();
@@ -237,10 +235,6 @@ function ClientSetup({
             ))}
           </ol>
           <div className="agent-wizard-actions">
-            <button className="secondary" onClick={onBack}>
-              <ArrowLeft size={15} />
-              {t('重新选择助手')}
-            </button>
             <button className="primary" onClick={() => setStage('verify')}>
               {t('下一步：验证授权')}
               <ArrowRight size={16} />
@@ -344,7 +338,6 @@ export default function AgentSetup({
   refresh,
   day,
   onSelect,
-  onBack,
   onDone,
 }: {
   client?: McpClient;
@@ -352,7 +345,6 @@ export default function AgentSetup({
   refresh: () => Promise<void>;
   day: (value: string) => string;
   onSelect: (client: McpClient) => void;
-  onBack: () => void;
   onDone: () => void;
 }) {
   const endpoint = useMcpEndpoint();
@@ -365,7 +357,6 @@ export default function AgentSetup({
           tokens={tokens}
           refresh={refresh}
           day={day}
-          onBack={onBack}
           onDone={onDone}
         />
       ) : (

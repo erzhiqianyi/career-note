@@ -194,7 +194,7 @@ export default function PersonalizedResumes({
               >
                 {drafts.map((d) => {
                   return (
-                    <DataRow key={d.id} className={d.archived ? 'dt-dim' : ''}>
+                    <DataRow key={d.id} className={d.archived ? 'dt-dim' : ''} onOpen={() => setSelected(d)}>
                       <DataTitle title={d.title} meta={`${d.targetRole || t('未填写目标岗位')} · v${d.revision}`} onClick={() => setSelected(d)} />
                       <DataCell label={t('语言')}>{d.language.toUpperCase()}</DataCell>
                       <DataCell label={t('状态')}>
@@ -646,7 +646,7 @@ export default function PersonalizedResumes({
                   const expired = !!p.expiresAt && Date.parse(p.expiresAt) <= Date.now(),
                     active = !p.revokedAt && !expired;
                   return (
-                    <DataRow key={p.id} className={active ? '' : 'dt-dim'}>
+                    <DataRow key={p.id} className={active ? '' : 'dt-dim'} onOpen={() => setPublication(p)}>
                       <DataTitle title={p.title} meta={`v${p.draftRevision}`} onClick={() => setPublication(p)} />
                       <DataCell label={t('可见性')} hide="phone">{p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</DataCell>
                       <DataCell label={t('有效期')} hide="tablet" className="num">

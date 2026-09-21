@@ -1,7 +1,5 @@
 'use client';
-import { useState, useSyncExternalStore, type SetStateAction } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import { useLocale } from './locale-provider';
+import { createContext, useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type SetStateAction } from 'react';
 
 const subscribe = (notify: () => void) => {
   const navigate = () => { notify(); window.scrollTo(0, 0); };
@@ -40,7 +38,19 @@ export function useRecordPage<T>(base: string, view: string, resolve: (id: strin
   return [value, setValue] as const;
 }
 
-export function RecordBack({ onBack }: { onBack: () => void }) {
-  const { t } = useLocale();
-  return <button type="button" className="text-button record-back" onClick={onBack}><ArrowLeft size={17} />{t('返回')}</button>;
+export type SubView = { title?: string; onBack: () => void };
+/** The page shell provides this; drilled-in views register here so the header's back arrow controls every return. */
+export const SubViewContext = createContext<(id: string, view: SubView | null) => void>(() => {});
+
+/** Registers a drilled-in view with the header (back arrow + optional title); renders nothing itself, so all pages return the same way. */
+export function RecordBack({ onBack, title }: { onBack: () => void; title?: string }) {
+  const register = useContext(SubViewContext);
+  const id = useId();
+  const latest = useRef(onBack);
+  latest.current = onBack;
+  useEffect(() => {
+    register(id, { title, onBack: () => latest.current() });
+    return () => register(id, null);
+  }, [register, id, title]);
+  return null;
 }

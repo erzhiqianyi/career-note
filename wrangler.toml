@@ -23,3 +23,8 @@ database_id = "00000000-0000-4000-8000-000000000000"
 # CAREER_ADMIN_UIDS は管理者権限用。アクセス許可リストも別途必要。
 # 本番の secrets（Firebase、CAREER_WEB_ORIGIN、CAREER_PUBLIC_ORIGIN、CAREER_CORS_ORIGINS など）は
 # `wrangler secret put` で登録する。[vars] に置くとローカルの off モードまで変わってしまう。
+
+# 面试回答的录音。本地 wrangler dev 会在 worker-state 里模拟；部署前 `wrangler r2 bucket create career-note-audio`。
+[[r2_buckets]]
+binding = "CAREER_AUDIO"
+bucket_name = "career-note-audio"

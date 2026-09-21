@@ -36,6 +36,14 @@ OAuth と MCP の公開アドレスは API 側（`CAREER_PUBLIC_ORIGIN`）、同
 
    名前を変えた場合は後述の Variable `CAREER_D1_NAME` に同じ名前を設定します。`database_id` をメモする必要はありません。テーブルは初回リクエスト時に `CREATE TABLE IF NOT EXISTS` で作られるため、マイグレーション作業はありません。
 
+   面接回答の録音は R2 に置きます（`wrangler.toml` の `CAREER_AUDIO`、バケット名 `career-note-audio`）。デプロイ前に一度だけ作成します：
+
+   ```sh
+   npx wrangler r2 bucket create career-note-audio
+   ```
+
+   バケットが無いと `wrangler deploy` が失敗します。ローカルの `wrangler dev` は R2 も `worker-state/` 配下でエミュレートするので、追加設定は要りません。
+
 2. **API Worker を一度手元からデプロイし、secrets を登録する**
 
    ```sh
@@ -71,7 +79,7 @@ OAuth と MCP の公開アドレスは API 側（`CAREER_PUBLIC_ORIGIN`）、同
    | Secret | 値 |
    | --- | --- |
    | `CLOUDFLARE_ACCOUNT_ID` | `npx wrangler whoami` に表示される Account ID |
-   | `CLOUDFLARE_API_TOKEN` | 「Edit Cloudflare Workers」テンプレートで作成し、**Account › D1: Edit**、**Account › Cloudflare Pages: Edit**、**Zone › Workers Routes: Edit**（対象ゾーン限定）を追加 |
+   | `CLOUDFLARE_API_TOKEN` | 「Edit Cloudflare Workers」テンプレートで作成し、**Account › D1: Edit**、**Account › Workers R2 Storage: Edit**、**Account › Cloudflare Pages: Edit**、**Zone › Workers Routes: Edit**（対象ゾーン限定）を追加 |
 
    Variables タブ：
 

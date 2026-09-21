@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 import { Miniflare } from 'miniflare';
 const bundled=await build({entryPoints:['worker/index.ts'],bundle:true,write:false,format:'esm',platform:'browser',target:'es2022'});
 async function worker(t,bindings={}) {
- const mf=new Miniflare({workers:[{name:'career',modules:true,script:bundled.outputFiles[0].text,compatibilityDate:'2026-05-22',d1Databases:['CAREER_DB'],bindings}]});
+ const mf=new Miniflare({workers:[{name:'career',modules:true,script:bundled.outputFiles[0].text,compatibilityDate:'2026-05-22',d1Databases:['CAREER_DB'],r2Buckets:['CAREER_AUDIO'],bindings}]});
  t.after(()=>mf.dispose());return mf;
 }
 void test('local Worker state and profile persistence use D1',async t=>{
@@ -63,4 +63,25 @@ void test('built-in question bank accepts attempts and review requests without a
  // Imports must not shadow a built-in pack id.
  const clash=await send('import',{schemaVersion:1,questionSets:[{id:'builtin-basics',jobId:'none',title:'t',scenario:'s',plan:'p',sourceNotes:'n',questions:[]}]});
  assert.equal(clash.status,400);
+});
+void test('a saved answer can carry a recording: owner playback, agent download link, expiry',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const attempt=await (await send('attempts',{questionSetId:'builtin-basics',questionId:'self-intro',answer:'田中と申します。',language:'日语',durationSeconds:45})).json();
+ assert.equal((await send('attempts/audio?id='+attempt.id)).status,404); // nothing recorded yet
+ const bytes=new Uint8Array([0x1a,0x45,0xdf,0xa3,1,2,3,4]);
+ const upload=(id,body,type='audio/webm;codecs=opus')=>mf.dispatchFetch('http://local/api/career/attempts/audio?id='+id,{method:'POST',headers:{'Content-Type':type},body});
+ assert.equal((await upload(attempt.id,bytes,'text/plain')).status,400);
+ assert.equal((await upload('missing',bytes)).status,404);
+ const saved=await (await upload(attempt.id,bytes)).json();
+ assert.equal(saved.audio.contentType,'audio/webm');assert.equal(saved.audio.size,bytes.length);
+ assert.equal((await (await send('state')).json()).attempts[0].audio.size,bytes.length);
+ const play=await send('attempts/audio?id='+attempt.id);
+ assert.equal(play.status,200);assert.equal(play.headers.get('content-type'),'audio/webm');
+ assert.deepEqual(new Uint8Array(await play.arrayBuffer()),bytes);
+ // Agents get a short-lived unauthenticated URL instead of bytes through MCP.
+ const link=await (await send('attempts/audio-link',{attemptId:attempt.id})).json();
+ assert.match(link.url,/\/api\/career\/attempts\/audio\/[a-f0-9]{48}$/);assert.equal(link.durationSeconds,45);
+ const fetched=await mf.dispatchFetch(link.url);assert.equal(fetched.status,200);assert.deepEqual(new Uint8Array(await fetched.arrayBuffer()),bytes);
+ assert.equal((await mf.dispatchFetch(link.url.replace(/.{4}$/,'0000'))).status,404);
+ assert.equal((await send('attempts/audio-link',{attemptId:'missing'})).status,404);
 });

@@ -68,8 +68,19 @@ export function DataTable<K extends string>({
   );
 }
 
-export function DataRow({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={'dt-row ' + className}>{children}</div>;
+/**
+ * A row. With `onOpen`, the whole row opens the record (buttons and links inside keep their own
+ * behaviour); the title button stays the keyboard-accessible entry, so the row itself is not focusable.
+ */
+export function DataRow({ children, className = '', onOpen }: { children: ReactNode; className?: string; onOpen?: () => void }) {
+  return (
+    <div
+      className={'dt-row ' + className + (onOpen ? ' dt-clickable' : '')}
+      onClick={onOpen ? (event) => { if (!(event.target as HTMLElement).closest('button, a, select, input, textarea, details')) onOpen(); } : undefined}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** A cell; `label` is shown on phones where the header row is hidden. */

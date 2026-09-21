@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Flag, MessageSquare, X } from 'lucide-react';
 import { useLocale } from '@/components/locale-provider';
 import type { Attempt, Job, Material } from '@/lib/career';
 
-export type CalendarMark = 'due' | 'interview' | 'target';
+export type CalendarMarkKind = 'due' | 'interview' | 'target';
+/** A dated item on the calendar; `jobs` are the companies involved (empty for the target date). */
+export type CalendarMark = { kind: CalendarMarkKind; jobs: { id: string; company: string }[] };
 
 /** What the user did on one day, derived from record timestamps (workspace timezone). */
 export type DayActivity = {
@@ -47,19 +49,26 @@ const KINDS: Array<[keyof DayActivity, string]> = [
   ['materials', '资料'],
 ];
 
-/** Month grid with today, upcoming marks and a per-day log of what was done; tap a day to read it. */
+const MARK_LABEL: Record<CalendarMarkKind, string> = { due: '待跟进', interview: '面试日', target: '目标日期' };
+
+/**
+ * Month grid with today, follow-up / interview / target marks and the month's interviews listed underneath.
+ * Tapping a day swaps that list for what is on that day; the company names open the company page.
+ */
 export default function TodayCalendar({
   today,
   marks,
   activity,
+  onOpenJob,
 }: {
   today: string;
   marks: Record<string, CalendarMark>;
   activity: Record<string, DayActivity>;
+  onOpenJob?: (jobId: string) => void;
 }) {
   const { locale, t } = useLocale();
-  const [selected, setSelected] = useState(today);
   const [offset, setOffset] = useState(0); // months from the current one
+  const [selected, setSelected] = useState(''); // YYYY-MM-DD, or '' for the month's interview list
   const [ty, tm] = today.split('-').map(Number);
   const first = new Date(Date.UTC(ty, tm - 1 + offset, 1));
   const year = first.getUTCFullYear();
@@ -74,12 +83,19 @@ export default function TodayCalendar({
   while (cells.length % 7) cells.push(null);
   const iso = (d: number) => `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   const prefix = `${year}-${String(month).padStart(2, '0')}-`;
-  const monthTotals = KINDS.map(([key, label]) => [
-    label,
-    Object.entries(activity).reduce((sum, [date, dayLog]) => (date.startsWith(prefix) ? sum + dayLog[key].length : sum), 0),
-  ] as const).filter(([, count]) => count > 0);
-  const dayLog = activity[selected];
-  const selectedTitle = new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(selected + 'T00:00:00Z'));
+  const shortDay = (date: string) => new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric', timeZone: 'UTC' }).format(new Date(date + 'T00:00:00Z'));
+  const interviews = Object.entries(marks)
+    .filter(([date, mark]) => date.startsWith(prefix) && mark.kind === 'interview')
+    .sort(([a], [b]) => a.localeCompare(b));
+  /** Tooltip for a day: its mark plus a short summary of what was done. */
+  const tooltip = (date: string) => {
+    const mark = marks[date];
+    const dayLog = activity[date];
+    const lines = [];
+    if (mark) lines.push(`${t(MARK_LABEL[mark.kind])}${mark.jobs.length ? ' · ' + mark.jobs.map((j) => j.company).join('、') : ''}`);
+    if (dayLog) for (const [key, label] of KINDS) if (dayLog[key].length) lines.push(`${t(label)} ${dayLog[key].length}：${dayLog[key].join('、')}`);
+    return lines.length ? lines.join('\n') : undefined;
+  };
   return (
     <div className="calendar">
       <div className="calendar-head">
@@ -106,47 +122,60 @@ export default function TodayCalendar({
             <button
               type="button"
               key={i}
-              className={['calendar-day', date === today && 'is-today', date === selected && 'is-selected', done && 'has-activity', mark && 'has-' + mark]
-                .filter(Boolean)
-                .join(' ')}
-              aria-pressed={date === selected}
+              className={['calendar-day', date === today && 'is-today', date === selected && 'is-selected', done && 'has-activity', mark && 'has-' + mark.kind].filter(Boolean).join(' ')}
               aria-label={date}
-              title={mark ? t(mark === 'due' ? '待跟进' : mark === 'interview' ? '面试日' : '目标日期') : undefined}
-              onClick={() => setSelected(date)}
+              aria-pressed={date === selected}
+              title={tooltip(date)}
+              onClick={() => setSelected(date === selected ? '' : date)}
             >
               {d}
             </button>
           );
         })}
       </div>
-      {monthTotals.length > 0 && (
-        <p className="calendar-totals">
-          {t('本月')}
-          {monthTotals.map(([label, count]) => (
-            <span key={label}>
-              {t(label)} {count}
-            </span>
+      {selected ? (
+        <div className="calendar-day-detail">
+          <div className="calendar-day-detail-head">
+            <b>{shortDay(selected)}{selected === today && <small>{t('今天')}</small>}</b>
+            <button type="button" className="icon-button" aria-label={t('关闭')} onClick={() => setSelected('')}><X size={14} /></button>
+          </div>
+          {(() => {
+            const mark = marks[selected];
+            const dayLog = activity[selected];
+            if (!mark && !dayLog) return <p className="muted">{t('这一天没有安排或记录。')}</p>;
+            return <ul className="calendar-interviews">
+              {mark && (mark.jobs.length ? mark.jobs : [null]).map((job, index) => (
+                <li key={job ? job.id : 'mark-' + index} className={'is-' + mark.kind}>
+                  {mark.kind === 'interview' ? <MessageSquare size={14} /> : mark.kind === 'target' ? <Flag size={14} /> : <Clock size={14} />}
+                  <b>{t(MARK_LABEL[mark.kind])}</b>
+                  <span>
+                    {job ? (onOpenJob ? <button type="button" className="text-button" onClick={() => onOpenJob(job.id)}>{job.company}</button> : job.company) : t('希望在这一天之前找到工作')}
+                  </span>
+                </li>
+              ))}
+              {dayLog && KINDS.filter(([key]) => dayLog[key].length).map(([key, label]) => (
+                <li key={key} className="is-activity">
+                  <span className="calendar-activity-count">{dayLog[key].length}</span>
+                  <b>{t(label)}</b>
+                  <span>{dayLog[key].join('、')}</span>
+                </li>
+              ))}
+            </ul>;
+          })()}
+        </div>
+      ) : interviews.length > 0 && (
+        <ul className="calendar-interviews">
+          {interviews.map(([date, mark]) => (
+            <li key={date} className={date < today ? 'is-past' : undefined}>
+              <MessageSquare size={14} />
+              <b>{shortDay(date)}</b>
+              <span>
+                {t('面试')} · {mark.jobs.map((job, index) => <span key={job.id}>{index > 0 && '、'}{onOpenJob ? <button type="button" className="text-button" onClick={() => onOpenJob(job.id)}>{job.company}</button> : job.company}</span>)}
+              </span>
+            </li>
           ))}
-        </p>
+        </ul>
       )}
-      <div className="calendar-log">
-        <h3>
-          {selectedTitle}
-          {selected === today && <small>{t('今天')}</small>}
-        </h3>
-        {dayLog ? (
-          KINDS.filter(([key]) => dayLog[key].length).map(([key, label]) => (
-            <p key={key}>
-              <b>
-                {t(label)} {dayLog[key].length}
-              </b>
-              <span>{dayLog[key].join('、')}</span>
-            </p>
-          ))
-        ) : (
-          <p className="muted">{t('这一天没有记录。')}</p>
-        )}
-      </div>
     </div>
   );
 }
