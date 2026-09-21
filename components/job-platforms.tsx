@@ -2,15 +2,20 @@
 import { RecordBack, useRecordPage } from './record-page';
 import { useLocale } from '@/components/locale-provider';
 
-import { Fragment, useState, type SyntheticEvent } from 'react';
-import { ChevronDown, ExternalLink, Pencil, Plus, Power, RotateCcw, Search, Star, Trash2 } from 'lucide-react';
-import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
+import { useState, type SyntheticEvent } from 'react';
+import { BriefcaseBusiness, Code2, Globe2, Languages, ArrowUpRight, ExternalLink, Pencil, Plus, Power, RotateCcw, Search, Star, Trash2 } from 'lucide-react';
 import { api } from '@/lib/career';
 import {
   builtinPlatforms,
   platformCategories,
   type JobPlatform,
 } from '@/lib/job-platforms';
+
+const categoryIcons: Record<string, typeof Globe2> = {
+  'IT・软件工程': Code2,
+  '双语・国际业务': Languages,
+  '转职中介': BriefcaseBusiness,
+};
 
 type Props = { platforms: JobPlatform[]; reload: () => Promise<void> };
 export default function JobPlatforms({ platforms, reload }: Props) {
@@ -23,6 +28,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
     const original = builtinPlatforms.find((item) => item.id === platform.id);
     return original?.[field] === value ? tr(value) : value;
   }
+  const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('使用中');
   const [category, setCategory] = useState('全部类别');
@@ -46,6 +52,9 @@ export default function JobPlatforms({ platforms, reload }: Props) {
           .includes(query.toLowerCase()),
     )
     .sort((a, b) => Number(b.favorite) - Number(a.favorite));
+  const pageCount = Math.max(1, Math.ceil(visible.length / 8));
+  const currentPage = Math.min(page, pageCount);
+  const pageItems = visible.slice((currentPage - 1) * 8, currentPage * 8);
   async function save(value: Partial<JobPlatform>, message: string) {
     setBusy(true);
     setError('');
@@ -83,17 +92,21 @@ export default function JobPlatforms({ platforms, reload }: Props) {
   return (
     <div className="platforms-page">
       {!edit && !selected && <>
+      <div className="platform-directory-heading">
+        <div><h2>{tr('找到适合自己的求职入口。')}</h2><p>{tr('比较平台特色，收藏常用入口，记录自己的使用进展。')}</p></div>
+        <button className="secondary" onClick={() => { setError(''); setEdit({}); }}><Plus size={17} />{tr('添加平台')}</button>
+      </div>
       <div className="list-toolbar platform-toolbar">
         <label className="search">
           <Search size={17} />
           <input
             aria-label={tr('搜索平台')}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder={tr('名称、方向或备注')}
           />
         </label>
-        <select aria-label={tr('类别')} value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select aria-label={tr('类别')} value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}>
           <option value={'全部类别'}>{tr('全部类别')}</option>
           {platformCategories.map((c) => (
             <option key={c} value={c}>
@@ -101,7 +114,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
             </option>
           ))}
         </select>
-        <select aria-label={tr('显示范围')} value={filter} onChange={(e) => setFilter(e.target.value)}>
+        <select aria-label={tr('显示范围')} value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}>
           {['使用中', '全部', '收藏', '已注册', '未注册', '已停用', '已删除'].map((c) => (
             <option key={c} value={c}>
               {tr(c)}
@@ -112,7 +125,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
           {visible.length}
           {tr('个平台')}
         </span>
-        <button className="primary" onClick={() => { setError(''); setEdit({}); }}><Plus size={17} />{tr('添加平台')}</button>
+
       </div>
       {error && !edit && (
         <p role="alert" className="form-error">
@@ -121,63 +134,35 @@ export default function JobPlatforms({ platforms, reload }: Props) {
       )}
       {notice && <output>{tr(notice)}</output>}
       {visible.length > 0 && (
-        <section className="panel dt-panel">
-          <DataTable
-            label={tr('求职平台')}
-            columns={[
-              { key: 'name', label: tr('平台'), width: 'minmax(0, 1fr)' },
-              { key: 'category', label: tr('类别'), width: '96px', hide: 'phone' },
-              { key: 'registered', label: tr('账号'), width: 'minmax(90px, 0.8fr)' },
-              { key: 'ops', label: tr('操作'), width: '40px', align: 'end' },
-            ]}
-          >
-            {visible.map((p) => {
-              const toggle = () => setSelected(p);
-              return (
-                <Fragment key={p.id}>
-                  <DataRow className={p.deleted || !p.enabled ? 'dt-dim' : ''}>
-                    <DataTitle
-                      title={<>{p.favorite && <Star size={14} aria-label={tr('收藏')} />} {p.name}</>}
-                      meta={new URL(p.url).hostname}
-                      onClick={toggle}
-                    />
-                    <DataCell label={tr('类别')} hide="phone">
-                      <span className="badge">{tr(p.category)}</span>
-                    </DataCell>
-                    <DataCell label={tr('账号')} className="ellipsis" title={p.accountEmail || undefined}>
-                      {p.registered ? (
-                        <>
-                          <span className="badge green">{tr('已注册')}</span>
-                          {p.accountEmail && <span className="muted"> {p.accountEmail}</span>}
-                        </>
-                      ) : (
-                        <span className="badge pending">{tr('未注册')}</span>
-                      )}
-                    </DataCell>
-                    <DataActions>
-                      <button
-                        className="icon-button"
-                        title={tr('详情')}
-                        aria-label={`${tr('详情')} ${p.name}`}
-                        onClick={toggle}
-                      >
-                        <ChevronDown size={16} style={{ transform: 'rotate(-90deg)' }} />
-                      </button>
-                    </DataActions>
-                  </DataRow>
-
-                </Fragment>
-              );
-            })}
-          </DataTable>
-        </section>
+        <ul className="platform-directory" aria-label={tr('求职平台')}>
+          {pageItems.map(p => {
+            const CategoryIcon = categoryIcons[p.category] || Globe2;
+            return <li key={p.id} className={'platform-directory-row' + (p.deleted || !p.enabled ? ' is-inactive' : '')}>
+              <div className="platform-category-mark" data-category={p.category} aria-hidden="true"><CategoryIcon size={23} strokeWidth={1.7} /></div>
+              <h3 className="platform-compact-name"><button title={p.name} onClick={() => setSelected(p)}>{p.name}</button></h3>
+              <span className="platform-category-label">{tr(p.category)}</span>
+              <span className="platform-compact-status">{tr(p.deleted ? '已删除' : !p.enabled ? '已停用' : p.registered ? '已注册' : '未注册')}</span>
+              <div className="platform-directory-actions">
+                <button className={'icon-button platform-favorite' + (p.favorite ? ' on' : '')} title={tr(p.favorite ? '取消收藏' : '收藏')} aria-label={`${tr(p.favorite ? '取消收藏' : '收藏')} ${p.name}`} aria-pressed={p.favorite} disabled={busy || p.deleted} onClick={() => void save({ ...p, favorite: !p.favorite }, p.favorite ? '已取消收藏' : '已收藏')}><Star size={18} fill={p.favorite ? 'currentColor' : 'none'} /></button>
+                <a className="platform-visit" title={tr('访问平台')} href={p.url} target="_blank" rel="noopener noreferrer" aria-label={`${tr('访问平台')} ${p.name}`}><ArrowUpRight size={18} /></a>
+                <button className="text-button platform-view-details" onClick={() => setSelected(p)} aria-label={`${tr('详情与备注')} ${p.name}`}>{tr('详情')}</button>
+              </div>
+            </li>;
+          })}
+        </ul>
       )}
+      {visible.length > 8 && <div className="platform-pagination" aria-label={tr('分页')}>
+        <span>{tr('第 {0} / {1} 页', [currentPage, pageCount])}</span>
+        <button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>{tr('上一页')}</button>
+        <button disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>{tr('下一页')}</button>
+      </div>}
       {!visible.length && (
         <div className="panel empty">
           <h3>{tr('没有符合条件的平台')}</h3>
           <p>{tr('试着修改筛选条件，或添加自己的求职入口。')}</p>
           <button
             onClick={() => {
+              setPage(1);
               setQuery('');
               setFilter('全部');
               setCategory('全部类别');
@@ -255,6 +240,7 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                       )}
                       </div>
                       <p>{platformText(p, 'description') || tr('还没有平台说明。')}</p>
+                      <p>{tr(p.registered ? '已注册' : '未注册')}{p.registered && p.accountEmail ? ' · ' + p.accountEmail : ''}</p>
                       {p.notes && (
                         <p className="platform-notes">
                           {tr('我的备注：')}

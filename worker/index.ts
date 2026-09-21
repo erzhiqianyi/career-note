@@ -1,5 +1,5 @@
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
-import { ensureResumeSchema, readResume, writeResume, resumeHistory } from './resume';
+import { ensureResumeSchema, readResume, writeResume, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
 import { sqlStore } from '@ninomae/mcp-app-server/sql';
 import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools';
@@ -210,13 +210,13 @@ async function getProfile(db: Workspace) {
   return { ...defaultProfile(), ...((await getMeta(db)) || {}) };
 }
 
-async function state(db: Workspace, uid = 'local') {
+async function state(db: Workspace, uid = 'local', resumeSummary = false) {
   const profile = await getProfile(db);
   return {
     platforms: mergePlatforms(await records(db, 'platforms:' + uid) as JobPlatform[]),
     jobs: await records(db, 'jobs'),
     profile,
-    resume: await readResume(db.connection, db.namespace),
+    resume: await readResume(db.connection, db.namespace, resumeSummary),
     materials: await records(db, 'materials'),
     reports: await records(db, 'reports'),
     tasks: await records(db, 'tasks'),
@@ -918,7 +918,7 @@ const handler = async (
 
   if (pathname === '/api/career/state' && method === 'GET') {
     ensureScopes(context, ['career:read']);
-    return jsonResponse(await state(db, context.uid));
+    return jsonResponse(await state(db, context.uid, url.searchParams.get('resumeView') === 'summary'));
   }
 
   if (method === 'GET' && pathname === '/api/career/personalized-resumes') {
@@ -928,11 +928,47 @@ const handler = async (
 
   if (method === 'GET' && pathname === '/api/career/resume') {
     ensureScopes(context, ['career:read']);
-    return jsonResponse({ entries: await readResume(rawDb, db.namespace) });
+    return jsonResponse({ entries: await readResume(rawDb, db.namespace, url.searchParams.get('view') === 'summary') });
+  }
+  if (method === 'GET' && pathname === '/api/career/resume/overview') {
+    ensureScopes(context, ['career:read']);
+    return jsonResponse(await resumeOverview(rawDb, db.namespace, { kind: url.searchParams.get('kind') || undefined, language: url.searchParams.get('language') || undefined, archived: url.searchParams.has('archived') ? url.searchParams.get('archived') === 'true' : undefined }));
+  }
+  if (method === 'GET' && pathname === '/api/career/resume/list') {
+    ensureScopes(context, ['career:read']);
+    return jsonResponse(await listResume(rawDb, db.namespace, { kind: url.searchParams.get('kind') || undefined, language: url.searchParams.get('language') || undefined, archived: url.searchParams.has('archived') ? url.searchParams.get('archived') === 'true' : undefined }, Number(url.searchParams.get('pageSize') || 20), url.searchParams.get('cursor') || ''));
+  }
+  if (method === 'GET' && pathname === '/api/career/resume/details') {
+    ensureScopes(context, ['career:read']);
+    const ids = url.searchParams.getAll('id');
+    if (!ids.length) throw new AppError(400, 'at least one id is required');
+    return jsonResponse(await resumeDetails(rawDb, db.namespace, ids));
   }
   if (method === 'GET' && pathname === '/api/career/resume/history') {
     ensureScopes(context, ['career:read']);
-    return jsonResponse({ entries: await resumeHistory(rawDb, db.namespace, url.searchParams.get('id') || '') });
+    return jsonResponse({ entries: await resumeHistory(rawDb, db.namespace, url.searchParams.get('id') || '', url.searchParams.get('view') === 'summary') });
+  }
+
+  if (method === 'GET' && pathname === '/api/career/resume/version') {
+    ensureScopes(context, ['career:read']);
+    const id = url.searchParams.get('id') || '';
+    const rawRevision = url.searchParams.get('revision') || '';
+    const revision = Number(rawRevision);
+    if (!id || !/^[1-9]\d*$/.test(rawRevision) || !Number.isSafeInteger(revision)) {
+      throw new AppError(400, 'id and a positive integer revision are required');
+    }
+    const entry = await resumeVersion(rawDb, db.namespace, id, revision);
+    if (!entry) throw new AppError(404, 'Resume version not found');
+    return jsonResponse({ entry });
+  }
+  if (method === 'GET' && pathname === '/api/career/resume/document') {
+    ensureScopes(context, ['career:read']);
+    const id = url.searchParams.get('id') || '';
+    const rawRevision = url.searchParams.get('revision') || '';
+    if (!id || !/^[1-9]\d*$/.test(rawRevision)) throw new AppError(400, 'id and a positive integer revision are required');
+    const chunk = await resumeDocumentChunk(rawDb, db.namespace, id, Number(rawRevision), Number(url.searchParams.get('offset') || 0), Number(url.searchParams.get('limit') || 12000));
+    if (!chunk) throw new AppError(404, 'Document version not found');
+    return jsonResponse(chunk);
   }
 
   // Agent access is granted only through OAuth; the owner can list and revoke it here.

@@ -169,13 +169,25 @@ test('structured resume records persist, reject conflicts, preserve documents an
     data: { title: 'Improvement', result: 'Fixture outcome' },
   });
   assert.equal(achievement.parentId, 'job-one');
+  const preferenceA = await ok('resume', {
+    id: 'pref-backend', kind: 'preferences', revision: 0,
+    data: { role: 'バックエンドエンジニア', rationale: 'Java・Spring・業務システムの実務経験', locations: '東京都' },
+    sourceNotes: '職務経歴 job-one、本人入力', verification: 'pending',
+  });
+  const preferenceB = await ok('resume', {
+    id: 'pref-data', kind: 'preferences', revision: 0,
+    data: { role: 'データエンジニア', rationale: 'Scala・Spark・ETL基盤の実務経験', locations: '東京都' },
+    sourceNotes: '職務経歴 job-one、本人入力', verification: 'pending',
+  });
+  assert.equal(preferenceA.data.role, 'バックエンドエンジニア');
+  assert.equal(preferenceB.data.role, 'データエンジニア');
   const saveRecord = async (entry, overrides) => {
     const { updatedAt, ...payload } = entry;
     return ok('resume', { ...payload, ...overrides });
   };
   const archived = await saveRecord(current, { archived: true });
   assert.equal(archived.archived, true);
-  assert.equal((await ok('resume')).entries.length, 4);
+  assert.equal((await ok('resume')).entries.length, 6);
   current = await saveRecord(archived, { archived: false });
   assert.equal(current.archived, false);
   const history = await ok('resume/history?id=job-one');
@@ -205,5 +217,68 @@ test('structured resume records persist, reject conflicts, preserve documents an
     (await ok('resume/history?id=original')).entries.at(-1).data.content,
     '# Immutable source',
   );
+  const summary = await ok('resume?view=summary');
+  const listedDoc = summary.entries.find(e => e.id === 'original');
+  assert.equal(listedDoc.data.version, 'v1');
+  assert.equal(listedDoc.revision, 2);
+  assert.equal(Object.hasOwn(listedDoc.data, 'content'), false);
+  assert.equal(summary.entries.find(e => e.id === 'basics').data.name, 'Fixture');
+  assert.equal(JSON.stringify(await ok('state?resumeView=summary')).includes('# Immutable source'), false);
+  const versions = await ok('resume/history?id=original&view=summary');
+  assert.deepEqual(versions.entries.map(e => e.revision), [2, 1]);
+  assert.ok(versions.entries.every(e => !Object.hasOwn(e, 'data')));
+  const original = (await ok('resume/version?id=original&revision=1')).entry;
+  assert.equal(original.data.content, '# Immutable source');
+  assert.equal(original.archived, false);
+  assert.equal((await ok('resume/version?id=original&revision=2')).entry.archived, true);
+  assert.equal((await ok('resume/version?id=job-one&revision=1')).entry.data.role, 'Engineer');
+  assert.equal((await send('resume/version?id=original&revision=99')).status, 404);
+  assert.equal((await send('resume/version?id=unknown&revision=1')).status, 404);
+  for (const revision of ['', '0', '-1', '1.5', 'abc']) {
+    assert.equal((await send('resume/version?id=original&revision=' + revision)).status, 400);
+  }
+  assert.equal((await send('resume/version?revision=1')).status, 400);
   assert.equal((await ok('state')).profile.summary, 'Preserve summary');
+
+  const overview = await ok('resume/overview?language=ja&archived=true');
+  assert.equal(overview.filter.language, 'ja');
+  assert.equal(overview.counts.document, 1);
+  const page = await ok('resume/list?language=ja&pageSize=2');
+  assert.equal(page.representation, 'metadata-preview');
+  assert.equal(page.entries.length, 2);
+  assert.ok(page.entries.every((entry) => !Object.hasOwn(entry.data, 'content')));
+  const next = page.cursor ? await ok('resume/list?language=ja&pageSize=2&cursor=' + encodeURIComponent(page.cursor)) : null;
+  assert.ok(!next || next.entries.every((entry) => !Object.hasOwn(entry.data, 'content')));
+  const details = await ok('resume/details?id=job-one&id=original');
+  assert.equal(details.returned, 2);
+  assert.equal(details.entries.find((entry) => entry.id === 'original').data.content, '# Immutable source');
+  const chunk = await ok('resume/document?id=original&revision=1&limit=4');
+  assert.equal(chunk.text, '# Im');
+  assert.equal(chunk.hasMore, true);
+  assert.equal((await ok('resume/document?id=original&revision=1&offset=4&limit=100')).text, 'mutable source');
+  assert.equal((await send('resume/details?id=unknown')).status, 200);
+});
+
+test('MCP resume reads request summaries and retrieve only the selected revision', async () => {
+  const bundle = await build({ entryPoints: ['worker/agent-tools.ts'], bundle: true, write: false, format: 'esm', platform: 'node' });
+  const { createCareerTools } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
+  const paths = [];
+  const tools = createCareerTools(async (_ctx, path) => {
+    paths.push(path);
+    return Response.json({ entries: [] });
+  });
+  for (const [name, args] of [
+    ['career_get_resume', {}],
+    ['career_get_context', {}],
+    ['career_resume_history', { id: 'doc/a' }],
+    ['career_get_resume_version', { id: 'doc/a', revision: 2 }],
+  ]) {
+    const tool = tools.find(t => t.name === name);
+    assert.equal(tool.scope, 'career:read');
+    await tool.handler(args, {});
+  }
+  assert.deepEqual(paths, [
+    'resume?view=summary', 'state?resumeView=summary',
+    'resume/history?id=doc%2Fa&view=summary', 'resume/version?id=doc%2Fa&revision=2',
+  ]);
 });

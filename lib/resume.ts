@@ -118,7 +118,9 @@ export const resumeSections: Record<
   preferences: {
     label: '求职意向',
     fields: [
-      field('roles', '目标岗位', { multiline: true }),
+      field('role', '目标岗位'),
+      field('rationale', '投递理由与匹配依据', { multiline: true }),
+      field('roles', '旧版目标岗位（兼容）', { multiline: true }),
       field('locations', '希望地点'),
       field('availability', '入职时间'),
       field('salary', '希望年薪'),
@@ -169,6 +171,8 @@ export function validateResume(input: unknown): ResumeWrite {
     }
     entry.data[f.key] = value;
   }
+  if (entry.kind === 'preferences' && !entry.data.role && !entry.data.roles)
+    throw new Error('目标岗位不能为空');
   const { startDate, endDate } = entry.data;
   if (startDate && endDate && endDate < startDate)
     throw new Error('结束年月不能早于开始年月');
@@ -177,6 +181,7 @@ export function validateResume(input: unknown): ResumeWrite {
 export function resumeTitle(entry: ResumeEntry) {
   return (
     entry.data.name ||
+    entry.data.role ||
     entry.data.employer ||
     entry.data.school ||
     entry.data.title ||

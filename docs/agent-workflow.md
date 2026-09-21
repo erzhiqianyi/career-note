@@ -26,7 +26,7 @@ npm run dev:tunnel
 
 ## MCP 优先连接
 
-技能使用已配置的 Career Note MCP，不依赖仓库路径。端点为当前网站的 `/api/career/mcp`，通过标准 MCP OAuth 授权（用户在浏览器里登录并同意）获得令牌；没有手动令牌。首先调用 `career_get_contract` 和 `career_get_context`；按需调用 `career_preview_import`、`career_import`，最后读回 context。履历收集技能在用户要求更新摘要时可调用 `career_update_profile`，保留现有字段和 revision。其他研究技能不自动修改履历。
+技能使用已配置的 Career Note MCP，不依赖仓库路径。端点为当前网站的 `/api/career/mcp`，通过标准 MCP OAuth 授权（用户在浏览器里登录并同意）获得令牌；没有手动令牌。读取履历时先调用 `career_get_resume_overview`、`career_list_resume`，再按需调用 `career_get_resume_details`、`career_get_resume_document_chunk`；写入前调用 `career_preview_import`，写入后读回 context。履历收集技能在用户要求更新摘要时可调用 `career_update_profile`，保留现有字段和 revision。其他研究技能不自动修改履历。
 
 授权 scope：career:read 用于 context，agent:write 用于预览/导入/排队，career:write 用于用户授权的摘要更新（授权页默认不勾选）。没有更改投递状态、原回答、代发申请或跨用户操作的 MCP 工具。投递复盘读取既有历史，保存 reports；无反馈不算失败，原因缺失标未知。
 
@@ -184,7 +184,7 @@ questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。题
 
 ## 構造化された履歴情報
 
-履歴の事実は `career_get_resume` で読み、種類別のフィールド定義を確認する。構造化データがある場合、旧profile.experienceよりも新しい各レコードを優先する。元文書との矛盾は残して本人へ確認する。
+履歴の事実は `career_get_resume_overview` → `career_list_resume` → `career_get_resume_details` の順で必要な範囲だけ読む。document の一覧・詳細は本文を含まない版情報として返り、必要な本文だけ `career_get_resume_document_chunk({ id, revision, offset, limit })`（または互換の `career_get_resume_version`）で取得する。`career_resume_history({ id })` は data を含まない修訂一覧を返す。data.version は表示用の版名で、取得には数値の revision を使う。構造化データがある場合、旧profile.experienceよりも新しい各レコードを優先する。元文書との矛盾は残して本人へ確認する。
 
 本人が履歴の保存・更新を依頼した場合は `career_save_resume_entry` を使う。kindはbasics、employment、education、project、skill、achievement、language、preferences、document。id、revision、kind、language（ja/zh/en。言語ごとに独立したレコードで、省略時はja）、data（種類別の文字列フィールド）、parentId、sourceNotes、verification（recorded/confirmed/pending）、archivedを渡す。別言語版を作る場合は翻訳ではなく本人確認済みの事実を同じ構造で新しいidに保存し、parentIdは同じ言語のレコードへ向ける。新規は新しいidとrevision 0、更新は最新revisionと保持する全フィールドを渡す。確認済みの注記が原文にあるだけならrecordedとし、今回の本人確認と混同しない。
 

@@ -18,3 +18,16 @@ MCPは `career_get_resume`、`career_save_resume_entry`、`career_resume_history
 旧profileは互換用に残し、画面では折り畳んで原文を表示する。Markdownの自動解析で雇用関係や成果を作らない。Agentが本人の依頼に従って原文を読み、新規レコードを作り、読み戻しで照合する。元の文書は文書版として保存する。連続した複数レコードの移行は一括トランザクションではないため、失敗時は既存idを読んで再開する。
 
 ローカルD1の永続化場所と認証設定は[導入手順](local-setup.md)を参照。個人の移行JSONや検証画像はリポジトリ外に保存する。
+
+## Agent の段階的な読み込み
+
+MCP の `career_get_resume` は構造化レコードと文書版のメタデータを返す。document の `data.content` は含めない。id、revision、data.title、data.version、language、archived、updatedAt、sourceNotes は保持する。`career_get_context` の resume 配列も同じ方針。`career_resume_history({ id })` は data を除いた修訂一覧を返す。
+
+本文や過去の構造化データが必要な場合だけ `career_get_resume_version({ id, revision })` で1版を取得する。data.version は表示用の版名であり、取得キーは id と数値の revision。文書の新しい版は別 id、同じ id の revision はアーカイブなどの変更履歴を表す。存在しない版は404、無効な指定は400。取得は本人の名前空間と career:read に制限する。
+
+REST では `GET /api/career/resume?view=summary`、`GET /api/career/state?resumeView=summary`、`GET /api/career/resume/history?id=...&view=summary` に対応し、単一版は `GET /api/career/resume/version?id=...&revision=...` で取得する。既存のWeb編集画面との互換性のため、REST のパラメータなしの読み込みは従来の完全データを維持する。MCP ツールは必ず summary を指定する。
+### 求职方向的记录边界
+
+`preferences` 不再把多个目标岗位视为一个事实字段。新记录应使用一条记录对应一个 `data.role`，并在 `data.rationale` 中说明投递理由和匹配依据；`sourceNotes` 记录依据来源，`verification` 表示本人确认状态。旧版 `data.roles` 多行或逗号文本仅作兼容读取，不会在读取时自动拆分、覆盖或写回真实资料。
+
+同一语言下可以保存多个未归档的 `preferences` 记录。每条记录独立拥有 id、revision、来源和确认状态；归档一个方向不会影响其他方向。未确认的方向不应被当作已确认事实，也不会自动生成或更新応募書類。

@@ -1,11 +1,11 @@
 'use client';
 import { RecordBack, useRecordPage } from './record-page';
-import { DataActions, DataCell, DataRow, DataTable, DataTitle, DataMoreActions } from '@/components/data-table';
+import { DataMoreActions } from '@/components/data-table';
 import { useEffect, useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  ChevronRight,
+  ChevronDown,
   Archive,
   ArchiveRestore,
   Briefcase,
@@ -85,7 +85,13 @@ const headFields = new Set([
   'status',
   'url',
 ]);
-const navKinds = resumeKinds.filter((k) => k !== 'basics');
+const navKinds = resumeKinds.filter(k => k !== 'basics');
+const primaryKinds: ResumeKind[] = ['employment', 'achievement', 'skill', 'document'];
+const moreKinds: ResumeKind[] = [];
+const sectionLabels: Record<ResumeKind, string> = {
+  basics: '概要', employment: '職歴・プロジェクト', education: '基本情報', project: '職歴・プロジェクト',
+  skill: 'スキル・語学', achievement: '実績・事例', language: 'スキル・語学', preferences: '基本情報', document: '資料・履歴',
+};
 
 /** 把多行文本拆成条目，去掉手写的「1.」「-」等前缀，交给真正的列表渲染。 */
 function lines(text = '') {
@@ -96,7 +102,7 @@ function lines(text = '') {
 }
 function chips(text = '') {
   return text
-    .split(/[,，、;；|]\s*|\s\/\s/)
+    .split(/[,，、;；|\n]\s*|\s\/\s/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -122,6 +128,7 @@ export default function ResumeManager({
     locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'zh';
   const [kind, setKind] = useState<ResumeKind>('employment');
   const [view, setView] = useState<View>('all');
+  const [showTools, setShowTools] = useState(false);
   const [draft, setDraft] = useRecordPage<ResumeEntry>('#resume', 'edit', id => entries.find(e => e.id === id) || null, e => e.id);
   const [selected, setSelected] = useRecordPage<ResumeEntry>('#resume', 'view', id => entries.find(e => e.id === id) || null, e => e.id);
   const [historyEntry, setHistoryEntry] = useRecordPage<ResumeEntry>('#resume', 'history', id => entries.find(e => e.id === id) || null, e => e.id);
@@ -372,10 +379,10 @@ export default function ResumeManager({
     </form>
   );
 
-  function actions(entry: ResumeEntry) {
+  function actions(entry: ResumeEntry, allowEdit = true) {
     return (
       <div className="resume-actions">
-        {entry.kind === 'document' ? (
+        {allowEdit && entry.kind === 'document' ? (
           <button
             className="icon-button"
             title={t('另存新版本')}
@@ -393,7 +400,7 @@ export default function ResumeManager({
           >
             <Copy size={16} />
           </button>
-        ) : (
+        ) : allowEdit ? (
           <button
             className="icon-button"
             title={t('编辑')}
@@ -403,7 +410,7 @@ export default function ResumeManager({
           >
             <Pencil size={16} />
           </button>
-        )}
+        ) : null}
         <DataMoreActions label={t('更多')}>
         <button
           className="icon-button"
@@ -451,7 +458,7 @@ export default function ResumeManager({
 
   function extraFields(entry: ResumeEntry) {
     return resumeSections[entry.kind].fields.filter(
-      (f) => !headFields.has(f.key) && entry.data[f.key],
+      (f) => !headFields.has(f.key) && entry.data[f.key] && !(entry.kind === 'preferences' && f.key === 'roles' && entry.data.role),
     );
   }
 
@@ -568,7 +575,7 @@ export default function ResumeManager({
                 </p>
               )}
             </div>
-            {actions(entry)}
+            {actions(entry, false)}
           </div>
           <div className="resume-record-details">
           {body}
@@ -618,8 +625,11 @@ export default function ResumeManager({
     );
   }
 
-  const sectionPending = (k: ResumeKind) =>
-    active.filter((e) => e.kind === k && e.verification === 'pending').length;
+  function chooseKind(next: ResumeKind) {
+    setKind(next);
+    setView('all');
+    setError('');
+  }
   const Icon = sectionIcon[kind];
 
   if (draft) return <section className="panel record-page"><RecordBack onBack={() => setDraft(null)} />{editor}</section>;
@@ -665,199 +675,84 @@ export default function ResumeManager({
   if (sourcePage) return <section className="panel record-page"><RecordBack onBack={() => setSourcePage(null)} /><h2>{t('旧版履历原文（保留）')}</h2><ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.experience || profile.summary}</ReactMarkdown></section>;
 
   return (
-    <div className="resume-manager">
-      <section className="panel resume-profile">
-        <div className="resume-profile-main">
-          <div className="resume-avatar" aria-hidden="true">
-            {initials(basics?.data.name) || '?'}
-          </div>
-          <div className="resume-profile-text">
-            <p className="eyebrow">{t('简历资料库')}</p>
-            <h2>{basics?.data.name || t('还没有基本资料')}</h2>
-            {basics?.data.reading && (
-              <p className="resume-reading">{basics.data.reading}</p>
-            )}
-            <p>{basics?.data.headline || t('按经历积累，按机会选择。')}</p>
-            <div className="resume-profile-meta">
-              {basics?.data.location && (
-                <span>
-                  <MapPin size={14} />
-                  {basics.data.location}
-                </span>
-              )}
-              {basics?.data.website && (
-                <a href={basics.data.website} target="_blank" rel="noreferrer">
-                  <Globe size={14} />
-                  {basics.data.website.replace(/^https?:\/\//, '')}
-                </a>
-              )}
-              {basics?.data.github && (
-                <a href={basics.data.github} target="_blank" rel="noreferrer">
-                  <Link2 size={14} />
-                  {basics.data.github.replace(/^https?:\/\//, '')}
-                </a>
-              )}
-            </div>
-          </div>
-          <div className="row resume-profile-actions">
-            <button
-              className="secondary"
-              disabled={busy}
-              onClick={() => start('basics', basics)}
-            >
-              <Pencil size={15} />
-              {basics ? t('编辑基本资料') : t('填写基本资料')}
-            </button>
-            <button
-              className="secondary"
-              onClick={() =>
-                download(
-                  'resume-data.json',
-                  JSON.stringify({ schemaVersion: 1, entries }, null, 2),
-                  'application/json',
-                )
-              }
-            >
-              <Download size={15} />
-              {t('导出 JSON')}
-            </button>
-          </div>
+    <div className="resume-manager resume-compact">
+      <section className="resume-identity" aria-label={t('基本资料')}>
+        <div className="resume-avatar" aria-hidden="true">{initials(basics?.data.name) || '?'}</div>
+        <div className="resume-identity-text">
+          <h2>{basics?.data.name || t('还没有基本资料')}</h2>
+          <p>{basics?.data.headline?.split(/[｜|]/)[0].trim() || t('職歴・実績・スキルを管理します。応募先に合わせた書類は「応募書類」で作成します。')}</p>
         </div>
-        {basics?.data.summary && <button className="text-button" onClick={() => setSelected(basics)}>{t('查看职业摘要')}</button>}
-        <div className="resume-health">
-          <div>
-            <span>{t('记录语言')}</span>
-            <strong className="is-lang">
-              {resumeLanguageLabels[language]}
-            </strong>
-          </div>
-          <div>
-            <span>{t('本人已确认')}</span>
-            <strong>{health.confirmed}</strong>
-          </div>
-          <div>
-            <span>{t('待确认')}</span>
-            <strong className={health.pending ? 'is-pending' : ''}>
-              {health.pending}
-            </strong>
-          </div>
-          <div>
-            <span>{t('已有资料记载')}</span>
-            <strong>{health.recorded}</strong>
-          </div>
-          <p>
-            {t(
-              '生成投递简历时只引用这里的记录；待确认的内容会被标注为未确认事项，投递前请逐条核对。',
-            )}
-            {otherLanguages.length > 0 && (
-              <>
-                {' '}
-                {t('其他语言版本：')}
-                {otherLanguages
-                  .map((x) => resumeLanguageLabels[x.l] + ' ' + x.n)
-                  .join(' · ')}
-                {t('，切换界面语言即可查看。')}
-              </>
-            )}
-          </p>
+        <div className="resume-identity-actions">
+          <button className="text-button" disabled={busy} onClick={() => basics ? setSelected(basics) : start('basics')}>
+            <Pencil size={16} />{t('基本资料')}
+          </button>
+          <DataMoreActions label={t('更多')}>
+            <button onClick={() => start('basics', basics)}>{t('编辑基本资料')}</button>
+            <button onClick={() => setShowTools(value => !value)}>{t('资料状态与筛选')}</button>
+            <button onClick={() => download('resume-data.json', JSON.stringify({ schemaVersion: 1, entries }, null, 2), 'application/json')}>
+              <Download size={15} />{t('导出 JSON')}
+            </button>
+            {(profile.experience || profile.skills) && <button onClick={() => setSourcePage('original')}>{t('旧版履历原文（保留）')}</button>}
+          </DataMoreActions>
         </div>
       </section>
 
-      <div className="resume-layout">
-        <nav className="resume-nav" aria-label={t('履历分类')}>
-          {navKinds.map((k) => {
-            const KindIcon = sectionIcon[k];
-            const n = active.filter((e) => e.kind === k).length;
-            const pending = sectionPending(k);
-            return (
-              <button
-                type="button"
-                key={k}
-                aria-current={kind === k ? 'page' : undefined}
-                onClick={() => {
-                  setKind(k);
-                  setView('all');
-                  setDraft(null);
-                  setHistory(null);
-                  setError('');
-                }}
-              >
-                <KindIcon size={16} />
-                <span>{t(resumeSections[k].label)}</span>
-                {pending > 0 && (
-                  <i className="resume-nav-pending" title={t('待确认')}>
-                    {pending}
-                  </i>
-                )}
-                <b className="nav-count">{n}</b>
-              </button>
-            );
-          })}
-        </nav>
-
-        <section className="panel resume-section">
-          <div className="resume-section-head">
-            <div>
-              <h2>
-                <Icon size={18} />
-                {t(resumeSections[kind].label)}
-              </h2>
-            </div>
-            <div className="row">
-              <select
-                aria-label={t('筛选确认状态')}
-                value={view}
-                onChange={(e) => setView(e.target.value as View)}
-              >
-                <option value="all">{t('全部记录')}</option>
-                <option value="pending">{t('待确认')}</option>
-                <option value="confirmed">{t('本人已确认')}</option>
-                <option value="recorded">{t('已有资料记载')}</option>
-                <option value="archived">{t('已归档')}</option>
-              </select>
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() => start(kind)}
-              >
-                <Plus size={16} />
-                {t('新增记录')}
-              </button>
-            </div>
+      <nav className="resume-category-tabs" aria-label={t('履历分类')}>
+        <button aria-current={['basics', 'education', 'preferences'].includes(kind) ? 'page' : undefined} onClick={() => chooseKind('basics')}>{t('概要')}</button>
+        {primaryKinds.map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={() => chooseKind(k)}>{t(sectionLabels[k])}</button>)}
+        {moreKinds.length > 0 && <details className="resume-category-more" onKeyDown={event => {
+          if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); }
+        }}>
+          <summary className={moreKinds.includes(kind) ? 'is-active' : ''}>
+            {moreKinds.includes(kind) ? t(resumeSections[kind].label) : t('其他分类')}<ChevronDown size={15} />
+          </summary>
+          <div className="resume-category-menu">
+            {moreKinds.map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={event => {
+              chooseKind(k);
+              const menu = event.currentTarget.closest('details');
+              if (menu) { menu.open = false; menu.querySelector('summary')?.focus(); }
+            }}>{t(resumeSections[k].label)}<span>{active.filter(e => e.kind === k).length}</span></button>)}
           </div>
-          {error && (
-            <p role="alert" className="resume-error">
-              {error}
-            </p>
-          )}
-          {!listed.length && !draft && (
-            <div className="empty">
-              <Icon size={26} />
-              <h3>
-                {view === 'all'
-                  ? t('这里还没有记录')
-                  : t('没有符合筛选条件的记录')}
-              </h3>
-              <p>
-                {view === 'all'
-                  ? t('新增一条，或通过 MCP 整理已有资料。')
-                  : t('切换筛选条件查看其他记录。')}
-              </p>
-            </div>
-          )}
-          {!!listed.length && <DataTable label={t(resumeSections[kind].label)} columns={[
-            {key:'title',label:t('标题'),width:'minmax(0, 1fr)'},
-            {key:'state',label:t('状态'),width:'110px'},
-            {key:'open',label:t('操作'),width:'40px',align:'end'},
-          ]}>{listed.map(entry => <DataRow key={entry.id}>
-            <DataTitle title={resumeTitle(entry)} meta={[entry.data.role || entry.data.category || entry.data.major, entry.data.startDate && [entry.data.startDate, entry.data.endDate].filter(Boolean).join(' — ')].filter(Boolean).join(' · ')} onClick={() => setSelected(entry)} />
-            <DataCell label={t('状态')}><span className={'badge ' + verificationTone[entry.verification]}>{t(verificationLabel[entry.verification])}</span></DataCell>
-            <DataActions><button className="icon-button" title={t('打开')} aria-label={t('打开')} onClick={() => setSelected(entry)}><ChevronRight size={16} /></button></DataActions>
-          </DataRow>)}</DataTable>}
-        </section>
-      </div>
+        </details>}
+      </nav>
 
-      {(profile.experience || profile.skills) && <button className="secondary" onClick={() => setSourcePage('original')}>{t('旧版履历原文（保留）')}</button>}
+      {['basics', 'education', 'preferences'].includes(kind) && <nav className="resume-sub-tabs" aria-label={t('基本情報')}>
+        {(['basics', 'education', 'preferences'] as ResumeKind[]).map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={() => chooseKind(k)}>{t(k === 'basics' ? '個人情報' : k === 'education' ? '学歴' : '求職方向')}</button>)}
+      </nav>}
+
+      {showTools && <aside className="resume-library-tools" aria-label={t('资料状态与筛选')}>
+        <div className="resume-tools-heading"><h3>{t('资料状态与筛选')}</h3><button className="icon-button" aria-label={t('关闭')} onClick={() => setShowTools(false)}><X size={16} /></button></div>
+        <p>{resumeLanguageLabels[language]} · {t('本人已确认')} {health.confirmed} · {t('待确认')} {health.pending} · {t('已有资料记载')} {health.recorded}</p>
+        <p>{t('生成投递简历时只引用这里的记录；待确认的内容会被标注为未确认事项，投递前请逐条核对。')}</p>
+        {otherLanguages.length > 0 && <p>{t('其他语言版本：')}{otherLanguages.map(x => resumeLanguageLabels[x.l] + ' ' + x.n).join(' · ')}{t('，切换界面语言即可查看。')}</p>}
+        <label>{t('筛选确认状态')} <select value={view} onChange={event => setView(event.target.value as View)}>
+          <option value="all">{t('全部记录')}</option><option value="pending">{t('待确认')}</option><option value="confirmed">{t('本人已确认')}</option><option value="recorded">{t('已有资料记载')}</option><option value="archived">{t('已归档')}</option>
+        </select></label>
+      </aside>}
+
+      <section className="resume-records" aria-labelledby="resume-records-heading">
+        <div className="resume-records-heading">
+          <h2 id="resume-records-heading">{t(sectionLabels[kind])}</h2>
+          <button className="primary" disabled={busy} onClick={() => start(kind)}><Plus size={18} />{t('添加{0}', [t(resumeSections[kind].label)])}</button>
+        </div>
+        {view !== 'all' && <div className="resume-active-filter"><span>{view === 'archived' ? t('已归档') : t(verificationLabel[view])}</span><button className="text-button" onClick={() => setView('all')}>{t('清除筛选')}</button></div>}
+        {error && <p role="alert" className="resume-error">{error}</p>}
+        {!listed.length && <div className="empty"><Icon size={26} /><h3>{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</h3><p>{view === 'all' ? t('新增一条，或通过 MCP 整理已有资料。') : t('切换筛选条件查看其他记录。')}</p></div>}
+        <ul className={'resume-record-list' + (kind === 'preferences' ? ' resume-preference-list' : '')}>
+          {listed.flatMap(entry => kind === 'preferences' && (entry.data.role || chips(entry.data.roles)).length > 1
+            ? (entry.data.role ? [entry.data.role] : chips(entry.data.roles)).map((role, index) => ({ entry, role, key: entry.id + '-role-' + index }))
+            : [{ entry, role: '', key: entry.id }]
+          ).map(({ entry, role, key }) => <li key={key}>
+            <button className="resume-record-open" onClick={() => setSelected(role ? { ...entry, data: { ...entry.data, role } } : entry)}>
+              <span className="resume-record-title">{role || resumeTitle(entry)}</span>
+              {(entry.data.role || entry.data.category || entry.data.major || entry.data.level) && <span className="resume-record-subtitle">{entry.data.role || entry.data.category || entry.data.major || entry.data.level}</span>}
+              {(entry.data.startDate || entry.data.date) && <span className="resume-record-period">{entry.data.startDate ? [entry.data.startDate, entry.data.endDate || t('至今或待确认')].join(' — ') : entry.data.date}</span>}
+              {entry.verification === 'pending' && <span className="resume-record-pending">{t('待确认')}</span>}
+            </button>
+            <button className="icon-button resume-record-edit" title={t('编辑')} aria-label={t('编辑') + ' ' + (role || resumeTitle(entry))} disabled={busy} onClick={() => start(kind, entry)}><Pencil size={19} /></button>
+          </li>)}
+        </ul>
+      </section>
     </div>
   );
 }

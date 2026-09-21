@@ -15,6 +15,8 @@ import {
 import ScheduledTemplates from '@/components/scheduled-templates';
 import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
 import CareerWelcome from '@/components/career-welcome';
+import SystemSettings from '@/components/system-settings';
+import WorkspaceFooter from '@/components/workspace-footer';
 import InterviewPractice from '@/components/interview-practice';
 import ResumeManager from '@/components/resume-manager';
 import PersonalizedResumes from '@/components/personalized-resumes';
@@ -64,6 +66,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Settings,
   Shield,
   ScrollText,
   Sparkles,
@@ -105,6 +108,7 @@ const nav = [
   { label: '面试练习', icon: CalendarDays },
   { label: '每日分析', icon: Sparkles },
   { label: 'Agent 协作', icon: Workflow },
+  { label: '系统设置', icon: Settings },
 ];
 // Phone layout: four tabs for what happens on the move; the rest lives in the drawer behind the brand.
 // Pages that are read or edited occasionally come first; anything that configures the workspace is "settings".
@@ -115,7 +119,7 @@ const phoneTabs = [
   { label: '面试练习', short: '面试', icon: CalendarDays },
 ];
 const drawerPages = ['我的履历', '个性化简历', '每日分析'];
-const drawerSettings = ['求职平台', 'Agent 协作'];
+const drawerSettings = ['求职平台', 'Agent 协作', '系统设置'];
 const subPages: Record<string, { parent: string; hash: string }> = {
   技能库: { parent: 'Agent 协作', hash: '#skills' },
   定时任务: { parent: 'Agent 协作', hash: '#schedule' },
@@ -129,6 +133,7 @@ const subPages: Record<string, { parent: string; hash: string }> = {
 };
 const sidebarKey = 'career-note.sidebar-collapsed';
 const hashes: Record<string, string> = {
+  '#settings': '系统设置',
   '#today': '今日准备',
   '#jobs': '公司与投递',
   '#interview': '面试练习',
@@ -1163,7 +1168,7 @@ export default function Home() {
             }
             return action ? <div className="page-actions">{action}</div> : null;
           })()}
-          {!data ? (
+          {active === '系统设置' ? <SystemSettings /> : !data ? (
             <section className="panel">
               <Empty
                 title={error ? tr('数据服务尚未连接') : tr('正在读取求职资料…')}
@@ -2110,6 +2115,7 @@ export default function Home() {
         </RecordPage>
       )}
         </div>
+        <WorkspaceFooter />
       </main>
 
     </div>

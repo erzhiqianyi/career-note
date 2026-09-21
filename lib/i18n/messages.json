@@ -4022,5 +4022,137 @@
   "用日语或中文写下你的回答。": {
     "ja": "日本語または中国語で回答を書いてください。",
     "en": "Write your answer in Japanese or Chinese."
+  },
+  "资料状态与筛选": {
+    "ja": "記録の状態と絞り込み",
+    "en": "Record status and filters"
+  },
+  "其他分类": {
+    "ja": "その他",
+    "en": "More"
+  },
+  "添加{0}": {
+    "ja": "{0}を追加",
+    "en": "Add {0}"
+  },
+  "清除筛选": {
+    "ja": "絞り込みを解除",
+    "en": "Clear filter"
+  },
+  "比较平台特色，收藏常用入口，记录自己的使用进展。": {
+    "ja": "サービスの特徴を比べて、よく使うサイトや利用状況をまとめましょう。",
+    "en": "Compare services, save your go-to sites, and keep track of where you’re registered."
+  },
+  "已添加备注": {
+    "ja": "メモあり",
+    "en": "Notes added"
+  },
+  "详情与备注": {
+    "ja": "詳細・メモ",
+    "en": "Details & notes"
+  },
+  "分页": {
+    "ja": "ページ切り替え",
+    "en": "Pagination"
+  },
+  "第 {0} / {1} 页": {
+    "ja": "{0} / {1} ページ",
+    "en": "Page {0} of {1}"
+  },
+  "上一页": {
+    "ja": "前へ",
+    "en": "Previous"
+  },
+  "下一页": {
+    "ja": "次へ",
+    "en": "Next"
+  },
+  "系统设置": {
+    "ja": "システム設定",
+    "en": "Settings"
+  },
+  "让阅读更舒服": {
+    "ja": "読みやすさを、自分らしく。",
+    "en": "Make reading comfortable"
+  },
+  "调整整个工作区的外观，修改即时生效。": {
+    "ja": "ワークスペース全体の表示を調整できます。変更はすぐに反映されます。",
+    "en": "Customize the workspace. Changes take effect immediately."
+  },
+  "主题": {
+    "ja": "テーマ",
+    "en": "Theme"
+  },
+  "选择你喜欢的界面配色。": {
+    "ja": "お好みの配色を選んでください。",
+    "en": "Choose your preferred palette."
+  },
+  "经典蓝": {
+    "ja": "クラシックブルー",
+    "en": "Classic blue"
+  },
+  "森林绿": {
+    "ja": "フォレストグリーン",
+    "en": "Forest green"
+  },
+  "暖纸色": {
+    "ja": "ウォームペーパー",
+    "en": "Warm paper"
+  },
+  "字体大小": {
+    "ja": "文字サイズ",
+    "en": "Text size"
+  },
+  "只调整文字大小，列表保持紧凑。": {
+    "ja": "一覧のコンパクトさを保ちながら、文字を調整します。",
+    "en": "Adjust text while keeping lists compact."
+  },
+  "标准": {
+    "ja": "標準",
+    "en": "Standard"
+  },
+  "舒适": {
+    "ja": "快適",
+    "en": "Comfortable"
+  },
+  "大号": {
+    "ja": "大きめ",
+    "en": "Large"
+  },
+  "特大": {
+    "ja": "特大",
+    "en": "Extra large"
+  },
+  "阅读预览": {
+    "ja": "表示プレビュー",
+    "en": "Reading preview"
+  },
+  "每一步准备，都让下一次机会更近。": {
+    "ja": "一つひとつの準備が、次のチャンスにつながります。",
+    "en": "Every step of preparation brings the next opportunity closer."
+  },
+  "名称、正文和辅助信息会一起调整。": {
+    "ja": "名前、本文、補足情報をまとめて調整します。",
+    "en": "Names, body text and supporting information scale together."
+  },
+  "切换界面语言，履历原文保持不变。": {
+    "ja": "表示言語を変更します。履歴の原文は変更されません。",
+    "en": "Change the interface language while preserving original resume text."
+  },
+  "已自动保存到此浏览器。": {
+    "ja": "このブラウザーに自動保存されました。",
+    "en": "Saved automatically in this browser."
+  },
+  "浏览器无法保存设置，本次调整仍然有效。": {
+    "ja": "設定を保存できません。今回の変更は有効です。",
+    "en": "Settings could not be saved. Changes still apply for this session."
+  },
+  "恢复默认外观": {
+    "ja": "標準の表示に戻す",
+    "en": "Reset appearance"
+  },
+  "显示语言": {
+    "ja": "表示言語",
+    "en": "Display language"
   }
 }

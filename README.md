@@ -9,6 +9,10 @@
 
 [ローカル導入](docs/local-setup.md) · [Cloudflare デプロイ](docs/deployment.md) · [図解ガイド](docs/illustrated-guide.md) · [開発工程と文書一覧](docs/README.md) · [既知の制約](docs/limitations.md) · [変更履歴](CHANGELOG.md)
 
+### 直接使える公开站点
+
+不想自己部署时，可以直接打开 **<https://career.erzhiqian.cc/>** 使用线上版本。线上站点由项目维护者部署；登录、数据保存和线上服务状态以该站点当前配置为准。希望自己管理域名、Cloudflare 账号和数据时，请按[部署手顺](docs/deployment.md)自行部署。
+
 ## 何ができる？
 
 | 困りごと | Career Note でできること |
@@ -90,6 +94,22 @@ fork したリポジトリを、コードを書き換えずに自分の Cloudfla
 3. GitHub リポジトリの Settings → Secrets and variables → Actions に、Secrets `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` と Variables `CAREER_API_HOST` / `CAREER_WEB_HOST` を設定します。
 
 以後は `main` への push で [api-deploy.yml](.github/workflows/api-deploy.yml) と [web-deploy.yml](.github/workflows/web-deploy.yml) が自動でデプロイします。リポジトリ内の `wrangler.toml` はホスト名や id を含まない汎用ファイルのままで、あなたの設定値は GitHub 側と Worker の secrets にだけ置かれます。詳細と secrets の一覧は[デプロイ手順](docs/deployment.md)を参照してください。
+
+## Google Analytics と SEO
+
+线上版本可通过构建时环境变量启用 GA4。先在 Google Analytics 创建 Web 数据流，取得形如 `G-XXXXXXXXXX` 的 Measurement ID，再配置：
+
+```env
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+- 本地开发：写入项目根目录的 `.env.local`。
+- Cloudflare Pages：打开 `Settings → Environment variables → Production`，添加同名变量后重新部署。
+- 开源部署：Measurement ID 不是私密密钥，可以使用自己的 GA4 数据流；不应把维护者的 ID 写死到代码中。
+
+配置读取位置是 [`app/layout.tsx`](app/layout.tsx)。未设置变量时不会加载 Google Analytics 脚本。由于 GA4 会收集访问数据，公开部署时还应根据部署地区和用户群体补充隐私政策，并确认是否需要 cookie / 隐私同意机制。
+
+本项目已提供基础 SEO：页面 title/description、canonical、Open Graph、`/robots.txt` 和 `/sitemap.xml`。部署后可在 Google Search Console 添加 `career.erzhiqian.cc`，提交 `https://career.erzhiqian.cc/sitemap.xml`，并用 URL 检查确认首页可抓取。登录后的个人求职资料属于私有工作区，不应加入 sitemap，也不应作为 SEO 内容公开。
 
 ## 日本の開発工程を学ぶ
 
