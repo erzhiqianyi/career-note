@@ -36,7 +36,6 @@ jobs:
       # Repository variables (Settings > Secrets and variables > Actions > Variables); see docs/deployment.md.
       CAREER_API_HOST: ${{ vars.CAREER_API_HOST }}
       CAREER_WEB_HOST: ${{ vars.CAREER_WEB_HOST }}
-      GA_MEASUREMENT_ID: ${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
       PAGES_PROJECT_NAME: ${{ vars.CAREER_PAGES_PROJECT || 'career-note' }}
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +65,17 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_CAREER_API_URL: https://${{ vars.CAREER_API_HOST }}
-          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ env.GA_MEASUREMENT_ID }}
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
+
+      - name: Verify GA4 in static build
+        if: ${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID != '' }}
+        run: |
+          set -euo pipefail
+          test -f dist/client/index.html
+          grep -Fq "${NEXT_PUBLIC_GA_MEASUREMENT_ID}" dist/client/index.html
+          grep -Fq "googletagmanager.com/gtag/js" dist/client/index.html
+        env:
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
 
       - name: Deploy to Cloudflare Pages
         run: |
