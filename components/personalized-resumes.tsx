@@ -1,5 +1,6 @@
 'use client';
 import { RecordBack, useRecordPage } from './record-page';
+import { ResumePreview } from './resume-preview';
 import { useEffect, useState } from 'react';
 import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil, ChevronRight } from 'lucide-react';
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
@@ -222,7 +223,7 @@ export default function PersonalizedResumes({
           )}
         </>
       )}
-      {selected && (() => { const d = drafts.find(item => item.id === selected.id) || selected; const edit = () => setDraft(structuredClone(d)); return <section className="panel record-page"><RecordBack onBack={() => setSelected(null)} /><h2>{d.title}</h2><p>{d.targetRole} · {d.language.toUpperCase()} · v{d.revision}</p><div className="record-detail-actions">                      <DataActions>
+      {selected && (() => { const d = drafts.find(item => item.id === selected.id) || selected; const edit = () => setDraft(structuredClone(d)); return <section className="panel record-page personalized-reading-page"><RecordBack onBack={() => setSelected(null)} /><h2>{d.title}</h2><p>{d.targetRole} · {d.language.toUpperCase()} · v{d.revision}</p><div className="record-detail-actions">                      <DataActions>
                         <button className="icon-button" onClick={edit} title={t('编辑')} aria-label={t('编辑') + ' ' + d.title}>
                           <Pencil size={16} />
                         </button>
@@ -270,17 +271,17 @@ export default function PersonalizedResumes({
                           {d.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                         </button>
 
-                      </DataActions></div><iframe title={t('简历详情')} sandbox="" srcDoc={resumeHTML(d.content, d.language)} className="resume-public-preview" /></section>; })()}
+                      </DataActions></div><ResumePreview title={t('简历详情')} html={resumeHTML(d.content, d.language)} /></section>; })()}
       {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</p><div className="record-detail-actions">                      <DataActions>
                         {active ? (
                           <>
-                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title={t('打开本地公开页')} aria-label={t('打开本地公开页') + ' ' + p.title}>
+                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title={t('打开公开页')} aria-label={t('打开公开页') + ' ' + p.title}>
                               <ExternalLink size={16} />
                             </a>
                             <button
                               className="icon-button"
-                              title={t('复制本地链接')}
-                              aria-label={t('复制本地链接') + ' ' + p.title}
+                              title={t('复制链接')}
+                              aria-label={t('复制链接') + ' ' + p.title}
                               onClick={() => act(() => copy(new URL(p.path, window.location.origin).href))}
                             >
                               <Copy size={16} />
@@ -578,12 +579,7 @@ export default function PersonalizedResumes({
           <h2>
             {t('发布预览')} · {preview.title} · v{preview.revision}
           </h2>
-          <iframe
-            title={t('公开简历预览')}
-            sandbox=""
-            srcDoc={resumeHTML(preview.content, preview.language)}
-            className="resume-public-preview"
-          />
+          <ResumePreview title={t('公开简历预览')} html={resumeHTML(preview.content, preview.language)} />
           <p>
             {t('仅发布上方内容。内部备注、来源、目标公司及工作区数据不公开。修改草稿后需创建新链接；旧链接可单独撤下。')}
           </p>
@@ -614,7 +610,7 @@ export default function PersonalizedResumes({
             />
             {t('我已检查以上公开内容和联系方式')}
           </label>
-          <p>{t('当前服务在本机：创建的链接仅可本地预览，尚未部署到互联网。')}</p>
+          <p>{t('创建后请打开链接确认可访问性，再分享给招聘方。本机服务的链接仅能在对应环境访问。')}</p>
           <div className="toolbar">
             <button
               disabled={
@@ -631,7 +627,7 @@ export default function PersonalizedResumes({
                   await refresh();
                   setPreview(null);
                   setTab('public');
-                  setNotice(t('已创建发布快照。本机链接可用于预览。'));
+                  setNotice(t('已创建发布快照。请打开链接检查后再分享。'));
                 })
               }
             >

@@ -136,7 +136,7 @@ export default function ResumeManager({
   // 界面语言决定展示哪一套简历记录；每种语言各自维护一套。
   const language: ResumeLanguage =
     locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'zh';
-  const [kind, setKind] = useState<ResumeKind>('employment');
+  const [kind, setKind] = useState<ResumeKind>('basics');
   const [view, setView] = useState<View>('all');
   const [showTools, setShowTools] = useState(false);
   const [draft, setDraft] = useRecordPage<ResumeEntry>('#resume', 'edit', id => entries.find(e => e.id === id) || null, e => e.id);
@@ -575,7 +575,7 @@ export default function ResumeManager({
         ? entry.data.date ||
           entry.data.startDate +
             ' — ' +
-            (entry.data.endDate || t('至今或待确认'))
+            (entry.data.endDate || t('结束年月未填写'))
         : '';
     const subtitle = [
       entry.data.role,
@@ -680,7 +680,7 @@ export default function ResumeManager({
   function rowOf(entry: ResumeEntry) {
     const d = entry.data;
     const period = d.startDate
-      ? [d.startDate, d.endDate || t('至今或待确认')].join(' — ')
+      ? [d.startDate, d.endDate || t('结束年月未填写')].join(' — ')
       : d.date || '';
     const parent = parentOf(entry);
     switch (entry.kind) {
@@ -801,8 +801,8 @@ export default function ResumeManager({
           <p>{basics?.data.headline?.split(/[｜|]/)[0].trim() || t('管理工作经历、成果与技能；针对公司的材料在「个性化简历」中生成。')}</p>
         </div>
         <div className="resume-identity-actions">
-          <button className="text-button" disabled={busy} onClick={() => basics ? setSelected(basics) : start('basics')}>
-            <Pencil size={16} />{t('基本资料')}
+          <button className="text-button" disabled={busy} onClick={() => setPrintPage('shokumu')}>
+            <Printer size={16} />{t('打印 / 保存为 PDF')}
           </button>
           <DataMoreActions label={t('更多')}>
             <button onClick={() => start('basics', basics)}>{t('编辑基本资料')}</button>
@@ -852,7 +852,7 @@ export default function ResumeManager({
       {kind === 'basics' ? (
         <section className="resume-records resume-basics-card" aria-labelledby="resume-records-heading">
           <div className="resume-records-heading">
-            <h2 id="resume-records-heading">{t('个人信息')}</h2>
+            <h2 id="resume-records-heading">{t('职业摘要')}</h2>
             <button className={basics ? 'secondary' : 'primary'} disabled={busy} onClick={() => start('basics', basics)}>
               {basics ? <Pencil size={16} /> : <Plus size={18} />}{basics ? t('编辑基本资料') : t('添加{0}', [t(resumeSections.basics.label)])}
             </button>
@@ -860,10 +860,10 @@ export default function ResumeManager({
           {error && <p role="alert" className="resume-error">{error}</p>}
           {basics ? (
             <dl className="resume-details resume-basics-details">
+              {basics.data.summary && <div className="wide resume-summary-first"><dt className="sr-only">{t('职业摘要')}</dt><dd className="resume-basics-summary">{lines(basics.data.summary).map((p, i) => <p key={i}>{p}</p>)}</dd></div>}
               <div><dt>{t('姓名')}</dt><dd>{basics.data.name}{basics.data.reading ? <span className="resume-basics-reading">{basics.data.reading}</span> : null}</dd></div>
               {basics.data.headline && <div><dt>{t('职业定位')}</dt><dd>{basics.data.headline}</dd></div>}
               {basics.data.location && <div><dt>{t('所在地')}</dt><dd>{basics.data.location}</dd></div>}
-              {basics.data.summary && <div className="wide"><dt>{t('职业摘要')}</dt><dd className="resume-basics-summary">{lines(basics.data.summary).map((p, i) => <p key={i}>{p}</p>)}</dd></div>}
               {(basics.data.website || basics.data.github) && <div><dt>{t('链接')}</dt><dd className="resume-basics-links">
                 {basics.data.website && <a href={basics.data.website} target="_blank" rel="noreferrer"><Globe size={13} />{basics.data.website.replace(/^https?:\/\//, '')}</a>}
                 {basics.data.github && <a href={basics.data.github} target="_blank" rel="noreferrer"><Link2 size={13} />{basics.data.github.replace(/^https?:\/\//, '')}</a>}

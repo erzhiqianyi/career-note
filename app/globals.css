@@ -3651,3 +3651,25 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
   .brief-history button b, .brief-history button span { font-size: 0.6875rem; }
   .brief-history button small { display: none; }
 }
+
+/* Keep the overview and document preview in the main reading flow. */
+.resume-identity { padding-bottom: 18px; gap: 16px; }
+.resume-identity .resume-avatar { width: 48px; height: 48px; }
+.resume-basics-card .resume-records-heading { padding: 22px 0 18px; }
+.resume-summary-first { padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.resume-basics-summary { max-width: 76ch; }
+.resume-basics-summary p { line-height: 1.9; }
+.personalized-manager .personalized-reading-page { width: 100%; box-sizing: border-box; }
+.resume-public-preview { display: block; margin: 18px 0; }
+@media (max-width: 600px) {
+  .resume-compact { padding: 8px 12px 24px; }
+  .resume-identity { flex-wrap: wrap; }
+  .resume-identity-actions { width: 100%; justify-content: flex-end; }
+  .resume-category-tabs { gap: 4px 16px; }
+  .resume-category-tabs > button { font-size: .875rem; padding: 12px 0; }
+  .resume-basics-details { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .shell > main, .shell.nav-collapsed > main { margin-left: 0; }
+  .resume-identity-actions { margin-left: 0; }
+}

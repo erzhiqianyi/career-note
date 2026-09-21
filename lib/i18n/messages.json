@@ -4886,5 +4886,21 @@
   "已练完": {
     "ja": "練習完了",
     "en": "Practised"
+  },
+  "结束年月未填写": {
+    "ja": "終了年月未入力",
+    "en": "End date not recorded"
+  },
+  "创建后请打开链接确认可访问性，再分享给招聘方。本机服务的链接仅能在对应环境访问。": {
+    "ja": "作成したリンクを開いて閲覧できることを確認してから、採用担当者に共有してください。ローカル環境のリンクは、その環境でのみ利用できます。",
+    "en": "Open the link and check that it is accessible before sharing it with recruiters. Local service links are only accessible in their own environment."
+  },
+  "已创建发布快照。请打开链接检查后再分享。": {
+    "ja": "公開スナップショットを作成しました。リンクを開いて確認してから共有してください。",
+    "en": "Snapshot created. Open and check the link before sharing."
+  },
+  "打开公开页": {
+    "ja": "公開ページを開く",
+    "en": "Open published page"
   }
 }
