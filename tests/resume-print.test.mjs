@@ -14,8 +14,8 @@ const load = async (entry) => {
   await writeFile(file, out.outputFiles[0].text);
   return import(pathToFileURL(file).href);
 };
-const { printableEntries, resumePrintHTML } = await load('lib/resume-print.ts');
-const { resumeFromEntries } = await load('lib/personalized-resume.ts');
+const { printableEntries, resumePrintHTML, resumePrintWarnings } = await load('lib/resume-print.ts');
+const { resumeFromEntries, personalizedPrintHTML } = await load('lib/personalized-resume.ts');
 
 const entry = (id, kind, data, extra = {}) => ({
   id, revision: 1, kind, language: 'ja', data, parentId: '', sourceNotes: '', verification: 'recorded', archived: false, updatedAt: '2026-09-21T00:00:00Z', ...extra,
@@ -37,13 +37,13 @@ const entries = [
 test('print templates use only current-language, unarchived, confirmed records', () => {
   const used = printableEntries(entries, 'ja');
   assert.ok(!used.some((e) => e.id === 'a2' || e.id === 'zh' || e.id === 'old'));
-  const rirekisho = resumePrintHTML(used, { template: 'rirekisho', date: '2026/09/21' });
+  const rirekisho = resumePrintHTML(used, { template: 'rirekisho', date: '2026/09/21', wishes: '在留資格の変更が必要です。' });
   assert.match(rirekisho, /<title>履歴書 — テスト 太郎<\/title>/);
-  assert.match(rirekisho, /株式会社サンプル　入社（エンジニア）/);
+  assert.match(rirekisho, /株式会社サンプル（正社員）　入社（エンジニア）/);
   assert.match(rirekisho, /<td class="y">2026<\/td><td class="m">1<\/td>/);
   assert.match(rirekisho, /JLPT N2　取得/);
   assert.match(rirekisho, /在留資格の変更が必要です。/);
-  assert.doesNotMatch(rirekisho, /（正社員）　入社/);
+  assert.doesNotMatch(rirekisho, /一身上の都合|扶養家族|配偶者|通勤時間/);
   const shokumu = resumePrintHTML(used, { template: 'shokumu', date: '2026/09/21', company: '株式会社応募先' });
   assert.match(shokumu, /株式会社応募先 御中/);
   assert.match(shokumu, /<li>ETL基盤を設計<\/li>/);
@@ -51,7 +51,7 @@ test('print templates use only current-language, unarchived, confirmed records',
   assert.doesNotMatch(shokumu, /未確認の実績/);
   assert.match(shokumu, /<td class="num">9年<\/td>/);
   assert.match(shokumu, /個人プロジェクト・公開作品/);
-  const withPending = resumePrintHTML(printableEntries(entries, 'ja', true), { template: 'shokumu' });
+  const withPending = resumePrintHTML(printableEntries(entries, 'ja', true), { template: 'shokumu', includePending: true });
   assert.match(withPending, /未確認の実績/);
 });
 
@@ -66,4 +66,18 @@ test('personalized drafts are prefilled from records with source references', ()
   assert.ok(draft.sourceRefs.some((r) => r.id === 'e1'));
   assert.ok(!draft.sourceRefs.some((r) => r.id === 'a2' || r.id === 'zh' || r.id === 'old'));
   assert.match(resumeFromEntries(entries, 'ja').title, /^個別履歴書 \d{4}-\d{2}-\d{2}$/);
+});
+
+ test('submission templates preserve unknown facts and exact selected draft content', () => {
+  const sample = [entry('b', 'basics', {name: '<script>Example</script>', birthDate: '1990-02-03'}), entry('e', 'employment', {employer: 'Example', role: 'Engineer', startDate: '2020-01'})];
+  const html = resumePrintHTML(sample, {template:'rirekisho', date:'2026-09-22', motivation:'Only this application'});
+  assert.match(html, /1990年2月3日生/);
+  assert.match(html, /Only this application/);
+  assert.doesNotMatch(html, /特になし|一身上の都合|<script>/);
+  assert.match(resumePrintHTML(sample,{template:'shokumu'}), /終了年月未入力/);
+  assert.ok(resumePrintWarnings(sample,'rirekisho').includes('详细地址'));
+  const d = resumeFromEntries(entries, 'ja'); d.content.summary = 'Selected revision only'; d.content.readings = {'要約':'ようやく'};
+  const customized = personalizedPrintHTML(d.content,'ja','2026-09-22');
+  assert.match(customized, /Selected revision only/); assert.match(customized, /<h1>職務経歴書<\/h1>/);
+  assert.doesNotMatch(customized, /<ruby>/);
 });

@@ -112,12 +112,12 @@ const escape = (s: string) =>
         c
       ]!,
   );
-export function resumeHTML(raw: PublicResume, language: string) {
+export function resumeHTML(raw: PublicResume, language: string, showJapaneseReadings = true) {
   const c = publicResumeSchema.parse(raw),
     e = escape;
   const ruby = (value: string) => {
     value = value.replace(/\\r\\n|\\n/g, '\n');
-    if (language !== 'ja' || !Object.keys(c.readings).length) return e(value);
+    if (!showJapaneseReadings || language !== 'ja' || !Object.keys(c.readings).length) return e(value);
     let out = e(value);
     for (const [word, reading] of Object.entries(c.readings).sort((a, b) => b[0].length - a[0].length))
       out = out.split(e(word)).join(`<ruby>${e(word)}<rt>${e(reading)}</rt></ruby>`);
@@ -228,4 +228,12 @@ export function resumeFromEntries(
     },
     sourceRefs: used.filter((e) => e.revision > 0).map((e) => ({ id: e.id, revision: e.revision })).slice(0, 150),
   };
+}
+
+/** A submission copy of the selected draft; never rehydrates from the master profile. */
+export function personalizedPrintHTML(content: PublicResume, language: string, date: string) {
+  return resumeHTML(content, language, false)
+    .replace('<title>', '<title>職務経歴書_')
+    .replace('</style>', '@page{size:A4;margin:16mm}h2,h3{break-after:avoid}p{orphans:3;widows:3}li{break-inside:avoid}@media print{article{break-inside:auto}main{max-width:none}}.submission-date{text-align:right}</style>')
+    .replace('<main>', '<main><h1>職務経歴書</h1><p class="submission-date">' + escape(date) + '現在</p>');
 }

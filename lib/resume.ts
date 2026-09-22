@@ -48,7 +48,12 @@ export const resumeSections: Record<
       field('github', 'GitHub'),
       field('email', '邮箱'),
       field('phone', '电话'),
-      field('birthDate', '出生年月', { date: true }),
+      field('birthDate', '出生日期（YYYY-MM-DD，兼容旧年月）'),
+      field('postalCode', '邮政编码'),
+      field('address', '详细地址'),
+      field('addressReading', '地址读音'),
+      field('contactAddress', '其他联系地址（可选）'),
+      field('gender', '性别（选填）'),
     ],
   },
   employment: {
@@ -166,6 +171,11 @@ export function validateResume(input: unknown): ResumeWrite {
   for (const f of fields) {
     const value = (entry.data[f.key] ?? '').trim();
     if (f.required && !value) throw new Error(f.label + '不能为空');
+    if (value && f.key === 'birthDate') {
+      if (!/^\d{4}-(0[1-9]|1[0-2])(-(?:0[1-9]|[12]\d|3[01]))?$/.test(value) ||
+        (value.length === 10 && new Date(value + 'T00:00:00Z').toISOString().slice(0, 10) !== value))
+        throw new Error('出生日期请使用有效的 YYYY-MM-DD（或旧版 YYYY-MM）');
+    }
     if (value && f.date && !/^\d{4}-(0[1-9]|1[0-2])$/.test(value))
       throw new Error(f.label + '请使用 YYYY-MM');
     if (value && ['url', 'website', 'github'].includes(f.key)) {

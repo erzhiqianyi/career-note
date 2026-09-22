@@ -1,6 +1,7 @@
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
 import { ensureResumeSchema, readResume, writeResume, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
+import { inspectorResponse } from '@ninomae/mcp-app-server/inspector';
 import { sqlStore } from '@ninomae/mcp-app-server/sql';
 import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools';
 import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } from './activity';
@@ -29,6 +30,8 @@ type Env = {
   CAREER_WEB_ORIGIN?: string;
   CAREER_OAUTH_REFRESH_DAYS?: string;
   CAREER_CORS_ORIGINS?: string;
+  /** Serve the dev inspector at /api/career/mcp/inspector in on/strict mode too (off mode always has it; it is local only). */
+  CAREER_INSPECTOR?: string;
   /** Recorded answers (R2). Optional: without it recording is refused with 503 and everything else works. */
   CAREER_AUDIO?: R2Bucket;
 };
@@ -136,6 +139,8 @@ async function ensureSchema(db: D1Database, gateway: McpAppServer): Promise<void
     `CREATE TABLE IF NOT EXISTS records (kind TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (kind,id));`,
   );
   await db.exec(`CREATE TABLE IF NOT EXISTS meta (id TEXT PRIMARY KEY, body TEXT NOT NULL);`);
+  // Who each MCP grant belongs to, in human terms: refreshed at every consent so career_get_connection_info can name the account.
+  await db.exec(`CREATE TABLE IF NOT EXISTS mcp_owners (uid TEXT PRIMARY KEY, email TEXT, display_name TEXT, provider TEXT, updated_at TEXT NOT NULL);`);
   await gateway.ensureSchema();
   await ensureActivitySchema(db);
 }
@@ -925,6 +930,27 @@ function createGateway(env: Env, db: D1Database): McpAppServer {
     tokenPrefix: 'mcp_',
     accessTokenDays: envDays(env.MCP_TOKEN_TTL_DAYS, 30),
     refreshTokenDays: envDays(env.CAREER_OAUTH_REFRESH_DAYS, 90),
+    // Off mode is already refused over a public address, so the inspector page is safe there; elsewhere it is opt-in.
+    inspector: (ensureMode(env) === 'off' || env.CAREER_INSPECTOR === 'true') && inspectorResponse,
+    // `career_get_connection_info` lets an agent confirm which workspace and environment a token is bound to.
+    connectionInfo: {
+      toolName: 'career_get_connection_info',
+      resolve: async ({ ownerId }) => {
+        const owner = ownerId === 'local'
+          ? { email: null, display_name: 'Local workspace', provider: null }
+          : await db.prepare('SELECT email, display_name, provider FROM mcp_owners WHERE uid = ?1').bind(ownerId).first<{ email: string | null; display_name: string | null; provider: string | null }>();
+        return {
+          // null → the grant's account was never seen at consent (pre-0.3 grant); the agent sees status "missing" rather than a guessed name.
+          user: owner ? {
+            ...(owner.email ? { email: owner.email } : {}),
+            ...(owner.display_name ? { displayName: owner.display_name } : {}),
+            ...(owner.provider ? { identities: [{ provider: owner.provider, subject: ownerId, issuer: env.FIREBASE_PROJECT_ID ? `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}` : undefined }] } : {}),
+          } : null,
+          environment: ensureMode(env) === 'off' ? 'local' : env.CAREER_PUBLIC_ORIGIN ? 'hosted' : 'development',
+          dataSource: 'd1:career-note',
+        };
+      },
+    },
     identity: {
       // Consent is approved with the same credential the web app uses (Firebase ID token, or the local workspace).
       async resolve(request) {
@@ -932,7 +958,13 @@ function createGateway(env: Env, db: D1Database): McpAppServer {
         try { user = await getAuthContext(request, env, gateway); }
         catch (error) { throw error instanceof AppError ? new AppServerError(error.code, error.message, 'invalid_token') : error; }
         if (user.tokenType !== 'firebase') throw new AppServerError(403, 'Sign in to approve an agent', 'access_denied');
-        return { id: user.uid, email: typeof user.claims.email === 'string' ? user.claims.email : undefined };
+        const email = typeof user.claims.email === 'string' ? user.claims.email : undefined;
+        if (user.uid !== 'local') {
+          const firebase = user.claims.firebase as { sign_in_provider?: unknown } | undefined;
+          await db.prepare('INSERT INTO mcp_owners (uid, email, display_name, provider, updated_at) VALUES (?1, ?2, ?3, ?4, ?5) ON CONFLICT(uid) DO UPDATE SET email = excluded.email, display_name = excluded.display_name, provider = excluded.provider, updated_at = excluded.updated_at')
+            .bind(user.uid, email ?? null, typeof user.claims.name === 'string' ? user.claims.name : null, typeof firebase?.sign_in_provider === 'string' ? firebase.sign_in_provider : null, new Date().toISOString()).run();
+        }
+        return { id: user.uid, email };
       },
     },
     onEvent: async (event) => {

@@ -31,8 +31,10 @@ const bundle = z
 export function createCareerTools(invoke: Invoke): AgentTool[] {
   const api = async (ctx: ToolContext, path: string, body?: Record<string, unknown>): Promise<ToolResult> => {
     const response = await invoke(ctx, path, body);
-    const data = await response.json();
-    return { content: [{ type: 'text', text: JSON.stringify(data) }], isError: !response.ok };
+    const data: unknown = await response.json();
+    // structuredContent (MCP 2025-06-18) carries the same JSON for hosts that render it; text stays for older clients.
+    const structured = data && typeof data === 'object' && !Array.isArray(data) ? { structuredContent: data as Record<string, unknown> } : {};
+    return { content: [{ type: 'text', text: JSON.stringify(data) }], ...structured, isError: !response.ok };
   };
   return [
     {

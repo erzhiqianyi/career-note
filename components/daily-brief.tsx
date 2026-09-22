@@ -147,7 +147,7 @@ export default function DailyBrief({
         <RecordBack title={t(open.label)} onBack={() => setOpenKey(null)} />
         <p className="brief-detail-meta"><open.Icon size={15} />{title}{date === data.today && ' · ' + t('今天')}<span className="brief-count">{open.rows.length}</span></p>
         {!open.rows.length ? (
-          <section className="panel brief-section"><div className="empty"><p>{t('这一天没有新的内容。定时任务收集到的职位、资料和点评会出现在这里。')}</p></div></section>
+          <section className="panel brief-section"><div className="empty"><p>{t('这一天没有新内容。')}</p></div></section>
         ) : grouped ? (
           [...groups].map(([name, rows]) => (
             <section key={name} className="panel brief-section brief-group">
@@ -172,7 +172,7 @@ export default function DailyBrief({
           ? <span className="muted small brief-queued">{t('分析已排队，等待 AI Agent 生成。')}</span>
           : <button type="button" className="secondary brief-request" disabled={requesting} onClick={requestAnalysis}><Sparkles size={15} />{t('请求今日分析')}</button>)}
       </div>
-      <p className="brief-summary">{total ? t('共 {0} 项新内容，点开分类查看详情。', [String(total)]) : t('这一天没有新的内容。定时任务收集到的职位、资料和点评会出现在这里。')}</p>
+      <p className="brief-summary">{total ? t('共 {0} 项新内容', [String(total)]) : t('这一天没有新内容。')}</p>
       <div className="brief-stats">
         {sections.map(({ key, Icon, label, rows }) => { const count = rows.length; return (
           <button key={key} type="button" className={count ? undefined : 'is-zero'} disabled={!count} aria-label={t('查看{0}', [t(label)])} onClick={() => setOpenKey(key)}>

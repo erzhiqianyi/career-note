@@ -1,4 +1,6 @@
 'use client';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { RecordBack, SubViewContext, useRecordPage, type SubView } from '@/components/record-page';
 import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
 
@@ -21,6 +23,7 @@ import InterviewPractice from '@/components/interview-practice';
 import StatusMark from '@/components/status-mark';
 import DailyBrief, { collectBrief, briefSize } from '@/components/daily-brief';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
+import { MaterialPrint } from '@/components/material-print';
 import ResumeManager from '@/components/resume-manager';
 import PersonalizedResumes from '@/components/personalized-resumes';
 import {
@@ -292,6 +295,7 @@ export default function Home() {
   const [hash, setHash] = useState('');
   const [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
     [doc, setDoc] = useRecordPage<Material | Report>('#documents', 'view', id => [...(data?.materials || []), ...(data?.reports || [])].find(item => item.id === id) || null, item => item.id);
+  const [printMaterial, setPrintMaterial] = useRecordPage<Material>('#documents', 'print', id => data?.materials.find(m => m.id === id && !!m.jobId && ['履歴書', '職務経歴書'].includes(m.kind)) || null, m => m.id);
   const [taskPage, setTaskPage] = useRecordPage<State['tasks'][number]>('#agents', 'task', id => data?.tasks.find(t => t.id === id) || null, t => t.id);
   const [archivedTokens, setArchivedTokens] = useRecordPage<boolean>('#agents', 'archive', () => true, () => 'all');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -607,7 +611,7 @@ export default function Home() {
   }
   async function request(kind: string, jobId = '') {
     await action(
-      () => api('tasks', { kind, jobId, instructions: '' }),
+      () => api('tasks', { kind, jobId, instructions: kind === '公司准备' ? '请先为指定公司分别生成并保存履歴書、職務経歴書两份独立 materials 版本（各自使用对应 kind）。参考 Hello Work：https://www.hellowork.mhlw.go.jp/member/career_doc01.html 。履歴書按厚生劳动省样式的栏目组织为可打印表格；職務経歴書突出岗位相关经历与成果，正文包含姓名、日期及职务经历。正文必须是完整的投递草稿，来源、解释和缺失信息清单放 sourceNotes；不得编造缺失事实。网页在保存后直接打印该版本正文。其他公司研究和面试准备材料照常生成。' : '' }),
       '已加入 AI Agent 待处理队列；分析完成后会显示结果。',
     );
   }
@@ -732,6 +736,11 @@ export default function Home() {
         onLogout={() => void logout()}
       />
     );
+  }
+  if (printMaterial) {
+    return <main className="material-print-layout">
+      <MaterialPrint key={printMaterial.id} material={printMaterial} onBack={() => { window.location.hash = '#documents/view/' + encodeURIComponent(printMaterial.id); }} />
+    </main>;
   }
   return (
     <div className={['shell', navCollapsed && 'nav-collapsed', isSubPage && 'sub-page'].filter(Boolean).join(' ')}>
@@ -928,10 +937,10 @@ export default function Home() {
           </div>
         </header>
         <div className="page">
-          {!doc && !profileEdit && !importOpen && !agentTrail && !taskPage && !archivedTokens && <>
+          {!doc && !printMaterial && !profileEdit && !importOpen && !agentTrail && !taskPage && !archivedTokens && <>
           {jobEdit ? (
 <section className="panel job-editor-page" key={jobEdit.id || 'new'} aria-labelledby="page-subtitle">
-          <div className="editor-heading"><p>{jobEdit.company || tr('先填写公司和职位，其余信息可稍后补充。')}</p></div>
+          {jobEdit.company && <div className="editor-heading"><p>{jobEdit.company}</p></div>}
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -1034,7 +1043,6 @@ export default function Home() {
           ) : (<>
           {active === '今日准备' && !briefOpen && (
             <div className="workspace-heading">
-              <p>{tr('从下一步开始，让准备持续推进。')}</p>
               <button className="primary" disabled={!data} onClick={() => data?.questionSets.length ? go('公司') : openJobEditor({})}>
                 {data?.questionSets.length ? <CalendarDays size={18} /> : <Plus size={18} />}
                 {tr(data?.questionSets.length ? '开始面试练习' : '添加职位')}
@@ -1064,11 +1072,6 @@ export default function Home() {
               <Empty
                 title={error ? tr('数据服务尚未连接') : tr('正在读取求职资料…')}
               >
-                <p>
-                  {tr(
-                    '资料当前来自当前工作区/租户，仅展示您授权范围内的信息。',
-                  )}
-                </p>
               </Empty>
             </section>
           ) : (
@@ -1140,7 +1143,7 @@ export default function Home() {
                         data.materials.length,
                         '按公司整理并保留版本',
                       ],
-                    ].map(([title, count, sub]) => (
+                    ].map(([title, count]) => (
                       <div
                         key={title}
                         className={count === 0 ? 'is-zero' : undefined}
@@ -1150,7 +1153,6 @@ export default function Home() {
                           {count}
                           <small>{tr('项')}</small>
                         </strong>
-                        <p>{tr(String(sub))}</p>
                       </div>
                     ))}
                   </div>
@@ -1194,7 +1196,7 @@ export default function Home() {
                           ))
                         ) : (
                           <>
-                            {nextSteps.map(([n, t, s, d, arg]) => (
+                            {nextSteps.map(([n, t, , d, arg]) => (
                               <button
                                 className="task-row"
                                 key={n}
@@ -1203,7 +1205,6 @@ export default function Home() {
                                 <span className="step">{n}</span>
                                 <span>
                                   <b>{tr(t, arg ? [arg] : [])}</b>
-                                  <small>{tr(s)}</small>
                                 </span>
                                 <ArrowUpRight size={18} />
                               </button>
@@ -1315,7 +1316,6 @@ export default function Home() {
                             </>
                           ) : (
                             <>
-                              <p className="goal-count">{tr('给自己定一个找到工作的日期，每天在这里看到倒计时。')}</p>
                               <button className="secondary" onClick={() => setGoalEdit(true)}>
                                 {tr('设定目标日期')}
                               </button>
@@ -1351,18 +1351,12 @@ export default function Home() {
                       <Blocks size={22} />
                       <span>
                         <b>{tr('技能库')}</b>
-                        <small className="page-note">
-                          {tr('浏览并安装求职技能，把指令交给助手执行。')}
-                        </small>
                       </span>
                     </button>
                     <button className="agent-entry" onClick={() => go('定时任务')}>
                       <CalendarClock size={22} />
                       <span>
                         <b>{tr('定时任务')}</b>
-                        <small className="page-note">
-                          {tr('配置来源与频率，生成定时收集的任务指令。')}
-                        </small>
                       </span>
                     </button>
                   </div>
@@ -1377,7 +1371,7 @@ export default function Home() {
                         {tr('个有效')}
                       </span>
                     </div>
-                    <p className="page-note">{tr('助手在浏览器里完成登录与同意后才会出现在这里。每个授权只能访问你的工作区，可随时撤销。')}</p>
+                    <p className="page-note">{tr('助手仅可访问你的工作区，可随时撤销授权。')}</p>
                     {auth?.mode !== 'off' && userEmail && (
                       <p className="small page-note">{tr('当前账号：{0}。授权页登录的是哪个 Google 账号，授权就归哪个账号；用其他账号授权的助手不会显示在这里。', [userEmail])}</p>
                     )}
@@ -1417,7 +1411,6 @@ export default function Home() {
                         <>
                           {!active.length ? (
                             <Empty title={tr('暂无已授权的助手')}>
-                              <p>{tr('在助手里添加上面的 MCP 地址并完成授权后，会显示在这里。')}</p>
                               <button className="text-button centered" onClick={() => go(mcpSetupPage)}>
                                 {tr('添加 AI 助手')}
                                 <ArrowUpRight size={16} />
@@ -1436,11 +1429,6 @@ export default function Home() {
                   <div className="phone-hidden">
                     <section className="panel">
                       <h2>{tr('资料导入与备份')}</h2>
-                      <p>
-                        {tr(
-                          '导入 Agent 输出的 JSON 数据包。先预览条目数量，再写入本机数据库。',
-                        )}
-                      </p>
                       <div className="button-stack">
                         <button
                           className="secondary"
@@ -1508,9 +1496,6 @@ export default function Home() {
                     )}
                     {!data.tasks.length && (
                       <Empty title={tr('没有待处理任务')}>
-                        <p>
-                          {tr('在公司详情中请求准备，或请求一份每日分析。')}
-                        </p>
                       </Empty>
                     )}
                   </section>
@@ -1590,8 +1575,9 @@ export default function Home() {
                 )}
               </div>
             )}
+          {'kind' in doc && doc.jobId && ['履歴書', '職務経歴書'].includes(doc.kind) && <button className="secondary" onClick={() => setPrintMaterial(doc)}>{tr('预览并打印已生成的简历')}</button>}
           <article className="document-body">
-            <DocumentText text={doc.content} />
+            {'kind' in doc && ['履歴書', '職務経歴書'].includes(doc.kind) ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.content}</ReactMarkdown> : <DocumentText text={doc.content} />}
           </article>
           <div className="source-box">
             <h3>{tr('依据与待确认事项')}</h3>

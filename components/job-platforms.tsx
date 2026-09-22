@@ -93,7 +93,6 @@ export default function JobPlatforms({ platforms, reload }: Props) {
     <div className="platforms-page">
       {!edit && !selected && <>
       <div className="platform-directory-heading">
-        <div><h2>{tr('找到适合自己的求职入口。')}</h2><p>{tr('比较平台特色，收藏常用入口，记录自己的使用进展。')}</p></div>
         <button className="secondary" onClick={() => { setError(''); setEdit({}); }}><Plus size={17} />{tr('添加平台')}</button>
       </div>
       <div className="list-toolbar platform-toolbar">

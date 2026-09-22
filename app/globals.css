@@ -3504,6 +3504,8 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 }
 .practice-materials { margin-top: 20px; }
 .practice-materials .section-head { padding: 0 0 12px; }
+.practice-materials .material-actions { justify-content: flex-end; }
+.workspace-heading, .platform-directory-heading { justify-content: flex-end; }
 .practice-materials .section-head select { padding: 7px 10px; border: 1px solid #e1e7ef; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-size: 0.8125rem; }
 /* Interview prep: one row per company, with the question-bank template and daily analysis as small entries underneath. */
 .prep-list .dt-row.is-closed { opacity: .6; }
@@ -3672,4 +3674,24 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 @media (max-width: 700px) {
   .shell > main, .shell.nav-collapsed > main { margin-left: 0; }
   .resume-identity-actions { margin-left: 0; }
+}
+
+.resume-export-check { border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 16px 0; font-size: .875rem; line-height: 1.7; }
+.resume-export-check p { margin: 8px 0; }
+.resume-export-check summary { cursor: pointer; font-weight: 600; }
+.resume-export-check .resume-print-preview { margin-top: 16px; }
+.document-body table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+.document-body th, .document-body td { padding: 10px; border: 1px solid var(--line); text-align: left; overflow-wrap: anywhere; }
+.material-print-layout { width: 100%; margin: 0; min-height: 100dvh; padding: 24px; }
+.material-print-page { width: 100%; max-width: 1200px; min-width: 0; margin: 0 auto; }
+.material-print-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.material-print-heading { flex: 1; min-width: 0; }
+.material-print-toolbar h1 { margin: 0 0 8px; font-size: 1.25rem; }
+.material-print-toolbar p { margin: 0; color: var(--ink-2); }
+.material-print-toolbar button { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.material-print-page .resume-print-preview { display: block; height: calc(100dvh - 220px); min-height: 500px; }
+@media (max-width: 600px) {
+  .material-print-layout { padding: 12px; }
+  .material-print-toolbar { align-items: flex-start; flex-wrap: wrap; }
+  .material-print-heading { flex-basis: calc(100% - 100px); }
 }

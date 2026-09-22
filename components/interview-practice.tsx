@@ -483,11 +483,12 @@ export default function InterviewPractice({
         ], ['岗位要求', '匹配点'])}
       </section>}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
-        {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p>
-          {!isBank && requestPreparation && (pendingJobIds.includes(jobId)
+        {!isBank && requestPreparation && <div className="section-head material-actions">
+          {requestPreparation && (pendingJobIds.includes(jobId)
             ? <p className="muted">{tr('已加入待处理队列，等待 AI Agent 生成。')}</p>
-            : <button className="secondary" disabled={requesting} onClick={() => requestPreparation(jobId)}><Sparkles size={16} />{tr('交给 AI Agent 准备')}</button>)}
+            : <button className="secondary" disabled={requesting} onClick={() => requestPreparation(jobId)}><Sparkles size={16} />{tr(companyMaterials.length ? '请求准备新版本' : '交给 AI Agent 准备')}</button>)}
         </div>}
+        {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p></div>}
       </section>}
       {activeTab === 'practice' && (!pack || !question ? (
         <section className="panel prep-tab-panel">
@@ -575,7 +576,7 @@ export default function InterviewPractice({
             {mentions.map(r => <li key={r.id}><span className="num">{day(r.date)}</span><button className="text-button" onClick={() => openReport?.(r)}>{r.title}</button></li>)}
           </ul>
         </>}
-        {!companyReviews.length && !pack && <p className="muted">{tr('练习并请 AI Agent 点评后，这里会汇总进度和重练重点。')}</p>}
+        {!companyReviews.length && !pack && <p className="muted">{tr('还没有练习总结。')}</p>}
       </section>}
       {activeTab === 'feedback' && <section className="panel prep-tab-panel">
         {companyReviews.length ? <ul className="prep-feedback-list">
@@ -584,7 +585,7 @@ export default function InterviewPractice({
             <p className="prewrap">{r.summary}</p>
             {a && <button className="text-button" onClick={() => openAttempt(a)}>{tr('查看完整点评')}</button>}
           </li>; })}
-        </ul> : <div className="empty"><p>{tr('还没有点评。保存回答后点「保存并请 AI Agent 点评」。')}</p></div>}
+        </ul> : <div className="empty"><p>{tr('还没有点评。')}</p></div>}
       </section>}
     </div>;
   }
@@ -872,7 +873,7 @@ export default function InterviewPractice({
               <div className="empty">
                 <p>
                   {tr(
-                    '保存第一段回答后，这里会保留原文、修改建议和下次练习重点。',
+                    '还没有保存的回答。',
                   )}
                 </p>
               </div>

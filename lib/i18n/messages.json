@@ -1,4 +1,36 @@
 {
+  "还没有保存的回答。": {
+    "ja": "保存した回答はまだありません。",
+    "en": "No saved answers yet."
+  },
+  "助手仅可访问你的工作区，可随时撤销授权。": {
+    "ja": "アシスタントは自分のワークスペースだけにアクセスします。許可はいつでも失効できます。",
+    "en": "Assistants can access only your workspace. Revoke access at any time."
+  },
+  "这一天没有新内容。": {
+    "ja": "この日の新着はありません。",
+    "en": "No new items for this day."
+  },
+  "共 {0} 项新内容": {
+    "ja": "新着 {0} 件",
+    "en": "{0} new items"
+  },
+  "还没有练习总结。": {
+    "ja": "練習のまとめはまだありません。",
+    "en": "No practice summary yet."
+  },
+  "还没有点评。": {
+    "ja": "フィードバックはまだありません。",
+    "en": "No feedback yet."
+  },
+  "A4 · 缩放 100% · 关闭页眉页脚": {
+    "ja": "A4 · 倍率100% · ヘッダーとフッターをオフ",
+    "en": "A4 · Scale 100% · Headers and footers off"
+  },
+  "返回文档": {
+    "ja": "書類に戻る",
+    "en": "Back to document"
+  },
   "今日准备": {
     "ja": "今日の準備",
     "en": "Today"
@@ -4887,6 +4919,18 @@
     "ja": "練習完了",
     "en": "Practised"
   },
+  "日语假名": {
+    "ja": "日本語のふりがな",
+    "en": "Japanese readings"
+  },
+  "日语显示假名": {
+    "ja": "日本語にふりがなを表示",
+    "en": "Show Japanese readings"
+  },
+  "在日语简历详情和预览中显示已提供的假名标记。": {
+    "ja": "日本語の履歴書の詳細とプレビューに、登録済みのふりがなを表示します。",
+    "en": "Show provided readings in Japanese resume details and previews."
+  },
   "结束年月未填写": {
     "ja": "終了年月未入力",
     "en": "End date not recorded"
@@ -4902,5 +4946,133 @@
   "打开公开页": {
     "ja": "公開ページを開く",
     "en": "Open published page"
+  },
+  "出生日期（YYYY-MM-DD，兼容旧年月）": {
+    "ja": "生年月日（YYYY-MM-DD、旧年月形式も対応）",
+    "en": "Date of birth (YYYY-MM-DD; legacy year-month accepted)"
+  },
+  "邮政编码": {
+    "ja": "郵便番号",
+    "en": "Postal code"
+  },
+  "详细地址": {
+    "ja": "現住所（番地・建物名まで）",
+    "en": "Full address"
+  },
+  "地址读音": {
+    "ja": "住所のふりがな",
+    "en": "Address reading"
+  },
+  "其他联系地址（可选）": {
+    "ja": "連絡先（現住所と異なる場合）",
+    "en": "Alternative contact address (optional)"
+  },
+  "性别（选填）": {
+    "ja": "性別（任意）",
+    "en": "Gender (optional)"
+  },
+  "出生日期": {
+    "ja": "生年月日",
+    "en": "Date of birth"
+  },
+  "经历起止年月（未填写结束年月不会视为在职）": {
+    "ja": "経歴の開始・終了年月（終了年月の未入力は在職中と扱いません）",
+    "en": "Career dates (a missing end date does not mean currently employed)"
+  },
+  "正文中的待填写或占位文字": {
+    "ja": "本文の未記入・仮置きの文字",
+    "en": "Unfilled placeholders in the content"
+  },
+  "日本投递用：请分别保存履歴書和職務経歴書。企业指定格式优先。": {
+    "ja": "応募用に履歴書と職務経歴書をそれぞれ保存してください。企業指定の書式がある場合はそちらを優先します。",
+    "en": "Save the two application documents separately. Follow the employer’s specified format."
+  },
+  "Hello Work 格式参考": {
+    "ja": "ハローワークの書式・作成ガイド",
+    "en": "Hello Work format guidance"
+  },
+  "文档日期": {
+    "ja": "書類の日付",
+    "en": "Document date"
+  },
+  "志望动机／个人亮点（本次导出）": {
+    "ja": "志望動機・アピールポイント（今回の出力）",
+    "en": "Motivation / strengths (this export)"
+  },
+  "本人希望（本次导出）": {
+    "ja": "本人希望（今回の出力）",
+    "en": "Preferences (this export)"
+  },
+  "证件照（可选，仅用于本次导出，PNG/JPEG，最多 5 MB）": {
+    "ja": "証明写真（任意・今回の出力のみ、PNG/JPEG、5 MBまで）",
+    "en": "Photo (optional, this export only, PNG/JPEG, up to 5 MB)"
+  },
+  "请选择不超过 5 MB 的 PNG 或 JPEG 图片": {
+    "ja": "5 MB以下のPNGまたはJPEG画像を選択してください",
+    "en": "Choose a PNG or JPEG image up to 5 MB"
+  },
+  "移除照片": {
+    "ja": "写真を外す",
+    "en": "Remove photo"
+  },
+  "投递前检查": {
+    "ja": "応募前の確認",
+    "en": "Before submitting"
+  },
+  "来源：当前语言的结构化资料，不包含个性化简历或原文文档的修改。个性化版本请从对应详情导出。": {
+    "ja": "現在の表示言語のプロフィール情報から作成します。個別履歴書や原文資料の編集内容は反映されません。個別版は該当する詳細画面から出力してください。",
+    "en": "Uses structured records in the current language. Export customized drafts from their own detail page."
+  },
+  "请核对或补充：": {
+    "ja": "確認・追記が必要な項目：",
+    "en": "Review or complete: "
+  },
+  "当前包含待确认记录，请在投递前核实。": {
+    "ja": "未確認の記録が含まれています。応募前に確認してください。",
+    "en": "Unverified records are included. Check before submitting."
+  },
+  "志望动机尚未填写；不会自动使用通用求职方向代替。": {
+    "ja": "志望動機は未入力です。一般的な求職方針から自動補完はしません。",
+    "en": "Motivation is empty; general career goals are not substituted."
+  },
+  "浏览器打印请选择 A4、100% 缩放并关闭页眉页脚。请检查分页及照片后分别保存 PDF。": {
+    "ja": "印刷設定はA4・倍率100%とし、ヘッダーとフッターをオフにしてください。改ページと写真を確認してPDFに保存してください。",
+    "en": "Choose A4, 100% scale, and disable browser headers and footers. Check page breaks and photos before saving as PDF."
+  },
+  "建议文件名：": {
+    "ja": "推奨ファイル名：",
+    "en": "Suggested filename: "
+  },
+  "导出此版本的職務経歴書": {
+    "ja": "この版の職務経歴書を出力",
+    "en": "Export this version as a career history"
+  },
+  "仅导出此版本内容；不重新读取通用资料。投递版不显示学习用假名。": {
+    "ja": "この版の内容のみを出力します。共通プロフィールからの再生成は行いません。応募用のため学習用ふりがなは非表示です。",
+    "en": "Exports this version only, without regenerating from the profile. Study readings are hidden."
+  },
+  "投递版预览": {
+    "ja": "応募用プレビュー",
+    "en": "Application preview"
+  },
+  "预览并打印已生成的简历": {
+    "ja": "作成済みの応募書類をプレビュー・印刷",
+    "en": "Preview and print saved resume"
+  },
+  "打印此份已保存资料的正文，不重新生成，不包含来源备注。请先核对内容和分页。": {
+    "ja": "保存済みの本文のみを印刷します。再生成や出典メモの印字は行いません。内容と改ページを確認してください。",
+    "en": "Prints the saved body without regenerating or including source notes. Review content and page breaks."
+  },
+  "先为这家公司生成并保存履歴書和職務経歴書，再打开资料核对、预览和打印。": {
+    "ja": "まずこの企業向けの履歴書・職務経歴書を作成・保存し、資料を開いて確認・プレビュー・印刷してください。",
+    "en": "Generate and save resumes for this company first, then open each document to review, preview and print."
+  },
+  "请求准备新版本": {
+    "ja": "新しい版の作成を依頼",
+    "en": "Request a new version"
+  },
+  "打印预览": {
+    "ja": "印刷プレビュー",
+    "en": "Print preview"
   }
 }

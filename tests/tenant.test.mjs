@@ -108,6 +108,14 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.ok(!(await ok(b,'state')).reports.some(r=>r.id==='mcp-report'));
   const bad=await rpc(writer.token,'tools/call',{name:'career_import',arguments:{bundle:{...bundle,profile:{summary:'bad'}}}});
   assert.equal(bad.result?.isError ?? !!bad.error,true);
+  // An agent can tell which Google account and environment its token is bound to; Bob's agent sees Bob, never Alice.
+  const whoami=await rpc(writer.token,'tools/call',{name:'career_get_connection_info',arguments:{}});
+  assert.deepEqual(whoami.result.structuredContent.user,{id:'alice',status:'active',email:'alice@example.com',identities:[{provider:'google.com',subject:'alice',issuer:'https://securetoken.google.com/test-project'}]});
+  assert.deepEqual(whoami.result.structuredContent.connection.scopes,['career:read','agent:write','career:write']);
+  assert.equal(whoami.result.structuredContent.connection.clientName,'Writer');
+  const bobAgent=(await authorizeAgent(mf,{name:'Bob agent',scopes:['career:read'],approveHeaders:{Authorization:'Bearer '+b}})).issued.access_token;
+  const bobInfo=await rpc(bobAgent,'tools/call',{name:'career_get_connection_info',arguments:{}});
+  assert.equal(bobInfo.result.structuredContent.user.email,'bob@example.com');
   await ok(a,'mcp/tokens/revoke',{id:issued.record.id});
   assert.equal((await send(issued.token,'state')).status,401);
   assert.equal(JSON.parse((await db.prepare("SELECT body FROM meta WHERE id='profile'").first()).body).summary,'Private legacy');

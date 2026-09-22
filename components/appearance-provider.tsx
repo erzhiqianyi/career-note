@@ -10,13 +10,17 @@ import {
 export type Appearance = {
   theme: 'blue' | 'forest' | 'paper';
   fontSize: 100 | 112.5 | 125 | 137.5;
+  showJapaneseReadings: boolean;
 };
-const defaults: Appearance = { theme: 'blue', fontSize: 112.5 };
+const defaults: Appearance = { theme: 'blue', fontSize: 112.5, showJapaneseReadings: true };
 const storageKey = 'career-note.appearance';
 function parseAppearance(raw: string | null): Appearance {
   try {
     const value = JSON.parse(raw || '{}');
     return {
+      showJapaneseReadings: typeof value?.showJapaneseReadings === 'boolean'
+        ? value.showJapaneseReadings
+        : defaults.showJapaneseReadings,
       theme: ['blue', 'forest', 'paper'].includes(value?.theme)
         ? value.theme
         : defaults.theme,

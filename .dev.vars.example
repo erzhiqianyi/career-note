@@ -12,6 +12,10 @@ CAREER_ADMIN_UIDS=
 # takes CAREER_TUNNEL / CAREER_PUBLIC_ORIGIN from .env (see .env.example).
 # CAREER_OAUTH_REFRESH_DAYS=90
 
+# MCP inspector at http://127.0.0.1:4211/api/career/mcp/inspector (also via the web port). Always on in
+# auth mode off (local only); set CAREER_INSPECTOR=true to enable it in on/strict mode. Never in production.
+# CAREER_INSPECTOR=true
+
 # Hosted deployment only (set with `wrangler secret put`, see docs/deployment.md):
 # CAREER_WEB_ORIGIN=https://career.example.com        # the Pages site; allowed for CORS, hosts the consent page
 # CAREER_PUBLIC_ORIGIN=https://career-api.example.com  # this Worker's own address, announced in OAuth metadata

@@ -1,7 +1,7 @@
 'use client';
 import { RecordBack, useRecordPage } from './record-page';
 import { DataMoreActions } from '@/components/data-table';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -22,7 +22,6 @@ import {
   MapPin,
   Pencil,
   Plus,
-  Printer,
   Target,
   Trophy,
   Wrench,
@@ -40,7 +39,6 @@ import {
   type ResumeLanguage,
 } from '@/lib/resume';
 import { useLocale } from './locale-provider';
-import { printTemplateLabels, printableEntries, resumePrintHTML, type PrintTemplate } from '@/lib/resume-print';
 
 type Verification = ResumeEntry['verification'];
 type View = 'all' | Verification | 'archived';
@@ -143,10 +141,6 @@ export default function ResumeManager({
   const [selected, setSelected] = useRecordPage<ResumeEntry>('#resume', 'view', id => entries.find(e => e.id === id) || null, e => e.id);
   const [historyEntry, setHistoryEntry] = useRecordPage<ResumeEntry>('#resume', 'history', id => entries.find(e => e.id === id) || null, e => e.id);
   const [sourcePage, setSourcePage] = useRecordPage<string>('#resume', 'source', () => 'original', s => s);
-  const [printPage, setPrintPage] = useRecordPage<PrintTemplate>('#resume', 'print', id => id === 'rirekisho' || id === 'shokumu' ? id : null, s => s);
-  const [printPending, setPrintPending] = useState(false);
-  const [printCompany, setPrintCompany] = useState('');
-  const printFrame = useRef<HTMLIFrameElement>(null);
   const [history, setHistory] = useState<ResumeEntry[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -766,30 +760,6 @@ export default function ResumeManager({
           ))}
         </section></div>;
   if (selected) return <section className="panel record-page"><RecordBack onBack={() => setSelected(null)} />{error && <p role="alert">{error}</p>}{record(entries.find(e => e.id === selected.id) || selected)}</section>;
-  if (printPage) {
-    const today = new Date().toISOString().slice(0, 10);
-    const used = printableEntries(entries, language, printPending);
-    const html = resumePrintHTML(used, { template: printPage, includePending: printPending, date: today.replace(/-/g, '/'), company: printCompany });
-    const pendingCount = entries.filter(e => !e.archived && lang(e) && e.verification === 'pending').length;
-    return <section className="panel record-page resume-print-page"><RecordBack onBack={() => setPrintPage(null)} />
-      <div className="resume-print-head">
-        <h2><Printer size={18} />{t('打印 / 保存为 PDF')}</h2>
-        <nav className="resume-sub-tabs" aria-label={t('打印模板')}>
-          {(['rirekisho', 'shokumu'] as PrintTemplate[]).map(k => <button key={k} aria-current={printPage === k ? 'page' : undefined} onClick={() => setPrintPage(k)}>{printTemplateLabels[k]}</button>)}
-        </nav>
-      </div>
-      <div className="resume-print-options">
-        <label className="field"><span>{t('应募公司（可选，印在标题旁）')}</span><input value={printCompany} onChange={e => setPrintCompany(e.target.value)} placeholder="株式会社〇〇" /></label>
-        <label className="resume-print-check"><input type="checkbox" checked={printPending} onChange={e => setPrintPending(e.target.checked)} />{t('包含待确认的记录（{0} 条）', [pendingCount])}</label>
-        <div className="row">
-          <button className="primary" onClick={() => printFrame.current?.contentWindow?.print()}><Printer size={16} />{t('打印 / 保存为 PDF')}</button>
-          <button className="secondary" onClick={() => download('resume-' + printPage + '-' + today + '.html', html, 'text/html')}><Download size={15} />{t('下载 HTML')}</button>
-        </div>
-      </div>
-      <p className="resume-print-note">{t('内容来自当前语言的结构化记录（基本资料、工作经历、学历、项目、技能、语言、求职方向），引用 {0} 条。修改记录后回到这里即可重新生成；电话、生年月日等空栏请在基本资料中补充或打印后手写。', [used.length])}</p>
-      <iframe ref={printFrame} title={printTemplateLabels[printPage]} srcDoc={html} className="resume-print-preview" />
-    </section>;
-  }
   if (sourcePage) return <section className="panel record-page"><RecordBack onBack={() => setSourcePage(null)} /><h2>{t('旧版履历原文（保留）')}</h2><ReactMarkdown remarkPlugins={[remarkGfm]}>{profile.experience || profile.summary}</ReactMarkdown></section>;
 
   return (
@@ -798,16 +768,13 @@ export default function ResumeManager({
         <div className="resume-avatar" aria-hidden="true">{initials(basics?.data.name) || '?'}</div>
         <div className="resume-identity-text">
           <h2>{basics?.data.name || t('还没有基本资料')}</h2>
-          <p>{basics?.data.headline?.split(/[｜|]/)[0].trim() || t('管理工作经历、成果与技能；针对公司的材料在「个性化简历」中生成。')}</p>
+          {basics?.data.headline && <p>{basics.data.headline.split(/[｜|]/)[0].trim()}</p>}
         </div>
         <div className="resume-identity-actions">
-          <button className="text-button" disabled={busy} onClick={() => setPrintPage('shokumu')}>
-            <Printer size={16} />{t('打印 / 保存为 PDF')}
-          </button>
+          <button className="text-button" disabled={busy} onClick={() => basics ? setSelected(basics) : start('basics')}><Pencil size={16} />{t('基本资料')}</button>
           <DataMoreActions label={t('更多')}>
             <button onClick={() => start('basics', basics)}>{t('编辑基本资料')}</button>
             <button onClick={() => setShowTools(value => !value)}>{t('资料状态与筛选')}</button>
-            <button onClick={() => setPrintPage('rirekisho')}><Printer size={15} />{t('打印 / 保存为 PDF')}</button>
             <button onClick={() => download('resume-data.json', JSON.stringify({ schemaVersion: 1, entries }, null, 2), 'application/json')}>
               <Download size={15} />{t('导出 JSON')}
             </button>
@@ -842,7 +809,6 @@ export default function ResumeManager({
       {showTools && <aside className="resume-library-tools" aria-label={t('资料状态与筛选')}>
         <div className="resume-tools-heading"><h3>{t('资料状态与筛选')}</h3><button className="icon-button" aria-label={t('关闭')} onClick={() => setShowTools(false)}><X size={16} /></button></div>
         <p>{resumeLanguageLabels[language]} · {t('本人已确认')} {health.confirmed} · {t('待确认')} {health.pending} · {t('已有资料记载')} {health.recorded}</p>
-        <p>{t('生成投递简历时只引用这里的记录；待确认的内容会被标注为未确认事项，投递前请逐条核对。')}</p>
         {otherLanguages.length > 0 && <p>{t('其他语言版本：')}{otherLanguages.map(x => resumeLanguageLabels[x.l] + ' ' + x.n).join(' · ')}{t('，切换界面语言即可查看。')}</p>}
         <label>{t('筛选确认状态')} <select value={view} onChange={event => setView(event.target.value as View)}>
           <option value="all">{t('全部记录')}</option><option value="pending">{t('待确认')}</option><option value="confirmed">{t('本人已确认')}</option><option value="recorded">{t('已有资料记载')}</option><option value="archived">{t('已归档')}</option>
@@ -873,7 +839,7 @@ export default function ResumeManager({
               </dd></div>}
             </dl>
           ) : (
-            <div className="empty"><Icon size={26} /><h3>{t('还没有基本资料')}</h3><p>{t('新增一条，或通过 MCP 整理已有资料。')}</p></div>
+            <div className="empty"><Icon size={26} /><h3>{t('还没有基本资料')}</h3></div>
           )}
           {basics && <div className="resume-basics-footer">{footer(basics)}</div>}
         </section>
@@ -882,13 +848,12 @@ export default function ResumeManager({
         <div className="resume-records-heading">
           <h2 id="resume-records-heading">{t(sectionLabels[kind])}</h2>
           <div className="resume-records-actions">
-            {kind === 'document' && <button className="secondary" onClick={() => setPrintPage('shokumu')}><Printer size={16} />{t('打印 / 保存为 PDF')}</button>}
             {kindsOf(kind).length === 1 && <button className="primary" disabled={busy} onClick={() => start(kind)}><Plus size={18} />{t('添加{0}', [t(resumeSections[kind].label)])}</button>}
           </div>
         </div>
         {view !== 'all' && <div className="resume-active-filter"><span>{view === 'archived' ? t('已归档') : t(verificationLabel[view])}</span><button className="text-button" onClick={() => setView('all')}>{t('清除筛选')}</button></div>}
         {error && <p role="alert" className="resume-error">{error}</p>}
-        {!listed.length && kindsOf(kind).length === 1 && <div className="empty"><Icon size={26} /><h3>{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</h3><p>{view === 'all' ? t('新增一条，或通过 MCP 整理已有资料。') : t('切换筛选条件查看其他记录。')}</p></div>}
+        {!listed.length && kindsOf(kind).length === 1 && <div className="empty"><Icon size={26} /><h3>{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</h3></div>}
         {kindsOf(kind).map(k => {
           const rows = listed.filter(e => e.kind === k);
           const grouped = kindsOf(kind).length > 1;

@@ -78,14 +78,12 @@ export default function CareerWelcome({ ready, configured, busy, error, userEmai
                 <p className="welcome-note-label">02 / {t('让材料回应岗位')}</p>
                 <h2>{t('一份志望动机的提纲')}</h2><p className="welcome-example-sub">{t('青空科技（虚构） · 准备草稿')}</p>
                 <ol className="welcome-outline"><li><strong>{t('为什么是这家公司')}</strong><p>{t('从业务与岗位出发，写下真正感兴趣的部分。')}</p></li><li><strong>{t('我能带来什么')}</strong><p>{t('选择一段真实经历，用行动与结果支撑。')}</p></li><li><strong>{t('希望如何成长')}</strong><p>{t('把个人方向与团队需要连接起来。')}</p></li></ol>
-                <p className="welcome-example-foot">{t('材料与公司关联，修改后仍可回看历史版本。')}</p>
               </>}
               {active === 2 && <>
                 <p className="welcome-note-label">03 / {t('把经历说清楚')}</p>
                 <h2>{t('练习一段项目介绍')}</h2><p className="welcome-question" lang="ja">これまでのプロジェクトで、工夫した点を教えてください。</p>
                 <div className="welcome-note"><span>{t('先整理思路')}</span><p>{t('遇到了什么问题？为什么这样做？结果如何？')}</p></div>
                 <div className="welcome-note"><span>{t('再练习表达')}</span><p>{t('用日语组织回答，保存后回看，补充具体事例。')}</p></div>
-                <p className="welcome-example-foot">{t('先构思，再用日语练习回答。')}</p>
               </>}
             </div>
             <div className="welcome-preview-bottom"><span>{t('示例仅用于了解功能，不会写入你的资料。')}</span><span aria-hidden="true">0{active + 1} / 03</span></div>

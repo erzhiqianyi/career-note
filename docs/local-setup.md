@@ -113,6 +113,8 @@ claude mcp add --transport http career-note http://127.0.0.1:4211/api/career/mcp
 
 Claude Code では `/mcp` → career-note → Authenticate で認可を開始する。許可済み Agent は画面の「Agent 協作 → 訪問設定」で確認・失効できる。
 
+Agent を入れずに MCP 接続を試すには、ブラウザーで `http://localhost:4210/api/career/mcp/inspector` を開く（`@ninomae/mcp-app-server` 同梱の開発用インスペクター）。**Authorize** で同意ページを経由してトークンを取得し、**Inspect server** で `tools/list` を表示、各ツールに JSON 引数を渡して呼び出せる。認証モード off では常に有効、on/strict では `.dev.vars` に `CAREER_INSPECTOR=true` を書いたときだけ有効になる（公開環境では有効にしない）。
+
 ### トンネルで公開する（`npm run dev:tunnel`）
 
 `npm run dev` は本機専用で、公開アドレスを一切使わない。claude.ai や ChatGPT のコネクターのようにホスト型の Agent は `127.0.0.1` に届かないので、その場合だけ `npm run dev:tunnel` を使う。ingress を画面ポート 4210 へ向けると画面・同意ページ・MCP（`/api/career/mcp`）がすべて公開アドレスで使える（Vite が `/api/career` と `/.well-known` を 4211 へ転送）。API ポート 4211 へ向けた場合は MCP だけ公開され、同意ページは本機の `localhost:4210` で開く。`.dev.vars` は `CAREER_AUTH_MODE=strict` が必要（off のままだとトンネル経由の要求は 403、OAuth エンドポイントは 503）。Google ユーザーごとにワークスペースは分離されるため、他人がログインしても自分の資料は見えない。

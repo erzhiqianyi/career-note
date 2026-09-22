@@ -2,6 +2,7 @@
 import { Check, RotateCcw } from 'lucide-react';
 import { useAppearance, type Appearance } from './appearance-provider';
 import { LanguageSwitcher, useLocale } from './locale-provider';
+import { Switch } from './ui/switch';
 
 const themes = [
   { value: 'blue', label: '经典蓝' },
@@ -19,14 +20,9 @@ export default function SystemSettings() {
   const { appearance, update, reset, saved } = useAppearance();
   return (
     <section className="settings-page" aria-label={tr('系统设置')}>
-      <div className="settings-heading">
-        <h2>{tr('让阅读更舒服')}</h2>
-        <p>{tr('调整整个工作区的外观，修改即时生效。')}</p>
-      </div>
       <div className="settings-panel">
         <fieldset>
           <legend>{tr('主题')}</legend>
-          <p>{tr('选择你喜欢的界面配色。')}</p>
           <div className="theme-options">
             {themes.map((theme) => (
               <label className="theme-option" key={theme.value}>
@@ -61,7 +57,6 @@ export default function SystemSettings() {
         </fieldset>
         <fieldset>
           <legend>{tr('字体大小')}</legend>
-          <p>{tr('只调整文字大小，列表保持紧凑。')}</p>
           <div className="font-options">
             {sizes.map((size) => (
               <label key={size.value}>
@@ -85,6 +80,26 @@ export default function SystemSettings() {
             <strong>{tr('阅读预览')}</strong>
             <p>{tr('每一步准备，都让下一次机会更近。')}</p>
             <small>{tr('名称、正文和辅助信息会一起调整。')}</small>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>{tr('日语假名')}</legend>
+          <div className="settings-language">
+            <div>
+              <label htmlFor="japanese-readings">{tr('日语显示假名')}</label>
+              <p id="japanese-readings-description">{tr('在日语简历详情和预览中显示已提供的假名标记。')}</p>
+            </div>
+            <Switch
+              id="japanese-readings"
+              checked={appearance.showJapaneseReadings}
+              onCheckedChange={(checked) => update({ showJapaneseReadings: checked })}
+              aria-describedby="japanese-readings-description"
+            />
+          </div>
+          <div className="settings-preview" lang="ja">
+            {appearance.showJapaneseReadings
+              ? <ruby>開発経験<rt>かいはつけいけん</rt></ruby>
+              : '開発経験'}
           </div>
         </fieldset>
         <div className="settings-language">

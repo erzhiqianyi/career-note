@@ -2,7 +2,7 @@ import { resumeTitle, type ResumeEntry } from './resume';
 
 /**
  * 从结构化履历记录生成可打印的 A4 文档（自包含 HTML，浏览器「打印 → 保存为 PDF」）。
- * 两种模板：日本通用的 JIS 风格「履歴書」和「職務経歴書」。只读取记录，不改写数据。
+ * 两种模板：参考厚生劳动省样式的「履歴書」和「職務経歴書」。只读取记录，不改写数据。
  */
 export type PrintTemplate = 'rirekisho' | 'shokumu';
 export type PrintOptions = {
@@ -13,13 +13,16 @@ export type PrintOptions = {
   date?: string;
   /** 应募先名称，写在标题下方（可选）。 */
   company?: string;
+  photo?: string;
+  motivation?: string;
+  wishes?: string;
 };
 
 const escape = (v = '') =>
   v.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] || c);
 const lines = (text = '') =>
   text
-    .split('\n')
+    .replace(/\\r\\n|\\n/g, '\n').split('\n')
     .map((l) => l.trim().replace(/^(\d+[.、)]|[-•・*])\s*/, ''))
     .filter(Boolean);
 const ym = (v = '') => {
@@ -30,7 +33,25 @@ const jaDate = (v = '') => {
   const { y, m } = ym(v);
   return y ? `${y}年${m}月` : '';
 };
-const period = (start = '', end = '') => (start ? `${jaDate(start)}～${end ? jaDate(end) : '現在'}` : '');
+const period = (start = '', end = '') => (start ? `${jaDate(start)}～${end ? jaDate(end) : '終了年月未入力'}` : '');
+const fullDate = (v = '') => {
+  const match = /^(\d{4})[-/](\d{2})[-/](\d{2})$/.exec(v);
+  return match ? `${match[1]}年${Number(match[2])}月${Number(match[3])}日` : jaDate(v);
+};
+export function resumePrintWarnings(entries: ResumeEntry[], template: PrintTemplate) {
+  const b = entries.find(e => e.kind === 'basics')?.data || {};
+  const warnings: string[] = [];
+  for (const [key, label] of [['name', '姓名'], ['reading', '姓名读音'], ['email', '邮箱']])
+    if (!b[key]) warnings.push(label);
+  if (template === 'rirekisho') for (const [key, label] of [['birthDate', '出生日期'], ['address', '详细地址'], ['phone', '电话']])
+    if (!b[key] || (key === 'birthDate' && b[key].length !== 10)) warnings.push(label);
+  if (entries.some(e => ['employment', 'education'].includes(e.kind) && (!e.data.startDate || !e.data.endDate))) warnings.push('经历起止年月（未填写结束年月不会视为在职）');
+  if (entries.some(e => Object.values(e.data).some(v => /待确认|待填写|TODO|XXX|〇〇/.test(v)))) warnings.push('正文中的待填写或占位文字');
+  return warnings;
+}
+export function resumePrintFilename(name: string, template: PrintTemplate, date: string) {
+  return [template === 'rirekisho' ? '履歴書' : '職務経歴書', name, date].filter(Boolean).join('_').replace(/[\\/:*?"<>|]/g, '-');
+}
 
 export function printableEntries(entries: ResumeEntry[], language: string, includePending = false) {
   return entries.filter(
@@ -66,8 +87,8 @@ body { margin: 0; color: #111; background: #e9ecf0; font-family: "Hiragino Minch
 .page { width: 210mm; max-width: 100%; min-height: 297mm; margin: 12mm auto; padding: 14mm 16mm; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
 .page + .page { page-break-before: always; }
 h1 { font-size: 20pt; letter-spacing: .5em; margin: 0 0 6mm; font-weight: 600; }
-h2 { font-size: 12pt; margin: 8mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid #111; font-weight: 700; }
-h3 { font-size: 11pt; margin: 4mm 0 1.5mm; font-weight: 700; }
+h2 { break-after: avoid; font-size: 12pt; margin: 8mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid #111; font-weight: 700; }
+h3 { break-after: avoid; font-size: 11pt; margin: 4mm 0 1.5mm; font-weight: 700; }
 p { margin: 0 0 2mm; white-space: pre-wrap; }
 ul { margin: 0 0 2mm; padding-left: 5mm; }
 li { margin-bottom: 1mm; }
@@ -77,6 +98,10 @@ th { background: #f2f2f2; white-space: nowrap; }
 .meta { text-align: right; font-size: 9.5pt; margin-bottom: 4mm; }
 .muted { color: #555; font-size: 9pt; }
 .avoid { break-inside: avoid; }
+tr, li { break-inside: avoid; }
+thead { display: table-header-group; }
+p { orphans: 3; widows: 3; overflow-wrap: anywhere; }
+td { overflow-wrap: anywhere; }
 @media print { body { background: #fff; } .page { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; } .toolbar { display: none; } }
 `;
 
@@ -92,11 +117,11 @@ function rirekisho(m: Model, o: PrintOptions) {
   }
   const workRows: typeof eduRows = [];
   for (const e of [...m.employment].reverse()) {
-    const employer = e.data.employer.replace(/[（(][^）)]*[）)]\s*$/, '');
+    const employer = e.data.employer || '';
     const d1 = ym(e.data.startDate);
     if (d1.y) workRows.push({ y: d1.y, m: d1.m, text: `${employer}　入社（${e.data.role}）` });
     const d2 = ym(e.data.endDate);
-    if (d2.y) workRows.push({ y: d2.y, m: d2.m, text: `${employer}　一身上の都合により退職` });
+    if (d2.y) workRows.push({ y: d2.y, m: d2.m, text: `${employer}　退職` });
   }
   const history = [
     { y: '', m: '', text: '学歴', head: true },
@@ -110,7 +135,7 @@ function rirekisho(m: Model, o: PrintOptions) {
     .map((l) => ({ ...ym(l.data.date), text: `${l.data.qualification}　取得` }));
   const cell = (r: { y: string; m: string; text: string; head?: boolean; end?: boolean }) =>
     `<tr><td class="y">${escape(r.y)}</td><td class="m">${escape(r.m)}</td><td class="${r.head ? 'head' : r.end ? 'end' : ''}">${escape(r.text)}</td></tr>`;
-  const links = [b.email, b.website, b.github].filter(Boolean).map(escape).join('<br>');
+  const links = [b.email].filter(Boolean).map(escape).join('<br>');
   const css = `
 .rirekisho h1 { display: flex; justify-content: space-between; align-items: flex-end; }
 .rirekisho h1 small { font-size: 9.5pt; letter-spacing: 0; font-weight: 400; }
@@ -125,29 +150,33 @@ function rirekisho(m: Model, o: PrintOptions) {
 `;
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>履歴書 — ${escape(b.name)}</title><style>${baseCss}${css}</style></head><body>
 <div class="page rirekisho">
-<h1>履歴書 <small>${escape(o.date || '')}現在</small></h1>
+<h1>履歴書 <small>${escape(fullDate(o.date))}現在</small></h1>
 <div class="id">
 <table>
 <tr><th>ふりがな</th><td class="kana">${escape(b.reading || '')}</td></tr>
 <tr><th>氏名</th><td class="name">${escape(b.name || '')}</td></tr>
-<tr><th>生年月日</th><td>${b.birthDate ? escape(jaDate(b.birthDate)) + '生' : '　'}</td></tr>
-<tr><th>現住所</th><td>${escape(b.location || '')}</td></tr>
+<tr><th>生年月日</th><td>${b.birthDate ? escape(fullDate(b.birthDate)) + '生' : '　'}</td></tr>
+<tr><th>性別（任意）</th><td>${escape(b.gender || '')}</td></tr>
+<tr><th>ふりがな</th><td class="kana">${escape(b.addressReading || '')}</td></tr>
+<tr><th>現住所</th><td>${escape([b.postalCode, b.address || b.location].filter(Boolean).join('　'))}</td></tr>
 <tr><th>電話番号</th><td>${escape(b.phone || '')}</td></tr>
-<tr><th>連絡先</th><td>${links}</td></tr>
+<tr><th>E-mail</th><td>${links}</td></tr>
+<tr><th>連絡先</th><td>${escape(b.contactAddress || '')}<br><small>現住所以外に連絡を希望する場合のみ記入</small></td></tr>
 </table>
-<div class="photo">写真<br>縦40mm×横30mm</div>
+<div class="photo">${o.photo && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(o.photo) ? `<img alt="証明写真" src="${o.photo}" style="width:100%;height:100%;object-fit:contain">` : '写真（必要な場合）<br>縦40mm×横30mm'}</div>
 </div>
 <h2>学歴・職歴</h2>
-<table class="hist"><tr><th class="y">年</th><th class="m">月</th><th>学歴・職歴</th></tr>${history.map(cell).join('')}</table>
-<h2>免許・資格</h2>
-<table class="hist"><tr><th class="y">年</th><th class="m">月</th><th>免許・資格</th></tr>${quals.length ? quals.map(cell).join('') : cell({ y: '', m: '', text: '特になし' })}</table>
+<table class="hist"><thead><tr><th class="y">年</th><th class="m">月</th><th>学歴・職歴</th></tr></thead><tbody>${history.slice(0, 12).map(cell).join('')}</tbody></table>
 </div>
 <div class="page rirekisho">
-<h2>志望の動機・自己PR</h2>
-<div class="box"><p>${escape(m.preferences.rationale || b.summary || '')}</p></div>
+<h2>学歴・職歴（続き）</h2>
+<table class="hist"><thead><tr><th>年</th><th>月</th><th>学歴・職歴</th></tr></thead><tbody>${history.slice(12).map(cell).join('') || cell({ y: '', m: '', text: '' })}</tbody></table>
+<h2>免許・資格</h2>
+<table class="hist"><thead><tr><th class="y">年</th><th class="m">月</th><th>免許・資格</th></tr></thead><tbody>${quals.length ? quals.map(cell).join('') : cell({ y: '', m: '', text: '' })}</tbody></table>
+<h2>志望の動機・特技・アピールポイントなど</h2>
+<div class="box"><p>${escape(o.motivation ?? '')}</p></div>
 <h2>本人希望記入欄</h2>
-<div class="box"><p>${escape(m.preferences.conditions || '')}</p>${m.preferences.roles || m.preferences.role ? `<p>希望職種：${escape(m.preferences.role || m.preferences.roles)}</p>` : ''}${m.preferences.locations ? `<p>希望勤務地：${escape(m.preferences.locations)}</p>` : ''}</div>
-<table><tr><th style="width:30mm">通勤時間</th><td>　</td><th style="width:30mm">扶養家族数</th><td>　</td></tr><tr><th>配偶者</th><td>　</td><th>配偶者の扶養義務</th><td>　</td></tr></table>
+<div class="box"><p>${escape(o.wishes ?? '')}</p></div>
 </div>
 </body></html>`;
 }
@@ -167,7 +196,7 @@ function shokumu(m: Model, o: PrintOptions) {
     .map((e) => {
       const projects = m.workProjects(e.id);
       const achievements = m.achievements(e.id);
-      return `<section class="job avoid">
+      return `<section class="job">
 <h3>${escape(e.data.employer)}${e.data.client ? `　<span class="muted">${escape(e.data.client)}</span>` : ''}</h3>
 <table class="job-meta">
 <tr><th>期間</th><td>${escape(period(e.data.startDate, e.data.endDate))}</td><th>職種・役割</th><td>${escape(e.data.role)}</td></tr>
@@ -202,12 +231,11 @@ ${p.data.problem ? `<p>${escape(p.data.problem)}</p>` : ''}${p.data.contribution
 `;
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>職務経歴書 — ${escape(b.name)}</title><style>${baseCss}${css}</style></head><body>
 <div class="page shokumu">
-<div class="head"><h1 style="margin:0">職務経歴書</h1><div class="who">${escape(o.date || '')}現在<b>${escape(b.name || '')}</b>${o.company ? escape(o.company) + ' 御中' : ''}</div></div>
+<div class="head"><h1 style="margin:0">職務経歴書</h1><div class="who">${escape(fullDate(o.date))}現在<b>${escape(b.name || '')}</b>${o.company ? escape(o.company) + ' 御中' : ''}</div></div>
 ${b.headline ? `<p><b>${escape(b.headline)}</b></p>` : ''}
 <h2>職務要約</h2>
 <p>${escape(b.summary || '')}</p>
-<h2>活かせる経験・知識・技術</h2>
-<table class="skills"><tr><th>分野</th><th style="width:auto">技術・経験</th><th class="num">経験年数</th></tr>${skillRows}</table>
+${skillRows ? `<h2>活かせる経験・知識・技術</h2><table class="skills"><thead><tr><th>分野</th><th style="width:auto">技術・経験</th><th class="num">経験年数</th></tr></thead><tbody>${skillRows}</tbody></table>` : ''}
 ${langRows ? `<h3>語学</h3><table class="skills">${langRows}</table>` : ''}
 <h2>職務経歴</h2>
 ${employment}
@@ -215,14 +243,14 @@ ${personal ? `<h2>個人プロジェクト・公開作品</h2>${personal}` : ''}
 <h2>学歴</h2>
 <ul>${m.education.map((e) => `<li>${escape(period(e.data.startDate, e.data.endDate))}　${escape([e.data.school, e.data.major, e.data.degree].filter(Boolean).join('　'))}</li>`).join('')}</ul>
 ${m.preferences.rationale ? `<h2>自己PR</h2><p>${escape(m.preferences.rationale)}</p>` : ''}
-${m.preferences.conditions ? `<h2>本人希望</h2><p>${escape(m.preferences.conditions)}</p>` : ''}
+
 <p class="muted" style="text-align:right;margin-top:6mm">以上</p>
 </div>
 </body></html>`;
 }
 
 export function resumePrintHTML(entries: ResumeEntry[], options: PrintOptions) {
-  const model = buildModel(entries);
+  const model = buildModel(entries.filter(e => !e.archived && (options.includePending || e.verification !== 'pending')));
   return options.template === 'rirekisho' ? rirekisho(model, options) : shokumu(model, options);
 }
 

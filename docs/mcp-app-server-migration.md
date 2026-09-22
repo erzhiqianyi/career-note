@@ -29,7 +29,7 @@ Career Note 是这个包的来源:`worker/index.ts` 里的接法就是标准范�
 git rm -r packages/agent-gateway
 npm pkg delete workspaces
 npm pkg delete dependencies.@ninomae/agent-gateway
-npm install @ninomae/mcp-app-server@^0.1.0
+npm install @ninomae/mcp-app-server@^0.4.0
 ```
 
 `@modelcontextprotocol/sdk`、`zod`、`jose`、`react` 已经在 `dependencies` 里,peer 依赖满足。
@@ -131,7 +131,7 @@ registrationLimit: { limiter: { allow: async (key) => (await env.REGISTER_LIMIT.
 
 ## 检查清单
 
-- [ ] 删 `packages/agent-gateway`、`workspaces`,装 `@ninomae/mcp-app-server@^0.1.0`
+- [ ] 删 `packages/agent-gateway`、`workspaces`,装 `@ninomae/mcp-app-server@^0.4.0`
 - [ ] `worker/index.ts`:import、`sqlStore(db, tables)`、`AppServerError` / `McpAppServer` 替换
 - [ ] `worker/agent-tools.ts`、`components/oauth-consent.tsx`:import 路径
 - [ ] `npm run typecheck && npm test && npm run test:smoke`

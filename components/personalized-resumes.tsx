@@ -6,6 +6,7 @@ import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import { api } from '@/lib/career';
 import { useLocale } from './locale-provider';
+import { useAppearance } from './appearance-provider';
 import {
   blankResume,
   personalizedResumeSchema,
@@ -24,6 +25,7 @@ export default function PersonalizedResumes({
   jobs?: { id: string; company: string; role: string; status: string }[];
 }) {
   const { t, locale } = useLocale();
+  const { appearance } = useAppearance();
   const resumeLanguage = locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'zh';
   const [newFor, setNewFor] = useState('');
   const openJobs = jobs.filter((j) => !['未通过', '已撤回', '内定'].includes(j.status));
@@ -271,7 +273,7 @@ export default function PersonalizedResumes({
                           {d.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                         </button>
 
-                      </DataActions></div><ResumePreview title={t('简历详情')} html={resumeHTML(d.content, d.language)} /></section>; })()}
+                      </DataActions></div><ResumePreview title={t('简历详情')} html={resumeHTML(d.content, d.language, appearance.showJapaneseReadings)} /></section>; })()}
       {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</p><div className="record-detail-actions">                      <DataActions>
                         {active ? (
                           <>
@@ -579,7 +581,7 @@ export default function PersonalizedResumes({
           <h2>
             {t('发布预览')} · {preview.title} · v{preview.revision}
           </h2>
-          <ResumePreview title={t('公开简历预览')} html={resumeHTML(preview.content, preview.language)} />
+          <ResumePreview title={t('公开简历预览')} html={resumeHTML(preview.content, preview.language, appearance.showJapaneseReadings)} />
           <p>
             {t('仅发布上方内容。内部备注、来源、目标公司及工作区数据不公开。修改草稿后需创建新链接；旧链接可单独撤下。')}
           </p>
