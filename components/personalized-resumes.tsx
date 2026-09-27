@@ -26,10 +26,12 @@ export default function PersonalizedResumes({
 }) {
   const { t, locale } = useLocale();
   const { appearance } = useAppearance();
+  const showReadings = appearance.showJapaneseReadings;
   const resumeLanguage = locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'zh';
+  const [selectedLanguage, setSelectedLanguage] = useState<PersonalizedResume['language']>(resumeLanguage);
   const [newFor, setNewFor] = useState('');
   const openJobs = jobs.filter((j) => !['未通过', '已撤回', '内定'].includes(j.status));
-  const hasRecords = entries.some((e) => !e.archived && (e.language || 'ja') === resumeLanguage && e.kind !== 'basics');
+  const hasRecords = entries.some((e) => !e.archived && (e.language || 'ja') === selectedLanguage && e.kind !== 'basics');
   const [drafts, setDrafts] = useState<PersonalizedResume[]>([]),
     [publications, setPublications] = useState<ResumePublication[]>([]);
   const [draft, setDraft] = useRecordPage<PersonalizedResume>('#personalized', 'edit', id => id === 'new' ? blankResume() : drafts.find(d => d.id === id) || null, d => d.revision === 0 ? 'new' : d.id);
@@ -43,6 +45,9 @@ export default function PersonalizedResumes({
   const [mode, setMode] = useState<'unlisted' | 'public'>('unlisted'),
     [expiry, setExpiry] = useState(''),
     [confirmed, setConfirmed] = useState(false);
+  const visibleDrafts = drafts.filter((d) => d.language === selectedLanguage);
+  const visiblePublications = publications.filter((p) => p.language === selectedLanguage);
+  useEffect(() => setSelectedLanguage(resumeLanguage), [resumeLanguage]);
   const refresh = async () => {
     const d = (await api('personalized-resumes')) as {
       drafts: PersonalizedResume[];
@@ -74,6 +79,7 @@ export default function PersonalizedResumes({
       personalizedResumeSchema.parse(payload),
     )) as PersonalizedResume;
     await refresh();
+    setSelectedLanguage(saved.language);
     setDraft(null);
     setNotice(t('草稿已保存，已有公开链接保持原样。'));
     return saved;
@@ -81,19 +87,6 @@ export default function PersonalizedResumes({
   const copy = async (value: string) => {
     await navigator.clipboard.writeText(value);
     setNotice(t('已复制'));
-  };
-  const annotateJapanese = (d: PersonalizedResume) => {
-    const source = [d.content.name, d.content.headline, d.content.location, d.content.summary,
-      ...d.content.sections.flatMap((s) => [s.heading, ...s.items.flatMap((i) => [i.title, i.subtitle, ...i.bullets])])].join(' ');
-    const common: Record<string, string> = {
-      株式会社カウリス: 'かぶしきがいしゃカウリス', 職務経歴: 'しょくむけいれき', 職務: 'しょくむ', 経歴: 'けいれき',
-      開発: 'かいはつ', 設計: 'せっけい', 実装: 'じっそう', 運用: 'うんよう', 保守: 'ほしゅ', 要件: 'ようけん',
-      経験: 'けいけん', 技術: 'ぎじゅつ', 業務: 'ぎょうむ', 課題: 'かだい', 改善: 'かいぜん', 導入: 'どうにゅう',
-      検証: 'けんしょう', 自動化: 'じどうか', 性能: 'せいのう', 障害対応: 'しょうがいたいおう',
-      日本語: 'にほんご', 英語: 'えいご', 中国語: 'ちゅうごくご', 現在: 'げんざい', 東京: 'とうきょう',
-      学歴: 'がくれき', 語学: 'ごがく', 個人: 'こじん', プロジェクト: 'プロジェクト',
-    };
-    return { ...d, content: { ...d.content, readings: Object.fromEntries(Object.entries(common).filter(([word]) => source.includes(word))) } };
   };
   const field = (
     key: 'title' | 'targetRole' | 'targetCompany',
@@ -112,10 +105,10 @@ export default function PersonalizedResumes({
       {!draft && !preview && !selected && !publication && <div className="list-toolbar resume-tabs">
         <div className="toolbar">
           <button onClick={() => setTab('drafts')}>
-            {t('简历草稿（{0}）', [drafts.length])}
+            {t('简历草稿（{0}）', [visibleDrafts.length])}
           </button>
           <button onClick={() => setTab('public')}>
-            {t('公开链接（{0}）', [publications.filter(
+            {t('公开链接（{0}）', [visiblePublications.filter(
                 (p) =>
                   !p.revokedAt &&
                   (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()),
@@ -127,6 +120,22 @@ export default function PersonalizedResumes({
         </div>
       </div>
       }
+      {!draft && !preview && !selected && !publication && (
+        <div className="list-toolbar resume-language-tabs" role="group" aria-label={t('简历语言')}>
+          {(['ja', 'en', 'zh'] as const).map((language) => (
+            <button
+              key={language}
+              type="button"
+              aria-pressed={selectedLanguage === language}
+              onClick={() => setSelectedLanguage(language)}
+            >
+              {{ ja: '日本語', en: 'English', zh: '中文' }[language]} ({tab === 'drafts'
+                ? drafts.filter((d) => d.language === language).length
+                : publications.filter((p) => p.language === language).length})
+            </button>
+          ))}
+        </div>
+      )}
       {error && (
         <p role="alert" className="inline-note">
           {error}
@@ -146,7 +155,9 @@ export default function PersonalizedResumes({
               <button className="primary"
                 onClick={() => {
                   const job = openJobs.find((j) => j.id === newFor);
-                  setDraft(hasRecords ? resumeFromEntries(entries, resumeLanguage, { company: job?.company, role: job?.role }) : blankResume());
+                  setDraft(hasRecords
+                    ? resumeFromEntries(entries, selectedLanguage, { company: job?.company, role: job?.role })
+                    : { ...blankResume(), language: selectedLanguage, title: { ja: '新しい個別履歴書', en: 'New personalized resume', zh: '新的个性化简历' }[selectedLanguage] });
                   setPreview(null);
                 }}
               >
@@ -156,7 +167,7 @@ export default function PersonalizedResumes({
                 onClick={() =>
                   act(() =>
                     copy(
-                      '请使用 career-personalized-resume 技能，为我生成个性化简历。先询问目标岗位与语言，读取 Career Note MCP 的 career_get_resume 和 career_get_personalized_resumes，用 career_save_personalized_resume 保存有来源依据的草稿，读回核验。不要发布，不要把内部来源备注写进公开正文。',
+                      `请使用 career-personalized-resume 技能，为我生成${{ ja: '日语', en: '英语', zh: '中文' }[selectedLanguage]}个性化简历。先确认目标岗位，读取 Career Note MCP 的履历及个性化简历，用 career_save_personalized_resume 保存有来源依据的独立草稿，读回核验。不要混合其他语言内容，不要发布，不要把内部来源备注写进公开正文。`,
                     ),
                   )
                 }
@@ -192,12 +203,12 @@ export default function PersonalizedResumes({
               </label>
             </div>
           </div>
-          {!drafts.length && (
+          {!visibleDrafts.length && (
             <div className="panel">
-              {t('还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。')}
+              {t('此语言还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。')}
             </div>
           )}
-          {drafts.length > 0 && (
+          {visibleDrafts.length > 0 && (
             <div className="panel dt-panel">
               <DataTable
                 label={t('个性化简历')}
@@ -208,15 +219,15 @@ export default function PersonalizedResumes({
                   { key: 'ops', label: t('操作'), width: '40px', align: 'end' },
                 ]}
               >
-                {drafts.map((d) => {
+                {visibleDrafts.map((d) => {
                   return (
                     <DataRow key={d.id} className={d.archived ? 'dt-dim' : ''} onOpen={() => setSelected(d)}>
                       <DataTitle title={d.title} meta={`${d.targetRole || t('未填写目标岗位')} · v${d.revision}`} onClick={() => setSelected(d)} />
                       <DataCell label={t('语言')}>{d.language.toUpperCase()}</DataCell>
-                      <DataCell label={t('状态')}>
+                      <DataCell label={t('状态')} corner>
                         <span className={'badge ' + (d.archived ? 'gray' : 'green')}>{d.archived ? t('已归档') : t('草稿')}</span>
                       </DataCell>
-                      <DataActions><button className="icon-button" title={t('打开')} aria-label={t('打开') + ' ' + d.title} onClick={() => setSelected(d)}><ChevronRight size={16} /></button></DataActions>
+                      <DataActions openOnly><button className="icon-button" title={t('打开')} aria-label={t('打开') + ' ' + d.title} onClick={() => setSelected(d)}><ChevronRight size={16} /></button></DataActions>
                     </DataRow>
                   );
                 })}
@@ -273,7 +284,7 @@ export default function PersonalizedResumes({
                           {d.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                         </button>
 
-                      </DataActions></div><ResumePreview title={t('简历详情')} html={resumeHTML(d.content, d.language, appearance.showJapaneseReadings)} /></section>; })()}
+                      </DataActions></div><ResumePreview title={t('简历详情')} html={resumeHTML(d.content, d.language, showReadings)} /></section>; })()}
       {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</p><div className="record-detail-actions">                      <DataActions>
                         {active ? (
                           <>
@@ -343,12 +354,7 @@ export default function PersonalizedResumes({
           </div>
           <h3>{t('以下内容会出现在公开预览中')}</h3>
           {draft.language === 'ja' && (
-            <div className="inline-note">
-              <button type="button" onClick={() => setDraft(annotateJapanese(draft))}>
-                {t('为已有日语内容标注假名')}
-              </button>
-              <span>{t('只标注当前词表中可确认的词；后续可替换为 AI 或第三方读音服务。')}</span>
-            </div>
+            <p className="inline-note">{t('日语读音随草稿保存，设置中的开关控制预览显示。公开页面和投递用打印版不显示假名。')}</p>
           )}
           {(['name', 'headline', 'location', 'summary'] as const).map(
             (k, i) => (
@@ -581,7 +587,7 @@ export default function PersonalizedResumes({
           <h2>
             {t('发布预览')} · {preview.title} · v{preview.revision}
           </h2>
-          <ResumePreview title={t('公开简历预览')} html={resumeHTML(preview.content, preview.language, appearance.showJapaneseReadings)} />
+          <ResumePreview title={t('公开简历预览')} html={resumeHTML(preview.content, preview.language)} />
           <p>
             {t('仅发布上方内容。内部备注、来源、目标公司及工作区数据不公开。修改草稿后需创建新链接；旧链接可单独撤下。')}
           </p>
@@ -628,6 +634,7 @@ export default function PersonalizedResumes({
                   });
                   await refresh();
                   setPreview(null);
+                  setSelectedLanguage(preview.language);
                   setTab('public');
                   setNotice(t('已创建发布快照。请打开链接检查后再分享。'));
                 })
@@ -644,37 +651,37 @@ export default function PersonalizedResumes({
           <div className="inline-note">
             {t('管理每一份简历的公开链接。当前链接在本机运行，互联网发布需要独立的公开服务。归档草稿不会撤下链接。')}
           </div>
-          {!publications.length && (
+          {!visiblePublications.length && (
             <div className="panel">
-              {t('暂无公开链接。先在草稿中选择「预览与发布」。')}
+              {t('此语言暂无公开链接。先在草稿中选择「预览与发布」。')}
             </div>
           )}
-          {publications.length > 0 && (
+          {visiblePublications.length > 0 && (
             <div className="panel dt-panel">
               <DataTable
                 label={t('公开链接')}
                 columns={[
                   { key: 'title', label: t('简历'), width: 'minmax(200px, 1.6fr)' },
-                  { key: 'mode', label: t('可见性'), width: '92px', hide: 'phone' },
+                  { key: 'mode', label: t('可见性'), width: '92px' },
                   { key: 'expires', label: t('有效期'), width: 'minmax(120px, 0.8fr)', hide: 'tablet' },
                   { key: 'state', label: t('状态'), width: '72px' },
                   { key: 'ops', label: t('操作'), width: '108px', align: 'end' },
                 ]}
               >
-                {publications.map((p) => {
+                {visiblePublications.map((p) => {
                   const expired = !!p.expiresAt && Date.parse(p.expiresAt) <= Date.now(),
                     active = !p.revokedAt && !expired;
                   return (
                     <DataRow key={p.id} className={active ? '' : 'dt-dim'} onOpen={() => setPublication(p)}>
                       <DataTitle title={p.title} meta={`v${p.draftRevision}`} onClick={() => setPublication(p)} />
-                      <DataCell label={t('可见性')} hide="phone">{p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</DataCell>
+                      <DataCell label={t('可见性')}>{p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</DataCell>
                       <DataCell label={t('有效期')} hide="tablet" className="num">
                         {p.expiresAt ? new Date(p.expiresAt).toLocaleString() : t('永久有效')}
                       </DataCell>
-                      <DataCell label={t('状态')}>
+                      <DataCell label={t('状态')} corner>
                         <span className={'badge ' + (active ? 'green' : 'gray')}>{p.revokedAt ? t('已撤下') : expired ? t('已过期') : t('有效')}</span>
                       </DataCell>
-                      <DataActions><button className="icon-button" aria-label={t('打开') + ' ' + p.title} onClick={() => setPublication(p)}><ChevronRight size={16} /></button></DataActions>
+                      <DataActions openOnly><button className="icon-button" aria-label={t('打开') + ' ' + p.title} onClick={() => setPublication(p)}><ChevronRight size={16} /></button></DataActions>
                     </DataRow>
                   );
                 })}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "日语假名注音"
+  short_description: "为日语资料正文补充读音，保存可显示假名的新版本"
+  default_prompt: "使用 $career-japanese-readings，为我指定的 Career Note 日语资料直接在正文补充 {漢字词|かな} 读音。保留事实和来源，能修订的保存新版本并读回；人名、公司名、地名没有来源时不要猜读音，不填写正式ふりがな字段。"

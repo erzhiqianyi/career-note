@@ -4,6 +4,7 @@ import { DataMoreActions } from '@/components/data-table';
 import { useEffect, useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { JaChildren } from './japanese-text';
 import {
   ChevronDown,
   Archive,
@@ -23,6 +24,7 @@ import {
   Pencil,
   Plus,
   Target,
+  Trash2,
   Trophy,
   Wrench,
   X,
@@ -196,6 +198,22 @@ export default function ResumeManager({
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('保存失败'));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function deleteDocument(entry: ResumeEntry) {
+    if (entry.kind !== 'document' || !entry.archived) return;
+    if (!window.confirm(t('永久删除此文档及其全部修订？此操作无法恢复。'))) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api('resume/delete', { id: entry.id, revision: entry.revision });
+      setSelected(null);
+      setHistoryEntry(null);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('删除失败'));
     } finally {
       setBusy(false);
     }
@@ -444,6 +462,13 @@ export default function ResumeManager({
             <Archive size={16} />
           )}
         </button>
+        {entry.kind === 'document' && entry.archived && <button
+          className="icon-button"
+          title={t('永久删除')}
+          aria-label={t('永久删除') + ' ' + resumeTitle(entry)}
+          disabled={busy}
+          onClick={() => void deleteDocument(entry)}
+        ><Trash2 size={16} /></button>}
         </DataMoreActions>
       </div>
     );
@@ -500,7 +525,7 @@ export default function ResumeManager({
             </button>
           </div>
           <div className="resume-markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ p: ({ children }) => <p><JaChildren mode="ja">{children}</JaChildren></p>, li: ({ children }) => <li><JaChildren mode="ja">{children}</JaChildren></li>, h1: ({ children }) => <h1><JaChildren mode="ja">{children}</JaChildren></h1>, h2: ({ children }) => <h2><JaChildren mode="ja">{children}</JaChildren></h2>, h3: ({ children }) => <h3><JaChildren mode="ja">{children}</JaChildren></h3> }}>
               {entry.data.content}
             </ReactMarkdown>
           </div>

@@ -139,8 +139,11 @@ export default function JobPlatforms({ platforms, reload }: Props) {
             return <li key={p.id} className={'platform-directory-row' + (p.deleted || !p.enabled ? ' is-inactive' : '')}>
               <div className="platform-category-mark" data-category={p.category} aria-hidden="true"><CategoryIcon size={23} strokeWidth={1.7} /></div>
               <h3 className="platform-compact-name"><button title={p.name} onClick={() => setSelected(p)}>{p.name}</button></h3>
-              <span className="platform-category-label">{tr(p.category)}</span>
-              <span className="platform-compact-status">{tr(p.deleted ? '已删除' : !p.enabled ? '已停用' : p.registered ? '已注册' : '未注册')}</span>
+              {/* Separate grid columns on wider screens; one meta line under the name on phones. */}
+              <span className="platform-compact-meta">
+                <span className="platform-category-label">{tr(p.category)}</span>
+                <span className="platform-compact-status">{tr(p.deleted ? '已删除' : !p.enabled ? '已停用' : p.registered ? '已注册' : '未注册')}</span>
+              </span>
               <div className="platform-directory-actions">
                 <button className={'icon-button platform-favorite' + (p.favorite ? ' on' : '')} title={tr(p.favorite ? '取消收藏' : '收藏')} aria-label={`${tr(p.favorite ? '取消收藏' : '收藏')} ${p.name}`} aria-pressed={p.favorite} disabled={busy || p.deleted} onClick={() => void save({ ...p, favorite: !p.favorite }, p.favorite ? '已取消收藏' : '已收藏')}><Star size={18} fill={p.favorite ? 'currentColor' : 'none'} /></button>
                 <a className="platform-visit" title={tr('访问平台')} href={p.url} target="_blank" rel="noopener noreferrer" aria-label={`${tr('访问平台')} ${p.name}`}><ArrowUpRight size={18} /></a>

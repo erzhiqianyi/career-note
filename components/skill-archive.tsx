@@ -83,7 +83,7 @@ export default function SkillArchive() {
                 <DataCell hide="phone" className="ellipsis muted" title={t(skill.description)}>
                   {t(skill.description)}
                 </DataCell>
-                <DataActions>
+                <DataActions openOnly>
                   <button className="icon-button" onClick={open} title={t('查看详情')} aria-label={`${t('查看详情')} ${t(skill.title)}`}>
                     <BookOpen size={16} />
                   </button>
@@ -105,16 +105,14 @@ export default function SkillArchive() {
           label={t('历史备份')}
           columns={[
             { key: 'at', label: t('时间'), width: 'minmax(160px, 1fr)' },
-            { key: 'size', label: t('内容'), width: 'minmax(160px, 1fr)', hide: 'phone' },
+            { key: 'size', label: t('内容'), width: 'minmax(160px, 1fr)' },
             { key: 'ops', label: t('操作'), width: '44px', align: 'end' },
           ]}
         >
           {archive.history.map((item) => (
             <DataRow key={item.revision}>
-              <DataCell className="num">
-                {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.createdAt))}
-              </DataCell>
-              <DataCell hide="phone" className="muted">
+              <DataTitle title={new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.createdAt))} />
+              <DataCell className="muted">
                 {`${item.skillCount} skills · ${Math.ceil(item.bytes / 1024)} KB · ${item.revision.slice(0, 8)}`}
               </DataCell>
               <DataActions>

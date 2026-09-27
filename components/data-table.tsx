@@ -83,12 +83,17 @@ export function DataRow({ children, className = '', onOpen }: { children: ReactN
   );
 }
 
-/** A cell; `label` is shown on phones where the header row is hidden. */
+/**
+ * A cell; `label` is shown on phones where the header row is hidden.
+ * On phones each row becomes a card: `corner` pins the cell (usually a status badge) beside the title,
+ * the other cells flow underneath it as a meta line.
+ */
 export function DataCell({
   children,
   label,
   hide,
   align,
+  corner,
   className = '',
   title,
 }: {
@@ -96,6 +101,7 @@ export function DataCell({
   label?: string;
   hide?: 'tablet' | 'phone';
   align?: 'end';
+  corner?: boolean;
   className?: string;
   title?: string;
 }) {
@@ -105,6 +111,7 @@ export function DataCell({
         'dt-cell' +
         (hide ? ' dt-hide-' + hide : '') +
         (align === 'end' ? ' dt-end' : '') +
+        (corner ? ' dt-corner' : '') +
         ' ' +
         className
       }
@@ -140,10 +147,13 @@ export function DataTitle({
   );
 }
 
-/** Trailing icon actions. Give each button a `title` so the icon is explained on hover. */
-export function DataActions({ children }: { children: ReactNode }) {
+/**
+ * Trailing icon actions. Give each button a `title` so the icon is explained on hover.
+ * `openOnly`: the actions only repeat the row's own open, so phones (where the whole card is tappable) drop them.
+ */
+export function DataActions({ children, openOnly }: { children: ReactNode; openOnly?: boolean }) {
   return (
-    <div className="dt-cell dt-actions">
+    <div className={'dt-cell dt-actions' + (openOnly ? ' dt-open-only' : '')}>
       {children}
     </div>
   );

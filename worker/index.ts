@@ -1,9 +1,10 @@
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
-import { ensureResumeSchema, readResume, writeResume, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
+import { ensureResumeSchema, readResume, writeResume, deleteResumeDocument, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
 import { inspectorResponse } from '@ninomae/mcp-app-server/inspector';
 import { sqlStore } from '@ninomae/mcp-app-server/sql';
 import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools';
+import { listReadings, saveReadings, builtinJapanese, ReadingsError } from './readings';
 import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } from './activity';
 import { verifyFirebaseToken } from './firebase-auth';
 import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-platforms';
@@ -231,6 +232,8 @@ async function state(db: Workspace, uid = 'local', resumeSummary = false) {
     questionSets: await records(db, 'questionSets'),
     attempts: await records(db, 'attempts'),
     reviews: await records(db, 'reviews'),
+    // Study furigana for the app; agents read it through career_get_readings instead of every context call.
+    ...(resumeSummary ? {} : { readings: await listReadings(db.connection, workspaceKey(db, 'readings')) }),
   };
 }
 
@@ -1043,6 +1046,11 @@ const handler = async (
     return jsonResponse(await listPersonalized(rawDb, db.namespace));
   }
 
+  if (method === 'GET' && pathname === '/api/career/readings') {
+    ensureScopes(context, ['career:read']);
+    const entries = await listReadings(rawDb, workspaceKey(db, 'readings'));
+    return jsonResponse(url.searchParams.get('include') === 'bank' ? { entries, builtinJapanese: builtinJapanese() } : { entries });
+  }
   if (method === 'GET' && pathname === '/api/career/resume') {
     ensureScopes(context, ['career:read']);
     return jsonResponse({ entries: await readResume(rawDb, db.namespace, url.searchParams.get('view') === 'summary') });
@@ -1166,6 +1174,16 @@ const handler = async (
       const saved = await writeResume(rawDb, db.namespace, workspaceKey(db, 'profile'), payload);
       return jsonResponse(saved.value, { status: saved.status });
     }
+    case '/api/career/resume/delete': {
+      ensureScopes(context, ['career:write']);
+      const deleted = await deleteResumeDocument(rawDb, db.namespace, workspaceKey(db, 'profile'), payload.id as string, payload.revision as number);
+      return jsonResponse(deleted.value, { status: deleted.status });
+    }
+    case '/api/career/readings':
+      ensureScopes(context, ['agent:write']);
+      try { result = await saveReadings(rawDb, workspaceKey(db, 'readings'), payload, context.tokenType === 'mcp'); }
+      catch (error) { throw error instanceof ReadingsError ? new AppError(error.code, error.message) : error; }
+      break;
     case '/api/career/profile':
       ensureScopes(context, ['career:write']);
       result = await saveProfile(db, payload);

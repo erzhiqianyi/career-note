@@ -3,6 +3,7 @@ import { Check, RotateCcw } from 'lucide-react';
 import { useAppearance, type Appearance } from './appearance-provider';
 import { LanguageSwitcher, useLocale } from './locale-provider';
 import { Switch } from './ui/switch';
+import { Ja } from './japanese-text';
 
 const themes = [
   { value: 'blue', label: '经典蓝' },
@@ -87,9 +88,10 @@ export default function SystemSettings() {
           <div className="settings-language">
             <div>
               <label htmlFor="japanese-readings">{tr('日语显示假名')}</label>
-              <p id="japanese-readings-description">{tr('在日语简历详情和预览中显示已提供的假名标记。')}</p>
+              <p id="japanese-readings-description">{tr('AI 生成日语资料时会保存读音。开启后在应用内显示假名；关闭后只显示原文。公开简历和投递用打印版始终不显示。')}</p>
             </div>
             <Switch
+              className="settings-reading-switch"
               id="japanese-readings"
               checked={appearance.showJapaneseReadings}
               onCheckedChange={(checked) => update({ showJapaneseReadings: checked })}
@@ -97,9 +99,7 @@ export default function SystemSettings() {
             />
           </div>
           <div className="settings-preview" lang="ja">
-            {appearance.showJapaneseReadings
-              ? <ruby>開発経験<rt>かいはつけいけん</rt></ruby>
-              : '開発経験'}
+            <Ja text="{開発経験|かいはつけいけん}" mode="ja" />
           </div>
         </fieldset>
         <div className="settings-language">

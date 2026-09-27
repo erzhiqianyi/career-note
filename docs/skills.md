@@ -12,6 +12,7 @@
 |投递结果与行动复盘|分析已有投递历史、面试记录和准备材料，找出阶段性瓶颈并保存复盘报告；不推断未记录的结果或代改状态。|[career-outcome-review](../.agents/skills/career-outcome-review/SKILL.md)|
 |MCP 数据同步|将已有求职研究、材料、题组和点评同步到用户配置的 Career Note MCP，执行协议检查、预览、写入与读回；不生成新的求职结论。|[career-workspace-sync](../.agents/skills/career-workspace-sync/SKILL.md)|
 |来源收集与状态核对|检查指定网站/邮件中的简历变化及投递事件，保存待确认报告|[career-source-sync](../.agents/skills/career-source-sync/SKILL.md)|
+|日语假名注音|在日语资料正文保存学习用假名，按范围修订旧资料；不填写正式ふりがな字段。|[career-japanese-readings](../.agents/skills/career-japanese-readings/SKILL.md)|
 
 ## 定时任务
 
@@ -21,6 +22,6 @@
 
 在 Agent 协作下载单个技能包并安装到所用助手的技能目录。配置 Streamable HTTP MCP：`http://localhost:4210/api/career/mcp`（端口跟随当前网站），不填写令牌；客户端首次连接会打开浏览器授权页，登录并同意后自动获得令牌。服务仅在本机监听，远程助手需要 `npm run dev:tunnel` 或公开部署得到的地址；不能直接访问此 localhost。
 
-工具：`career_get_contract`、`career_get_context`、`career_preview_import`、`career_import`、`career_update_profile`、`career_create_task`。列出的工具按授权时勾选的 scope 限定；没有自动投递或修改结果的工具。
+工具：`career_get_contract`、`career_get_context`、`career_preview_import`、`career_import`、`career_update_profile`、`career_create_task`、`career_get_readings`、`career_save_readings`。列出的工具按授权时勾选的 scope 限定；没有自动投递或修改结果的工具。
 
 每个包包含完整技能目录，不依赖仓库路径。下载包不包含账号、令牌或个人数据。修改后执行 `npm run skills:archive`，生成单技能 ZIP、完整备份与网站目录；历史备份按内容版本保留。

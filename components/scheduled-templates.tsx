@@ -39,8 +39,8 @@ export default function ScheduledTemplates() {
         {key:'open',label:t('操作'),width:'40px',align:'end'},
       ]}>{scheduledTaskTemplates.map(template => <DataRow key={template.id} onOpen={() => setSelected(template)}>
         <DataTitle title={t(template.title)} meta={t(template.summary)} onClick={() => setSelected(template)} />
-        <DataCell>{t(triggerLabel[template.trigger])}</DataCell>
-        <DataActions><button className="icon-button" title={t('打开')} aria-label={t('打开')} onClick={() => setSelected(template)}><ChevronRight size={16} /></button></DataActions>
+        <DataCell corner>{t(triggerLabel[template.trigger])}</DataCell>
+        <DataActions openOnly><button className="icon-button" title={t('打开')} aria-label={t('打开')} onClick={() => setSelected(template)}><ChevronRight size={16} /></button></DataActions>
       </DataRow>)}</DataTable>
       <output aria-live="polite">{t(notice)}</output>
     </section>

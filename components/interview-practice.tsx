@@ -29,6 +29,7 @@ import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { buildHints, type Hints } from '@/lib/interview-hints';
 import { resumeSections } from '@/lib/resume';
 import { prepRank, prepStage, prepStageTone, type PrepProgress } from '@/lib/prep-stage';
+import { Ja } from '@/components/japanese-text';
 const profileLabels: Record<string, string> = {
   summary: '个人概要',
   skills: '技能',
@@ -123,12 +124,12 @@ export default function InterviewPractice({
   const materialsFor = (jobId: string) => materials.filter(m => (m.jobId || '') === jobId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const materialTable = (rows: Material[], label: string, withCompany = false) => <DataTable label={label} columns={[
     { key: 'title', label: tr(withCompany ? '标题 / 公司' : '标题'), width: 'minmax(0,1fr)' },
-    { key: 'kind', label: tr('类型'), width: '110px', hide: 'phone' },
+    { key: 'kind', label: tr('类型'), width: '110px' },
     { key: 'review', label: tr('状态'), width: '80px' },
   ]}>{rows.map(m => <DataRow key={m.id} onOpen={() => openMaterial(m)}>
     <DataTitle title={m.title} meta={<>{withCompany ? (data.jobs.find(j => j.id === m.jobId)?.company || tr('整个求职工作区')) + ' · ' : ''}{day(m.createdAt)}</>} onClick={() => openMaterial(m)} />
-    <DataCell label={tr('类型')} hide="phone">{tr(m.kind)}</DataCell>
-    <DataCell label={tr('状态')}><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
+    <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
+    <DataCell label={tr('状态')} corner><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
   </DataRow>)}</DataTable>;
   const [company, setCompany] = useRecordPage<string>('#jobs', 'company', id => id === BANK_JOB_ID || data.jobs.some(j => j.id === id) ? id : null, id => id);
   const [help, setHelp] = useRecordPage<string>('#jobs', 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
@@ -230,8 +231,8 @@ export default function InterviewPractice({
   const keywordChips = (h: Hints) =>
     (h.keywords.length || h.gaps.length) ? (
       <div className="hint-keywords">
-        {h.keywords.map((k) => <span key={'k' + k} className="hint-chip is-have" lang="ja">{k}</span>)}
-        {h.gaps.map((k) => <span key={'g' + k} className="hint-chip is-gap" lang="ja">{k}</span>)}
+        {h.keywords.map((k) => <span key={'k' + k} className="hint-chip is-have" lang="ja"><Ja text={k} mode="ja" /></span>)}
+        {h.gaps.map((k) => <span key={'g' + k} className="hint-chip is-gap" lang="ja"><Ja text={k} mode="ja" /></span>)}
       </div>
     ) : null;
   const attempts = (data.attempts || [])
@@ -379,7 +380,7 @@ export default function InterviewPractice({
       <section className="panel dt-panel prep-list">
         {jobs.length ? <DataTable<PrepColumn> label={tr('面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
           { key: 'company', label: tr('公司 / 职位'), width: 'minmax(0,2fr)', sortable: true },
-          { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', hide: 'phone', sortable: true },
+          { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', sortable: true },
           { key: 'schedule', label: tr('面试 / 跟进'), width: 'minmax(0,1.2fr)', sortable: true },
           { key: 'prep', label: tr('准备阶段'), width: 'minmax(120px,1.2fr)', sortable: true },
         ]}>{jobs.map(job => {
@@ -389,8 +390,8 @@ export default function InterviewPractice({
           const overdue = !!job.nextDate && job.nextDate < data.today;
           return <DataRow key={job.id} className={closed.includes(job.status) ? 'is-closed' : ''} onOpen={() => setCompany(job.id)}>
             <DataTitle title={job.company} meta={job.role} onClick={() => setCompany(job.id)} />
-            <DataCell label={tr('投递状态')} hide="phone"><StatusMark status={job.status} label /></DataCell>
-            <DataCell label={tr('面试 / 跟进')}>
+            <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label /></DataCell>
+            <DataCell label={tr('面试 / 跟进')} className="prep-schedule">
               {job.nextDate ? <>
                 <b className={'prep-when' + (overdue ? ' prep-overdue' : interview ? ' prep-interview' : '')} title={tr(overdue ? '已逾期' : interview ? '面试日' : '待跟进')}>
                   {interview ? <MessageSquare size={14} /> : <Clock3 size={14} />}{day(job.nextDate)}
@@ -398,7 +399,7 @@ export default function InterviewPractice({
                 {job.nextAction && <small className="muted">{job.nextAction}</small>}
               </> : job.nextAction ? <span className="muted">{job.nextAction}</span> : <span className="muted">—</span>}
             </DataCell>
-            <DataCell label={tr('准备阶段')}>
+            <DataCell label={tr('准备阶段')} className="prep-progress">
               <span className={'prep-stage tone-' + prepStageTone[stage]}>{tr(stage)}</span>
               <small className="muted">
                 {tr('资料 {0} / {1}', [String(prep.materials), String(prep.materialTotal)])}
@@ -424,13 +425,13 @@ export default function InterviewPractice({
     const questionOf = (a: Attempt) => packs.find(p => p.id === a.questionSetId)?.questions.find(q => q.id === a.questionId);
     const openAttempt = (a: Attempt) => { setPicked(p => ({ ...p, [a.questionSetId + ':' + a.questionId]: a.id })); setQuestionId(a.questionId); setPracticeRecord(a.questionSetId + '|' + a.questionId); };
     const mentions = !isBank && currentJob ? (data.reports || []).filter(r => (r.title + '\n' + r.content).includes(currentJob.company)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5) : [];
-    const factList = (items: Array<[string, string]>) => <dl className="facts">
-      {items.map(([k, v]) => <div key={k}><dt>{tr(k)}</dt><dd>{v || <span className="muted">{tr('待确认')}</span>}</dd></div>)}
+    const factList = (items: Array<[string, string, boolean?]>) => <dl className="facts">
+      {items.map(([k, v, own]) => <div key={k}><dt>{tr(k)}</dt><dd>{v ? own ? <Ja text={v} /> : v : <span className="muted">{tr('待确认')}</span>}</dd></div>)}
     </dl>;
     const textSections = (items: Array<[string, string]>, openKeys: string[] = []) => items.map(([k, v]) => (
       <details className="text-section detail-disclosure" key={k} open={openKeys.includes(k)}>
         <summary>{tr(k)}</summary>
-        <p className="prewrap">{v || tr('尚未补充')}</p>
+        <p className="prewrap">{v ? <Ja text={v} /> : tr('尚未补充')}</p>
       </details>
     ));
     // The page header already shows the back arrow and the company (or template) name; only the meta line lives here.
@@ -448,14 +449,21 @@ export default function InterviewPractice({
           </button>;
         })}
       </div>
+      {/* Phone (CSS): the tab row can hold 6 items and runs wider than the screen, so a picker replaces it there instead of a sideways swipe. */}
+      <select className="prep-tabs-select" aria-label={tr('面试准备')} value={activeTab} onChange={e => setTab(e.target.value as PrepTab)}>
+        {tabs.map(([id, label]) => {
+          const count = id === 'materials' ? companyMaterials.length : id === 'feedback' ? companyReviews.length : 0;
+          return <option key={id} value={id}>{tr(label)}{count > 0 ? ' · ' + count : ''}</option>;
+        })}
+      </select>
       {activeTab === 'company' && currentJob && <section className="panel prep-tab-panel">
         {factList([
-          ['工作地点', currentJob.location],
-          ['外国人招聘信息', currentJob.foreigner],
-          ['在留资格支持', currentJob.visa],
+          ['工作地点', currentJob.location, true],
+          ['外国人招聘信息', currentJob.foreigner, true],
+          ['在留资格支持', currentJob.visa, true],
           ['投递状态', currentJob.status ? tr(currentJob.status) : ''],
           ['优先级', currentJob.priority ? tr(currentJob.priority) : ''],
-          ['下一步', currentJob.nextAction ? currentJob.nextAction + (currentJob.nextDate ? '（' + day(currentJob.nextDate) + '）' : '') : ''],
+          ['下一步', currentJob.nextAction ? currentJob.nextAction + (currentJob.nextDate ? '（' + day(currentJob.nextDate) + '）' : '') : '', true],
         ])}
         {textSections([
           ['公司业务与特点', currentJob.business],
@@ -470,8 +478,8 @@ export default function InterviewPractice({
       {activeTab === 'posting' && currentJob && <section className="panel prep-tab-panel">
         <div className="section-head"><h2>{currentJob.role}</h2>{currentJob.url && <a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a>}</div>
         {factList([
-          ['薪资范围', currentJob.salary],
-          ['日语要求', currentJob.japanese],
+          ['薪资范围', currentJob.salary, true],
+          ['日语要求', currentJob.japanese, true],
           ['信息确认日期', currentJob.sourceDate ? day(currentJob.sourceDate) : ''],
           ['匹配评价', currentJob.matchLevel ? tr(currentJob.matchLevel) : ''],
         ])}
@@ -529,7 +537,7 @@ export default function InterviewPractice({
                   {practiced.has(q.id) ? <Check size={16} /> : String(i + 1).padStart(2, '0')}
                 </span>
                 <span>
-                  <b>{bt(q.title)}</b>
+                  <b><Ja text={bt(q.title)} /></b>
                   <small>
                     {tr(q.category)} · {q.targetSeconds}
                     {tr('秒')}
@@ -552,7 +560,7 @@ export default function InterviewPractice({
           <ul className="prep-next-list">
             {companyReviews.slice(0, 5).map(r => { const a = companyAttempts.find(x => x.id === r.attemptId); const q = a && questionOf(a); return <li key={r.id}>
               <span className="num">{day(r.createdAt)}</span>
-              <span>{a ? <button className="text-button" onClick={() => openAttempt(a)}><b>{q ? bt(q.title) : ''}</b></button> : <b>{q ? bt(q.title) : ''}</b>}<span className="prewrap">{r.nextPractice}</span></span>
+              <span>{a ? <button className="text-button" onClick={() => openAttempt(a)}><b>{q ? <Ja text={bt(q.title)} /> : ''}</b></button> : <b>{q ? <Ja text={bt(q.title)} /> : ''}</b>}<span className="prewrap"><Ja text={r.nextPractice} /></span></span>
             </li>; })}
           </ul>
         </>}
@@ -563,7 +571,7 @@ export default function InterviewPractice({
               const tries = companyAttempts.filter(a => a.questionSetId === pack.id && a.questionId === q.id);
               const reviewed = tries.filter(a => reviewedAttemptIds.has(a.id)).length;
               return <li key={q.id} className={tries.length ? '' : 'is-untried'}>
-                <button className="text-button" onClick={() => { setQuestionId(q.id); setPracticeRecord(pack.id + '|' + q.id); }}><b>{bt(q.title)}</b></button>
+                <button className="text-button" onClick={() => { setQuestionId(q.id); setPracticeRecord(pack.id + '|' + q.id); }}><b><Ja text={bt(q.title)} /></b></button>
                 <span className="muted">{tries.length ? tr('{0} 次 · 点评 {1}', [String(tries.length), String(reviewed)]) : tr('未练习')}</span>
                 {tries.length > 0 && <Play size={14} className="prep-tried" aria-hidden="true" />}
               </li>;
@@ -581,8 +589,8 @@ export default function InterviewPractice({
       {activeTab === 'feedback' && <section className="panel prep-tab-panel">
         {companyReviews.length ? <ul className="prep-feedback-list">
           {companyReviews.map(r => { const a = companyAttempts.find(x => x.id === r.attemptId); const q = a && questionOf(a); return <li key={r.id}>
-            <div className="prep-feedback-head"><b>{q ? bt(q.title) : tr('回答点评')}</b><span className="num muted">{day(r.createdAt)}</span></div>
-            <p className="prewrap">{r.summary}</p>
+            <div className="prep-feedback-head"><b>{q ? <Ja text={bt(q.title)} /> : tr('回答点评')}</b><span className="num muted">{day(r.createdAt)}</span></div>
+            <p className="prewrap"><Ja text={r.summary} /></p>
             {a && <button className="text-button" onClick={() => openAttempt(a)}>{tr('查看完整点评')}</button>}
           </li>; })}
         </ul> : <div className="empty"><p>{tr('还没有点评。')}</p></div>}
@@ -599,7 +607,7 @@ export default function InterviewPractice({
           {isBank && pack.communicationGuide && (
             <section className="panel candidate-context">
               <h2>{tr('这组题在考察什么')}</h2>
-              <p>{bt(pack.communicationGuide)}</p>
+              <p><Ja text={bt(pack.communicationGuide)} /></p>
               <p className="small muted">
                 {tr(
                   '题库内置，适用于大多数公司；针对某家公司的追问，请在该公司下请求「公司准备」。',
@@ -610,21 +618,21 @@ export default function InterviewPractice({
           {pack.candidateContext && (
             <section className="panel candidate-context">
               <h2>{tr('结合你的求职背景')}</h2>
-              <p>{pack.candidateContext}</p>
+              <p><Ja text={pack.candidateContext} /></p>
               <div className="row">
                 <span className="tag">{tr('工作经验单独看')}</span>
                 <span className="tag">{tr('用能说出口的日语练习')}</span>
               </div>
               <details>
                 <summary>{tr('沟通练习与企业确认事项')}</summary>
-                <p className="prewrap">{pack.communicationGuide}</p>
+                <p className="prewrap"><Ja text={pack.communicationGuide} /></p>
               </details>
             </section>
           )}
           <section className="practice-intro">
             <div>
               <span className="eyebrow">INTERVIEW REHEARSAL</span>
-              <h2>{bt(pack.scenario)}</h2>
+              <h2><Ja text={bt(pack.scenario)} /></h2>
               <p>
                 {tr(
                   '先独立回答 → 提交点评 → 根据追问再说一次。每次保留原回答。',
@@ -644,7 +652,7 @@ export default function InterviewPractice({
               <BookOpen size={18} />
               {tr('面试前要做什么')}
             </h2>
-            <p className="prewrap">{bt(pack.plan)}</p>
+            <p className="prewrap"><Ja text={bt(pack.plan)} /></p>
             <p className="source-line">
               {bt(pack.sourceNotes)}
             </p>
@@ -660,15 +668,15 @@ export default function InterviewPractice({
               {tr(error)}
             </div>
           )}
-          {help && <section className="panel question-help-page"><h2>{question.questionJa}</h2>              <p>{bt(question.meaning)}</p>
+          {help && <section className="panel question-help-page"><h2 lang="ja"><Ja text={question.questionJa} mode="ja" /></h2>              <p>{bt(question.meaning)}</p>
               {(question.simpleQuestionJa || question.vocabulary) && (
                 <details className="language-support">
                   <summary>{tr('换个简单说法，理解这道题')}</summary>
                   {question.simpleQuestionJa && (
-                    <p lang="ja">{question.simpleQuestionJa}</p>
+                    <p lang="ja"><Ja text={question.simpleQuestionJa} mode="ja" /></p>
                   )}
                   {question.vocabulary && (
-                    <p className="prewrap">{question.vocabulary}</p>
+                    <p className="prewrap"><Ja text={question.vocabulary} /></p>
                   )}
                 </details>
               )}
@@ -678,7 +686,7 @@ export default function InterviewPractice({
               </div>
               <details>
                 <summary>{tr('卡住时，看看回答思路')}</summary>
-                <p className="prewrap">{bt(question.outline)}</p>
+                <p className="prewrap"><Ja text={bt(question.outline)} /></p>
               </details>
               {hints && (hints.keywords.length > 0 || hints.gaps.length > 0) && (
                 <div className="question-purpose hint-block">
@@ -691,7 +699,7 @@ export default function InterviewPractice({
                 <div className="question-purpose hint-block">
                   <b>{tr('参考 · 招聘信息里对应的内容')}</b>
                   <ul className="hint-lines">
-                    {hints.company.map((c, i) => <li key={i}><em>{c.field}</em><span lang="ja">{c.text}</span></li>)}
+                    {hints.company.map((c, i) => <li key={i}><em>{c.field}</em><span lang="ja"><Ja text={c.text} /></span></li>)}
                   </ul>
                 </div>
               )}
@@ -701,8 +709,8 @@ export default function InterviewPractice({
                   <ul className="hint-records">
                     {hints.resume.map((r) => (
                       <li key={r.id}>
-                        <span className="hint-record-head"><em>{tr(resumeSections[r.kind as keyof typeof resumeSections]?.label || r.kind)}</em><strong lang="ja">{r.title}</strong></span>
-                        {r.lines.map((line, i) => <p key={i} lang="ja">{line}</p>)}
+                        <span className="hint-record-head"><em>{tr(resumeSections[r.kind as keyof typeof resumeSections]?.label || r.kind)}</em><strong lang="ja"><Ja text={r.title} /></strong></span>
+                        {r.lines.map((line, i) => <p key={i} lang="ja"><Ja text={line} /></p>)}
                       </li>
                     ))}
                   </ul>
@@ -725,7 +733,7 @@ export default function InterviewPractice({
                           {value ? '' : tr('（尚未填写）')}
                         </summary>
                         <p className="prewrap small">
-                          {value ||
+                          {value ? <Ja text={value} /> :
                             tr('在「我的履历」里补充后，这里会显示可引用的内容。')}
                         </p>
                       </details>
@@ -736,7 +744,7 @@ export default function InterviewPractice({
               <details>
                 <summary>{tr('面试官可能继续问')}</summary>
                 <p className="prewrap" lang="ja">
-                  {question.followUps}
+                  <Ja text={question.followUps} mode="ja" />
                 </p>
               </details>
 </section>}
@@ -752,7 +760,7 @@ export default function InterviewPractice({
                 </span>
               </div>
               <h2 className="japanese-question" lang="ja">
-                {question.questionJa}
+                <Ja text={question.questionJa} mode="ja" />
               </h2>
               <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('回答提示')}</button>
               {hints && keywordChips(hints)}
@@ -887,7 +895,7 @@ export default function InterviewPractice({
                       ? tr(' · {0} 秒', [attempt.durationSeconds])
                       : ''}
                   </summary>
-                  <p className="prewrap">{attempt.answer}</p>
+                  <p className="prewrap"><Ja text={attempt.answer} /></p>
                   {attempt.audio && <AttemptAudio attemptId={attempt.id} size={attempt.audio.size} />}
                 </details>
                 {attempt.profileRevision !== data.profile.revision && (
@@ -905,7 +913,7 @@ export default function InterviewPractice({
                         })}
                       </span>
                       <h3>{tr('这次最值得改进的地方')}</h3>
-                      <p className="prewrap">{review.summary}</p>
+                      <p className="prewrap"><Ja text={review.summary} /></p>
                     </div>
                     <div className="feedback-grid">
                       {[
@@ -916,7 +924,7 @@ export default function InterviewPractice({
                       ].map(([title, text]) => (
                         <div className="feedback-block" key={title}>
                           <h3>{tr(title)}</h3>
-                          <p className="prewrap">{text}</p>
+                          <p className="prewrap"><Ja text={text} /></p>
                         </div>
                       ))}
                     </div>
@@ -924,7 +932,7 @@ export default function InterviewPractice({
                       <div className="feedback-block">
                         <h3>{tr('外国求职者的沟通建议')}</h3>
                         <p className="prewrap">
-                          {review.foreignApplicantNotes}
+                          <Ja text={review.foreignApplicantNotes} />
                         </p>
                       </div>
                     )}
@@ -934,7 +942,7 @@ export default function InterviewPractice({
                           {tr('先练这一版：简短、礼貌、能说出口')}
                         </summary>
                         <p className="prewrap" lang="ja">
-                          {review.simpleAnswer}
+                          <Ja text={review.simpleAnswer} mode="ja" />
                         </p>
                       </details>
                     )}
@@ -943,17 +951,17 @@ export default function InterviewPractice({
                         {tr('参考改写：理解结构后，用自己的话重说')}
                       </summary>
                       <p className="prewrap" lang="ja">
-                        {review.revisedAnswer}
+                        <Ja text={review.revisedAnswer} mode="ja" />
                       </p>
                     </details>
                     <div className="feedback-grid">
                       <div className="feedback-block">
                         <h3>{tr('下一轮追问')}</h3>
-                        <p className="prewrap">{review.followUps}</p>
+                        <p className="prewrap"><Ja text={review.followUps} /></p>
                       </div>
                       <div className="feedback-block">
                         <h3>{tr('下一次只练这件事')}</h3>
-                        <p className="prewrap">{review.nextPractice}</p>
+                        <p className="prewrap"><Ja text={review.nextPractice} /></p>
                       </div>
                     </div>
                     <details>

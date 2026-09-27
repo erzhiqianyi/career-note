@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { RecordBack, SubViewContext, useRecordPage, type SubView } from '@/components/record-page';
 import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
 
-import AgentConnection from '@/components/agent-connection';
+import AgentOverview from '@/components/agent-overview';
 import AgentSetup from '@/components/agent-setup';
 import {
   findMcpClient,
@@ -18,6 +18,7 @@ import ScheduledTemplates from '@/components/scheduled-templates';
 import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
+import { Ja, JaChildren } from '@/components/japanese-text';
 import WorkspaceFooter from '@/components/workspace-footer';
 import InterviewPractice from '@/components/interview-practice';
 import StatusMark from '@/components/status-mark';
@@ -57,6 +58,7 @@ import {
   FileText,
   Flag,
   LayoutDashboard,
+  Link2,
   LogIn,
   LogOut,
   Menu,
@@ -105,14 +107,9 @@ const nav = [
   { label: '求职平台', icon: Search },
   { label: '系统设置', icon: Settings },
 ];
-// Phone layout: four tabs for what happens on the move; the rest lives in the drawer behind the brand.
-// Pages that are read or edited occasionally come first; anything that configures the workspace is "settings".
-const phoneTabs = [
-  { label: '今日准备', short: '今日', icon: LayoutDashboard },
-  { label: '公司', short: '公司', icon: BriefcaseBusiness },
-  { label: '我的履历', short: '履历', icon: UserRound },
-];
-const drawerPages = ['个性化简历'];
+// Phone layout: every page lives behind the brand drawer (no bottom tab bar).
+// Content pages come first; anything that configures the workspace is grouped as "settings".
+const drawerPages = ['今日准备', '公司', '我的履历', '个性化简历'];
 const drawerSettings = ['Agent 协作', '求职平台', '系统设置'];
 // `parent` is the nav page that stays highlighted; `back` is where the header arrow goes when it is not the parent.
 const subPages: Record<string, { parent: string; hash: string; back?: string }> = {
@@ -743,6 +740,7 @@ export default function Home() {
     </main>;
   }
   return (
+    <>
     <div className={['shell', navCollapsed && 'nav-collapsed', isSubPage && 'sub-page'].filter(Boolean).join(' ')}>
       <aside className="sidebar">
         <div className="brand">
@@ -781,20 +779,6 @@ export default function Home() {
           <span className="nav-label">{tr('收起导航栏')}</span>
         </button>
       </aside>
-      <nav className="mobile-nav" aria-label={tr('手机导航')}>
-        {phoneTabs.map(({ label, short, icon: Icon }) => (
-          <button
-            key={label}
-            className={activePage === label ? 'active' : ''}
-            aria-label={tr(label)}
-            aria-current={activePage === label ? 'page' : undefined}
-            onClick={() => go(label)}
-          >
-            <Icon size={21} />
-            <span>{tr(short)}</span>
-          </button>
-        ))}
-      </nav>
       {drawerOpen && (
         <Drawer onClose={() => setDrawerOpen(false)}>
           <div className="drawer-section">
@@ -1345,8 +1329,12 @@ export default function Home() {
               {active === '个性化简历' && <PersonalizedResumes entries={data.resume || []} jobs={data.jobs} />}
               {active === 'Agent 协作' && (
                 <>
-                  <AgentConnection onAdd={() => go(mcpSetupPage)} />
+                  <AgentOverview onAdd={() => go(mcpSetupPage)} />
                   <div className="agent-entries">
+                    <button className="agent-entry" onClick={() => go(mcpSetupPage)}>
+                      <Link2 size={22} />
+                      <span><b>{tr('连接 AI 助手')}</b></span>
+                    </button>
                     <button className="agent-entry" onClick={() => go('技能库')}>
                       <Blocks size={22} />
                       <span>
@@ -1380,7 +1368,7 @@ export default function Home() {
                       const archived = mcpTokens.filter((item) => item.revoked || item.expired);
                       const tokenColumns = [
                         { key: 'name', label: tr('助手 / 权限'), width: 'minmax(180px, 1.5fr)' },
-                        { key: 'expires', label: tr('有效期至'), width: '92px', hide: 'phone' as const },
+                        { key: 'expires', label: tr('有效期至'), width: '92px' },
                         { key: 'used', label: tr('最近使用'), width: '92px', hide: 'tablet' as const },
                         { key: 'state', label: tr('状态'), width: '72px' },
                         { key: 'ops', label: tr('操作'), width: '76px', align: 'end' as const },
@@ -1391,12 +1379,12 @@ export default function Home() {
                           <Fragment key={item.id}>
                             <DataRow onOpen={() => void showAgentTrail(item.id)}>
                               <DataTitle title={item.name} meta={item.scopes.join(' · ')} onClick={() => void showAgentTrail(item.id)} />
-                              <DataCell label={tr('有效期至')} hide="phone" className="num">{day(item.expiresAt)}</DataCell>
+                              <DataCell label={tr('有效期至')} className="num">{day(item.expiresAt)}</DataCell>
                               <DataCell label={tr('最近使用')} hide="tablet" className="num">{item.lastUsedAt ? day(item.lastUsedAt) : '—'}</DataCell>
-                              <DataCell label={tr('状态')}>
+                              <DataCell label={tr('状态')} corner>
                                 <span className={'badge ' + (live ? 'green' : 'gray')}>{item.revoked ? tr('已撤销') : item.expired ? tr('已过期') : tr('有效')}</span>
                               </DataCell>
-                              <DataActions>
+                              <DataActions openOnly>
                                 <button className="icon-button" onClick={() => void showAgentTrail(item.id)} title={tr('打开')} aria-label={tr('打开')}>
                                   <ScrollText size={16} />
                                 </button>
@@ -1487,7 +1475,7 @@ export default function Home() {
                               meta={data.jobs.find((j) => j.id === t.jobId)?.company || tr('整个求职工作区')}
                             />
                             <DataCell label={tr('创建')} hide="phone" className="num">{day(t.createdAt)}</DataCell>
-                            <DataCell align="end">
+                            <DataCell align="end" corner>
                               <span className={'badge ' + (t.status === '待处理' ? 'amber' : 'green')}>{tr(t.status)}</span>
                             </DataCell>
                           </DataRow>
@@ -1577,11 +1565,11 @@ export default function Home() {
             )}
           {'kind' in doc && doc.jobId && ['履歴書', '職務経歴書'].includes(doc.kind) && <button className="secondary" onClick={() => setPrintMaterial(doc)}>{tr('预览并打印已生成的简历')}</button>}
           <article className="document-body">
-            {'kind' in doc && ['履歴書', '職務経歴書'].includes(doc.kind) ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.content}</ReactMarkdown> : <DocumentText text={doc.content} />}
+            {'kind' in doc && ['履歴書', '職務経歴書'].includes(doc.kind) ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{doc.content}</ReactMarkdown> : <DocumentText text={doc.content} />}
           </article>
           <div className="source-box">
             <h3>{tr('依据与待确认事项')}</h3>
-            <p className="prewrap">{doc.sourceNotes}</p>
+            <p className="prewrap"><Ja text={doc.sourceNotes} /></p>
           </div>
         </RecordPage>
       )}
@@ -1682,6 +1670,7 @@ export default function Home() {
       </SubViewContext.Provider>
 
     </div>
+    </>
   );
 }
 function ProfileForm({
@@ -1728,6 +1717,12 @@ function ProfileForm({
   );
 }
 
+// Study furigana inside generated 履歴書/職務経歴書 drafts, which are Japanese throughout (so bold terms and
+// kanji-only headings are annotated too); the print view never uses this.
+const markdownRuby = Object.fromEntries(
+  (['p', 'li', 'h1', 'h2', 'h3', 'h4', 'td', 'th', 'strong', 'em'] as const).map((Tag) => [Tag, ({ children }: { children?: ReactNode }) => <Tag><JaChildren mode="ja">{children}</JaChildren></Tag>]),
+);
+
 function DocumentText({ text }: { text: string }) {
   return (
     <>
@@ -1739,11 +1734,11 @@ function DocumentText({ text }: { text: string }) {
           const heading = block.match(/^(#{1,4}) (.+)$/);
           if (heading)
             return heading[1].length === 1 ? (
-              <h2 key={i}>{heading[2]}</h2>
+              <h2 key={i}><Ja text={heading[2]} /></h2>
             ) : (
-              <h3 key={i}>{heading[2]}</h3>
+              <h3 key={i}><Ja text={heading[2]} /></h3>
             );
-          return <p key={i}>{block}</p>;
+          return <p key={i}><Ja text={block} /></p>;
         })}
     </>
   );

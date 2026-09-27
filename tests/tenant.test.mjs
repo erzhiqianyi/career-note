@@ -58,6 +58,12 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.equal((await send(b,'resume',{id:'result',kind:'achievement',revision:0,parentId:'resume-same',data:{title:'Cross account'}})).status,400);
   await ok(b,'resume',{...resumeEntry,data:{employer:'Bob employer',role:'Engineer'}});
   assert.equal((await ok(a,'resume')).entries[0].data.employer,'Alice employer');
+  const aliceDocument = await ok(a,'resume',{id:'shared-document',kind:'document',revision:0,data:{title:'Alice source',version:'v1',content:'Alice private text'},archived:true});
+  await ok(b,'resume',{id:'shared-document',kind:'document',revision:0,data:{title:'Bob source',version:'v1',content:'Bob private text'},archived:true});
+  assert.equal((await send(b,'resume/delete',{id:'shared-document',revision:aliceDocument.revision+1})).status,409);
+  assert.equal((await ok(a,'resume/delete',{id:'shared-document',revision:aliceDocument.revision})).deleted,true);
+  assert.equal((await ok(a,'resume/history?id=shared-document')).entries.length,0);
+  assert.equal((await ok(b,'resume/history?id=shared-document')).entries[0].data.content,'Bob private text');
   // Agents are admitted only through OAuth consent given by the signed-in owner.
   assert.equal((await send(undefined,'oauth/approve',{decision:'approve'})).status,401);
   const grant=await authorizeAgent(mf,{name:'Alice agent',scopes:['career:read'],approveHeaders:{Authorization:'Bearer '+a}});
@@ -80,6 +86,7 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.ok(!listed.result.tools.some(t=>t.name==='career_import'));
   assert.ok(listed.result.tools.some(t=>t.name==='career_get_resume'));
   assert.ok(!listed.result.tools.some(t=>t.name==='career_save_resume_entry'));
+  assert.ok(!listed.result.tools.some(t=>t.name==='career_delete_resume_document'));
   const read=await rpc(issued.token,'tools/call',{name:'career_get_context',arguments:{}});
   assert.equal(JSON.parse(read.result.content[0].text).profile.summary,'Alice only');
   const writer={token:(await authorizeAgent(mf,{name:'Writer',scopes:['career:read','agent:write','career:write'],approveHeaders:{Authorization:'Bearer '+a}})).issued.access_token};

@@ -226,3 +226,52 @@ export async function writeResume(
     return { status: 409, value: { error: '记录已更新，请刷新后重新编辑' } };
   return { status: 200, value: saved };
 }
+
+/** Permanently remove one archived document and every stored revision. */
+export async function deleteResumeDocument(
+  db: D1Database,
+  owner: string,
+  profileKey: string,
+  id: string,
+  revision: number,
+) {
+  if (typeof id !== 'string' || !id || id.length > 100 || !Number.isSafeInteger(revision) || revision < 1)
+    return { status: 400, value: { error: '请提供文档 id 和当前修订号' } };
+
+  const existing = await db.prepare('SELECT kind,revision,archived FROM resume_entries WHERE owner=? AND id=?')
+    .bind(owner, id).first<{ kind: string; revision: number; archived: number }>();
+  if (!existing) return { status: 404, value: { error: '文档不存在' } };
+  if (existing.kind !== 'document' || !existing.archived)
+    return { status: 400, value: { error: '只能永久删除已归档的简历文档' } };
+  if (existing.revision !== revision)
+    return { status: 409, value: { error: '文档已更新，请刷新后重试' } };
+
+  // Personalized drafts retain exact source revisions. Keep those references valid,
+  // including drafts that exist only in their own history.
+  const referenced = await db.prepare(`SELECT 1 FROM (
+      SELECT body FROM personalized_resumes WHERE owner=?
+      UNION ALL SELECT body FROM personalized_resume_history WHERE owner=?
+    ) AS p, json_each(p.body, '$.sourceRefs') AS ref
+    WHERE json_extract(ref.value, '$.id')=? LIMIT 1`)
+    .bind(owner, owner, id).first();
+  if (referenced) return { status: 409, value: { error: '此文档仍被个性化简历引用，请先处理引用' } };
+
+  const now = new Date().toISOString();
+  const results = await db.batch([
+    db.prepare(`DELETE FROM resume_entries WHERE owner=? AND id=? AND kind='document' AND archived=1 AND revision=?
+      AND NOT EXISTS (SELECT 1 FROM (
+          SELECT body FROM personalized_resumes WHERE owner=?
+          UNION ALL SELECT body FROM personalized_resume_history WHERE owner=?
+        ) AS p, json_each(p.body, '$.sourceRefs') AS ref
+        WHERE json_extract(ref.value, '$.id')=?)`)
+      .bind(owner, id, revision, owner, owner, id),
+    db.prepare('DELETE FROM resume_history WHERE owner=? AND id=? AND changes()=1').bind(owner, id),
+    db.prepare(`INSERT INTO meta(id,body)
+      SELECT ?,json_object('revision',1,'updatedAt',?) WHERE changes()>0
+      ON CONFLICT(id) DO UPDATE SET body=json_set(meta.body,'$.revision',coalesce(json_extract(meta.body,'$.revision'),0)+1,'$.updatedAt',?)`)
+      .bind(profileKey, now, now),
+  ]);
+  if (!results[0].meta.changes)
+    return { status: 409, value: { error: '文档已更新或仍被引用，请刷新后重试' } };
+  return { status: 200, value: { id, deleted: true, deletedRevisions: results[1].meta.changes } };
+}

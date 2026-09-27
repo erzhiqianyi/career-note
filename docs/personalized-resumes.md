@@ -2,6 +2,8 @@
 
 结构化履历是事实母版。个性化简历是独立草稿，外部 AI 可通过 MCP 创建，用户可以编辑、复制、归档及导入 JSON。每次保存使用 revision 乐观锁并记录历史。真实数据继续存于外部 CAREER_DATA_DIR 对应的本地 D1 中。
 
+管理页面按日语、英语、中文分别显示草稿和公开链接。新建草稿使用当前选择的语言，只预填同语言的结构化履历；切换语言不会修改已有草稿或公开快照。AI 生成请求也使用当前选择的语言，并要求保存独立版本。
+
 `GET/POST /api/career/personalized-resumes` 分别读取和保存本用户草稿。MCP 提供 `career_get_personalized_resumes` 和 `career_save_personalized_resume`；需要 career:read / career:write。输入结构见 lib/personalized-resume.ts。来源引用校验本租户的记录历史。
 
 用户在应用中预览并确认公开内容，再调用 `POST /api/career/resume-publications`，输入 draftId、draftRevision、mode（public/unlisted）、expiresAt（ISO 时间或空字符串）。服务器只从对应版本复制 content 和 language。草稿随后更新或归档不改变快照。更新公开内容时创建新链接，旧链接可单独撤下。

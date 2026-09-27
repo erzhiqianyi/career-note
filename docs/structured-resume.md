@@ -6,14 +6,15 @@
 
 - `GET /api/career/resume`：本人の全レコード（アーカイブを含む）。
 - `POST /api/career/resume`：1レコードの作成・編集・アーカイブ・復元。新規はrevision 0、更新は最新revision。idと種類は変更しない。
+- `POST /api/career/resume/delete`：アーカイブ済み文書1件の全修訂を完全削除。`id`と最新`revision`が必要。
 - `GET /api/career/resume/history?id=...`：本人の対象レコードの版履歴。
 - `GET /api/career/state`：既存データに加えてresume配列を返す。
 
-MCPは `career_get_resume`、`career_save_resume_entry`、`career_resume_history` を公開する。読み込みにcareer:read、変更にcareer:writeが必要。ユーザーIDはクライアントから指定できない。career_get_resumeは種類別フィールドの一覧も返す。
+MCPは `career_get_resume`、`career_save_resume_entry`、`career_delete_resume_document`、`career_resume_history` を公開する。読み込みにcareer:read、変更にcareer:writeが必要。ユーザーIDはクライアントから指定できない。career_get_resumeは種類別フィールドの一覧も返す。
 
 更新はSQLのrevision条件で競合を拒否する。DBトリガーが同じトランザクション内で `resume_history` へ各版を記録する。変更時は既存profileのrevisionも進め、以前の資料生成時点から変更されたことを検出できる。原文フィールドは変更しない。
 
-文書の本文は作成後に上書きできない。別のidと版名で新しい文書を作る。アーカイブ・復元は可能。履歴の削除APIは提供しない。
+文書の本文は作成後に上書きできない。別のidと版名で新しい文書を作る。アーカイブ・復元が可能。本人が明示的に依頼した場合、アーカイブ済みの文書だけ `career_delete_resume_document({ id, revision })` または `POST /api/career/resume/delete` で完全削除できる。現在のrevisionを必須とし、本文と全revisionを同時に削除する。個別化履歴書の下書き・履歴がsourceRefsで参照する文書は削除できない。構造化された職歴・学歴などの事実レコードはこの操作の対象外。
 
 旧profileは互換用に残し、画面では折り畳んで原文を表示する。Markdownの自動解析で雇用関係や成果を作らない。Agentが本人の依頼に従って原文を読み、新規レコードを作り、読み戻しで照合する。元の文書は文書版として保存する。連続した複数レコードの移行は一括トランザクションではないため、失敗時は既存idを読んで再開する。
 

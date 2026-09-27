@@ -1,4 +1,5 @@
 import { resumeTitle, type ResumeEntry } from './resume';
+import { plainJapanese } from './japanese-readings';
 
 /**
  * 从结构化履历记录生成可打印的 A4 文档（自包含 HTML，浏览器「打印 → 保存为 PDF」）。
@@ -19,7 +20,7 @@ export type PrintOptions = {
 };
 
 const escape = (v = '') =>
-  v.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] || c);
+  plainJapanese(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] || c);
 const lines = (text = '') =>
   text
     .replace(/\\r\\n|\\n/g, '\n').split('\n')

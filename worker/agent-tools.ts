@@ -128,6 +128,14 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       handler: (payload, ctx) => api(ctx, 'resume', payload),
     },
     {
+      name: 'career_delete_resume_document',
+      scope: 'career:write',
+      description: 'Permanently delete one archived resume document and all its revisions when the owner explicitly requests deletion. Requires its current revision. Fails if a personalized resume references it; never deletes structured career facts.',
+      inputSchema: { id: z.string().min(1).max(100), revision: z.number().int().positive() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+      handler: (payload, ctx) => api(ctx, 'resume/delete', payload),
+    },
+    {
       name: 'career_get_personalized_resumes',
       scope: 'career:read',
       description: 'Read this user’s personalized resume drafts and publication snapshots. Private notes and sources must not be copied into public content.',
@@ -142,6 +150,22 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       inputSchema: personalizedResumeSchema.shape,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       handler: (payload, ctx) => api(ctx, 'personalized-resumes', payload),
+    },
+    {
+      name: 'career_get_readings',
+      scope: 'career:read',
+      description: 'Legacy glossary read for older clients. New Japanese materials save readings inline as {漢字|かな}; use career_get_context to read the material being revised.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: (_args, ctx) => api(ctx, 'readings?include=bank'),
+    },
+    {
+      name: 'career_save_readings',
+      scope: 'agent:write',
+      description: 'Legacy glossary write for older clients only. For new or revised Japanese material save readings inline as {漢字|かな} with that material. Never use this tool for official ふりがな fields.',
+      inputSchema: { entries: z.array(z.object({ word: z.string().min(1).max(32), reading: z.string().min(1).max(64), note: z.string().max(200).optional() })).min(1).max(200) },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      handler: ({ entries }, ctx) => api(ctx, 'readings', { entries }),
     },
     {
       name: 'career_preview_import',

@@ -6,12 +6,13 @@ import remarkGfm from 'remark-gfm';
 import { ArrowLeft, Printer } from 'lucide-react';
 import type { Material } from '@/lib/career';
 import { useLocale } from './locale-provider';
+import { plainJapanese } from '@/lib/japanese-readings';
 
 /** Print the saved company material, never regenerate from live profile records. */
 export function MaterialPrint({ material, onBack }: { material: Material; onBack: () => void }) {
   const { t } = useLocale();
   const frame = useRef<HTMLIFrameElement>(null);
-  const body = renderToStaticMarkup(<ReactMarkdown remarkPlugins={[remarkGfm]}>{material.content}</ReactMarkdown>);
+  const body = renderToStaticMarkup(<ReactMarkdown remarkPlugins={[remarkGfm]}>{plainJapanese(material.content)}</ReactMarkdown>);
   const title = material.kind === '履歴書' ? '履歴書' : '職務経歴書';
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${title}</title><style>
     @page{size:A4;margin:16mm}*{box-sizing:border-box}body{margin:0;color:#111;background:#eee;font:10.5pt/1.65 "Hiragino Mincho ProN","Yu Mincho",serif}

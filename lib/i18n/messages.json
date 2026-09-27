@@ -271,10 +271,6 @@
     "ja": "ワークスペースのナビゲーション",
     "en": "Workspace navigation"
   },
-  "手机导航": {
-    "ja": "モバイルナビゲーション",
-    "en": "Mobile navigation"
-  },
   "今日": {
     "ja": "今日",
     "en": "Today"
@@ -1226,6 +1222,18 @@
   "删除": {
     "ja": "削除",
     "en": "Delete"
+  },
+  "永久删除": {
+    "ja": "完全に削除",
+    "en": "Delete permanently"
+  },
+  "永久删除此文档及其全部修订？此操作无法恢复。": {
+    "ja": "この文書とすべての改訂履歴を完全に削除しますか？元に戻せません。",
+    "en": "Permanently delete this document and all its revisions? This cannot be undone."
+  },
+  "删除失败": {
+    "ja": "削除に失敗しました",
+    "en": "Delete failed"
   },
   "没有符合条件的平台": {
     "ja": "条件に合うサービスがありません",
@@ -3511,10 +3519,6 @@
     "ja": "承認後の戻り先",
     "en": "After approval you will return to"
   },
-  "AI 助手": {
-    "ja": "AI アシスタント",
-    "en": "AI assistant"
-  },
   "正在返回 {0}…": {
     "ja": "{0} に戻っています…",
     "en": "Returning to {0}…"
@@ -3989,7 +3993,7 @@
   },
   "收起": {
     "ja": "閉じる",
-    "en": "Collapse"
+    "en": "Close"
   },
   "详情": {
     "ja": "詳細",
@@ -4403,6 +4407,10 @@
     "ja": "公開リンクはまだありません。草稿から「プレビューと公開」を選んでください。",
     "en": "No public links yet. Choose \"Preview & publish\" from a draft first."
   },
+  "此语言暂无公开链接。先在草稿中选择「预览与发布」。": {
+    "ja": "この言語の公開リンクはまだありません。草稿から「プレビューと公開」を選んでください。",
+    "en": "No public links for this language yet. Choose \"Preview & publish\" from a draft first."
+  },
   "有效期": {
     "ja": "有効期限",
     "en": "Expires"
@@ -4514,6 +4522,10 @@
   "还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。": {
     "ja": "個別履歴書はまだありません。新しく作るか、AI Agent に MCP 経由で保存してもらいましょう。",
     "en": "No personalized resumes yet. Create one, or let your AI Agent save one via MCP."
+  },
+  "此语言还没有个性化简历。新建一份，或让 AI Agent 通过 MCP 保存。": {
+    "ja": "この言語の個別履歴書はまだありません。新しく作るか、AI Agent に MCP 経由で保存してもらいましょう。",
+    "en": "No personalized resumes for this language yet. Create one, or let your AI Agent save one via MCP."
   },
   "链接已撤下。已被他人保存的副本无法收回。": {
     "ja": "リンクを取り下げました。他の人が保存したコピーは回収できません。",
@@ -4927,10 +4939,6 @@
     "ja": "日本語にふりがなを表示",
     "en": "Show Japanese readings"
   },
-  "在日语简历详情和预览中显示已提供的假名标记。": {
-    "ja": "日本語の履歴書の詳細とプレビューに、登録済みのふりがなを表示します。",
-    "en": "Show provided readings in Japanese resume details and previews."
-  },
   "结束年月未填写": {
     "ja": "終了年月未入力",
     "en": "End date not recorded"
@@ -5074,5 +5082,285 @@
   "打印预览": {
     "ja": "印刷プレビュー",
     "en": "Print preview"
+  },
+  "AI 建议的读音，尚未确认": {
+    "ja": "AIが提案した読みです（未確認）",
+    "en": "Suggested by AI, not yet confirmed"
+  },
+  "AI 生成日语资料时会保存读音。开启后在应用内显示假名；关闭后只显示原文。公开简历和投递用打印版始终不显示。": {
+    "ja": "AI が日本語資料を作成する際に読みを保存します。オンにするとアプリ内でふりがなを表示し、オフにすると本文だけを表示します。公開履歴書と応募用の印刷版には表示されません。",
+    "en": "AI saves readings with Japanese material. Turn this on to show furigana in the app, or off to show the original text. Public resumes and printed application copies never show readings."
+  },
+  "日语读音随草稿保存，设置中的开关控制预览显示。公开页面和投递用打印版不显示假名。": {
+    "ja": "日本語の読みは下書きと共に保存され、設定でプレビュー表示を切り替えられます。公開ページと応募用の印刷版には表示されません。",
+    "en": "Japanese readings are saved with the draft. The setting controls their preview display. Public pages and printed application copies do not show them."
+  },
+  "预览中的假名来自「系统设置 › 假名词表」，公开页面和投递用打印版不显示假名。": {
+    "ja": "プレビューのふりがなは「システム設定 › ふりがな辞書」から表示されます。公開ページと応募用の印刷版には表示されません。",
+    "en": "Readings in the preview come from Settings › Reading glossary. Public pages and printed application copies never show them."
+  },
+  "在面试练习、公司资料、准备文稿和简历预览的日语里显示假名。公开简历和投递用打印版始终不显示。": {
+    "ja": "面接練習、企業情報、準備資料、履歴書プレビューの日本語にふりがなを表示します。公開履歴書と応募用の印刷版には表示されません。",
+    "en": "Show readings over Japanese in interview practice, company notes, prep documents and resume previews. Public resumes and printed application copies never show them."
+  },
+  "假名词表": {
+    "ja": "ふりがな辞書",
+    "en": "Reading glossary"
+  },
+  "面试练习、公司资料、准备文稿和简历预览里的日语，按这张词表标注假名。AI 建议的读音以虚线显示，确认后变为实线。": {
+    "ja": "面接練習、企業情報、準備資料、履歴書プレビューの日本語は、この辞書に沿ってふりがなを表示します。AI が提案した読みは点線で表示され、確認すると実線になります。",
+    "en": "Japanese in interview practice, company notes, prep documents and resume previews is annotated from this glossary. Readings suggested by AI are dotted until you confirm them."
+  },
+  "词语": {
+    "ja": "語句",
+    "en": "Word"
+  },
+  "词语（含汉字）": {
+    "ja": "語句（漢字を含む）",
+    "en": "Word (with kanji)"
+  },
+  "读音": {
+    "ja": "読み",
+    "en": "Reading"
+  },
+  "读音（假名）": {
+    "ja": "読み（かな）",
+    "en": "Reading (kana)"
+  },
+  "添加": {
+    "ja": "追加",
+    "en": "Add"
+  },
+  "筛选": {
+    "ja": "絞り込み",
+    "en": "Filter"
+  },
+  "待确认 {0}": {
+    "ja": "未確認 {0}",
+    "en": "Unconfirmed {0}"
+  },
+  "全部 {0}": {
+    "ja": "すべて {0}",
+    "en": "All {0}"
+  },
+  "搜索词表": {
+    "ja": "辞書を検索",
+    "en": "Search glossary"
+  },
+  "搜索": {
+    "ja": "検索",
+    "en": "Search"
+  },
+  "全部确认": {
+    "ja": "すべて確認",
+    "en": "Confirm all"
+  },
+  "{0} 的读音": {
+    "ja": "{0} の読み",
+    "en": "Reading of {0}"
+  },
+  "AI 建议": {
+    "ja": "AI の提案",
+    "en": "AI suggestion"
+  },
+  "自己添加": {
+    "ja": "自分で追加",
+    "en": "Added by you"
+  },
+  "确认读音": {
+    "ja": "読みを確認",
+    "en": "Confirm reading"
+  },
+  "没有符合条件的词。": {
+    "ja": "条件に合う語句はありません。",
+    "en": "No matching words."
+  },
+  "词表还是空的。自己添加，或把上面的指令交给 AI Agent 生成建议。": {
+    "ja": "辞書はまだ空です。自分で追加するか、上の指示を AI Agent に渡して提案を作成してください。",
+    "en": "The glossary is empty. Add words yourself, or give the instruction above to your AI agent for suggestions."
+  },
+  "已保存": {
+    "ja": "保存しました",
+    "en": "Saved"
+  },
+  "已确认": {
+    "ja": "確認しました",
+    "en": "Confirmed"
+  },
+  "AI 求职技巧": {
+    "ja": "AI 就職のヒント",
+    "en": "AI job-search tips"
+  },
+  "一起探索 AI 求职的好方法": {
+    "ja": "AI を使った就職準備を一緒に探そう",
+    "en": "Explore better ways to use AI in your job search"
+  },
+  "从一条问题、一次练习开始。这里收录可直接尝试的方法；即使不连接 Career Note，也能用你常用的 AI 助手试一试。": {
+    "ja": "一つの質問、一回の練習から。すぐ試せる方法を集めました。Career Note に接続しなくても、普段の AI アシスタントで使えます。",
+    "en": "Start with one question or practice session. These ideas work with your usual AI assistant, even without connecting Career Note."
+  },
+  "按主题筛选技巧": {
+    "ja": "テーマでヒントを絞り込む",
+    "en": "Filter tips by topic"
+  },
+  "AI 入门": {
+    "ja": "AI 入門",
+    "en": "Getting started"
+  },
+  "求职准备": {
+    "ja": "就職準備",
+    "en": "Job preparation"
+  },
+  "连接工具": {
+    "ja": "ツール連携",
+    "en": "Connect tools"
+  },
+  "手帖精选 · {0} 篇": {
+    "ja": "手帖のおすすめ · {0} 件",
+    "en": "Selected by Career Note · {0}"
+  },
+  "就职手帖 · 实用技巧": {
+    "ja": "就職手帖 · 実践ヒント",
+    "en": "Career Note · Practical tip"
+  },
+  "可以这样问 AI": {
+    "ja": "AI への質問例",
+    "en": "Try asking AI"
+  },
+  "复制提问": {
+    "ja": "質問をコピー",
+    "en": "Copy prompt"
+  },
+  "已复制提问": {
+    "ja": "コピーしました",
+    "en": "Prompt copied"
+  },
+  "查看连接步骤": {
+    "ja": "接続手順を見る",
+    "en": "See connection steps"
+  },
+  "连接 AI 助手": {
+    "ja": "AI アシスタントを接続",
+    "en": "Connect an AI assistant"
+  },
+  "第一次用 AI 求职，从这里开始": {
+    "ja": "初めて AI を使うなら、ここから",
+    "en": "New to AI? Start here"
+  },
+  "不用安装工具。先让 AI 问你几个问题，再把模糊的求职想法整理成下一步。": {
+    "ja": "ツールの導入は不要。まず AI に質問してもらい、漠然とした希望を次の行動に整理します。",
+    "en": "No setup needed. Let AI ask a few questions and turn vague plans into a next step."
+  },
+  "只告诉 AI 与求职有关的经历、目标岗位和希望工作的地区；不必先整理成完整简历。": {
+    "ja": "就職に関係する経験、希望職種、勤務地を伝えます。完成した履歴書はまだ不要です。",
+    "en": "Share relevant experience, target roles, and preferred location. A complete résumé is not needed yet."
+  },
+  "让它先提问，补齐职位方向、语言能力、工作条件等关键空白。": {
+    "ja": "職種の方向性、語学力、希望条件について先に質問してもらいます。",
+    "en": "Ask it to clarify your role direction, language level, and work preferences first."
+  },
+  "请它给出本周最值得做的三件事，并指出哪些建议仍需要你核实。": {
+    "ja": "今週取り組む三つの行動と、確認が必要な提案を挙げてもらいます。",
+    "en": "Ask for three useful actions this week and which suggestions still need checking."
+  },
+  "我准备在日本找工作，但还不确定从哪里开始。请先问我最多 5 个关键问题，了解我的经历、目标岗位、日语水平和工作条件。等我回答后，再给出本周可以完成的 3 个具体步骤；不要猜测我没有提供的事实。": {
+    "ja": "日本で仕事を探したいのですが、何から始めるか迷っています。まず経験、希望職種、日本語力、勤務条件について重要な質問を五つ以内でしてください。回答後、今週できる具体的な行動を三つ提案してください。伝えていない事実は推測しないでください。",
+    "en": "I want to find work in Japan but am unsure where to begin. Ask me up to five key questions about my experience, target roles, Japanese level, and work conditions. After I answer, suggest three concrete steps for this week. Do not assume facts I have not provided."
+  },
+  "读懂一条招聘信息": {
+    "ja": "求人票を読み解く",
+    "en": "Understand a job posting"
+  },
+  "让 AI 帮你区分硬性要求、加分条件和没有写清楚的地方。": {
+    "ja": "必須条件、歓迎条件、不明点を AI と整理します。",
+    "en": "Separate required qualifications, nice-to-haves, and unclear terms."
+  },
+  "提供招聘原始链接或正文，并说明你最在意的条件。": {
+    "ja": "求人の原文リンクか本文と、重視する条件を伝えます。",
+    "en": "Give the original posting or text and your most important conditions."
+  },
+  "请 AI 分开列出明示要求、推测和需要向公司确认的问题。": {
+    "ja": "明示された要件、推測、企業に確認する質問を分けてもらいます。",
+    "en": "Have AI separate stated requirements, inferences, and questions for the employer."
+  },
+  "回到招聘原文检查日期、工作地点、薪资、语言与在留资格信息。": {
+    "ja": "原文に戻り、掲載日、勤務地、給与、言語、在留資格の情報を確認します。",
+    "en": "Check the source for date, location, pay, language, and visa information."
+  },
+  "请阅读这条招聘信息：[粘贴链接或正文]。分三栏列出明确写出的要求、可能的加分条件、尚不清楚的问题。对日语、地点、薪资和在留资格不要自行补全；引用对应原文，并告诉我信息的确认日期。": {
+    "ja": "この求人を読んでください：[リンクまたは本文]。明示された要件、歓迎条件と思われる項目、不明点の三つに分けてください。日本語、勤務地、給与、在留資格は補完せず、該当する原文と確認日を示してください。",
+    "en": "Read this job posting: [link or text]. Separate stated requirements, possible nice-to-haves, and open questions. Do not fill in missing facts about Japanese, location, salary, or visa support. Quote the relevant source and give the verification date."
+  },
+  "把经历改写成有依据的履历": {
+    "ja": "経験を根拠ある応募書類に",
+    "en": "Turn experience into an evidence-based résumé"
+  },
+  "让 AI 帮你找出经历与岗位的连接点，同时守住真实事实。": {
+    "ja": "経験と求人の接点を探しながら、事実を守ります。",
+    "en": "Find links between your experience and the role while keeping every fact true."
+  },
+  "提供现有履历和目标职位，先请 AI 标记匹配点与信息缺口。": {
+    "ja": "現在の経歴と求人を渡し、合致点と不足情報を先に示してもらいます。",
+    "en": "Provide your current résumé and target role; identify matches and missing facts first."
+  },
+  "逐条核对公司、项目、职责、成果和数字是否确实属于你。": {
+    "ja": "企業、プロジェクト、担当、成果、数字が本当に自分のものか一つずつ確認します。",
+    "en": "Verify each employer, project, duty, result, and number."
+  },
+  "让 AI 再写一版草稿；把无法确认的内容留作待填写。": {
+    "ja": "その後に下書きを作り、確認できない内容は空欄にします。",
+    "en": "Then draft a version and leave unverified details to fill in later."
+  },
+  "这是我的现有履历：[粘贴相关经历]。这是目标职位：[粘贴职位要求]。请先做事实对照表，再给出一版针对该岗位的履历表述。不得编造业绩数字、学历或职责；不确定的地方请标为“待确认”。": {
+    "ja": "これが現在の経歴です：[関連する経験]。対象求人はこちらです：[要件]。まず事実の対応表を作り、その後で求人向けの表現案を出してください。成果の数字、学歴、担当業務を創作せず、不明点は「要確認」としてください。",
+    "en": "Here is my current experience: [paste relevant details]. Here is the target role: [paste requirements]. First make a fact-matching table, then draft role-specific résumé wording. Do not invent metrics, education, or responsibilities; mark uncertainties for confirmation."
+  },
+  "把面试练习变成有效复盘": {
+    "ja": "面接練習を振り返りにつなげる",
+    "en": "Turn interview practice into useful feedback"
+  },
+  "先自己回答，再请 AI 从内容、结构和日语表达三个角度给建议。": {
+    "ja": "まず自分で答え、内容、構成、日本語表現の三点から助言を受けます。",
+    "en": "Answer first, then get feedback on content, structure, and Japanese expression."
+  },
+  "请 AI 根据岗位生成少量练习题，并标明这些只是模拟题。": {
+    "ja": "求人に沿った少数の練習問題を作り、模擬問題だと明示してもらいます。",
+    "en": "Ask for a few role-based practice questions clearly labeled as simulations."
+  },
+  "先用自己的话回答；保存原回答，不让 AI 代替你回答。": {
+    "ja": "自分の言葉で答え、元の回答を残します。AI に代答させません。",
+    "en": "Answer in your own words and keep the original answer."
+  },
+  "请它指出缺少的事实、回答结构和日语表达问题，然后再练一次。": {
+    "ja": "根拠不足、構成、日本語表現を指摘してもらい、もう一度練習します。",
+    "en": "Ask about missing evidence, structure, and expression, then practice again."
+  },
+  "请根据这个岗位：[粘贴职位信息]，给我 5 道日语模拟面试题。一次只问一题，等我回答后再点评。点评请分为内容依据、结构、日语表达，并给一个可练习的修改方向。不要把模拟题称作公司真题。": {
+    "ja": "この求人に基づき：[求人情報]、日本語の模擬面接質問を五つ作ってください。一問ずつ質問し、私の回答後に根拠、構成、日本語表現の面から講評し、練習できる改善点を一つ示してください。企業の実際の質問とは呼ばないでください。",
+    "en": "Based on this role: [job details], give me five Japanese mock interview questions, one at a time. After each answer, review evidence, structure, and Japanese expression, then give one improvement to practice. Do not call them real company questions."
+  },
+  "让 AI 读取 Career Note 的资料": {
+    "ja": "AI に Career Note の資料を読ませる",
+    "en": "Let AI read your Career Note records"
+  },
+  "如果你已经在手帖保存履历和职位，可以连接 MCP，减少反复复制资料。": {
+    "ja": "手帖に経歴と求人を保存しているなら、MCP 接続で何度もコピーする手間を減らせます。",
+    "en": "If your résumé and roles are saved here, MCP reduces repeated copying."
+  },
+  "先核对手帖里的履历和求职条件，再选择你正在使用的 AI 助手。": {
+    "ja": "まず手帖の経歴と希望条件を確認し、利用する AI アシスタントを選びます。",
+    "en": "Check your saved profile and preferences, then choose your AI assistant."
+  },
+  "按照连接向导添加 MCP 地址，在浏览器里选择权限并完成授权。": {
+    "ja": "接続手順に沿って MCP アドレスを追加し、ブラウザーで権限を選んで許可します。",
+    "en": "Add the MCP address using the guide and authorize the chosen permissions in your browser."
+  },
+  "先让助手读取工作区约定和资料；写入前预览，写入后到手帖核对。": {
+    "ja": "最初に規約と資料を読ませ、書き込み前にプレビューし、保存後に手帖で確認します。",
+    "en": "Have it read the workspace rules and records first; preview before writing and verify afterward."
+  },
+  "请调用 Career Note 的 career_get_contract，先告诉我这个工作区的使用约定。然后读取我的履历概况，列出可用于求职准备的资料和明显缺口；这一步先不要写入任何内容。": {
+    "ja": "Career Note の career_get_contract を呼び出し、まずこのワークスペースの規約を説明してください。次に経歴の概要を読み、準備に使える資料と明らかな不足を挙げてください。この段階では何も書き込まないでください。",
+    "en": "Call Career Note career_get_contract and explain the workspace rules first. Then read my résumé overview and list useful records and obvious gaps. Do not write anything yet."
   }
 }

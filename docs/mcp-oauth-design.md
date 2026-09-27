@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS oauth_refresh_tokens (
 
 5. `CAREER_AUTH_MODE=off` 时（§8.4）跳过登录，显示"本机模式：将以本机工作区身份授权"。
 
-主界面"访问设置"：删除"创建令牌"表单和 [agent-connection.tsx](../components/agent-connection.tsx) 里"创建自己的访问令牌"步骤，接入步骤改为"复制 MCP 地址 → 在助手里添加 → 浏览器里登录并同意"。令牌列表只剩查看和撤销，每行显示客户端名、scope、签发时间、最近使用。
+主界面"访问设置"：不提供"创建令牌"表单；[连接向导](../components/agent-setup.tsx) 的步骤为"复制 MCP 地址 → 在助手里添加 → 浏览器里登录并同意"。令牌列表只剩查看和撤销，每行显示客户端名、scope、签发时间、最近使用。
 
 ## 7. 安全规则
 

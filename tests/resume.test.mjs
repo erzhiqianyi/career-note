@@ -263,6 +263,34 @@ test('structured resume records persist, reject conflicts, preserve documents an
   assert.equal(chunk.hasMore, true);
   assert.equal((await ok('resume/document?id=original&revision=1&offset=4&limit=100')).text, 'mutable source');
   assert.equal((await send('resume/details?id=unknown')).status, 200);
+
+  // Permanent deletion is limited to archived documents and removes every revision.
+  const beforeDelete = (await ok('state')).profile.revision;
+  assert.equal((await send('resume/delete', { id: 'original', revision: 3 })).status, 409);
+  assert.equal((await send('resume/delete', { id: 'job-one', revision: current.revision })).status, 400);
+  const deleted = await ok('resume/delete', { id: 'original', revision: 4 });
+  assert.equal(deleted.deleted, true);
+  assert.equal(deleted.deletedRevisions, 4);
+  assert.equal((await ok('state')).profile.revision, beforeDelete + 1);
+  assert.equal((await ok('resume/history?id=original')).entries.length, 0);
+  assert.equal((await send('resume/version?id=original&revision=1')).status, 404);
+  assert.equal((await ok('resume?view=summary')).entries.some(e => e.id === 'original'), false);
+  assert.equal((await send('resume/delete', { id: 'original', revision: 4 })).status, 404);
+});
+
+test('referenced resume documents cannot be permanently deleted', async (t) => {
+  const mf = new Miniflare({ modules: true, script: bundled.outputFiles[0].text, compatibilityDate: '2026-05-22', d1Databases: ['CAREER_DB'] });
+  t.after(() => mf.dispose());
+  const send = (path, body) => mf.dispatchFetch('http://local/api/career/' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const createdDocument = await send('resume', { id: 'source', kind: 'document', revision: 0, data: { title: 'Source', version: 'v1', content: '# Source' }, archived: true });
+  const doc = await createdDocument.json();
+  assert.equal(createdDocument.status, 200, JSON.stringify(doc));
+  const draft = { id: 'draft', revision: 0, title: 'Draft', targetRole: '', targetCompany: '', language: 'ja', content: { name: 'Fixture', headline: '', summary: '', location: '', links: [], sections: [] }, sourceRefs: [{ id: 'source', revision: 1 }], privateNotes: '' };
+  const savedDraft = await send('personalized-resumes', draft);
+  assert.equal(savedDraft.status, 200, await savedDraft.text());
+  assert.equal((await send('resume/delete', { id: doc.id, revision: doc.revision })).status, 409);
+  const db = await mf.getD1Database('CAREER_DB');
+  assert.equal((await db.prepare('SELECT count(*) AS n FROM resume_history WHERE id=?').bind('source').first()).n, 1);
 });
 
 test('MCP resume reads request summaries and retrieve only the selected revision', async () => {
@@ -287,4 +315,9 @@ test('MCP resume reads request summaries and retrieve only the selected revision
     'resume?view=summary', 'state?resumeView=summary',
     'resume/history?id=doc%2Fa&view=summary', 'resume/version?id=doc%2Fa&revision=2',
   ]);
+  const deletion = tools.find(t => t.name === 'career_delete_resume_document');
+  assert.equal(deletion.scope, 'career:write');
+  assert.equal(deletion.annotations.destructiveHint, true);
+  await deletion.handler({ id: 'doc/a', revision: 2 }, {});
+  assert.equal(paths.at(-1), 'resume/delete');
 });

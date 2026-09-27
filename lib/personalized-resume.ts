@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { inlineRubyHTML, plainJapanese } from './japanese-readings';
 const text = z.string().trim().max(6000);
 const link = z
   .object({
@@ -112,18 +113,17 @@ const escape = (s: string) =>
         c
       ]!,
   );
-export function resumeHTML(raw: PublicResume, language: string, showJapaneseReadings = true) {
+/**
+ * Readings are stored inline with the draft. Public and print views remove the annotations.
+ */
+export function resumeHTML(raw: PublicResume, language: string, showReadings = false) {
   const c = publicResumeSchema.parse(raw),
     e = escape;
   const ruby = (value: string) => {
     value = value.replace(/\\r\\n|\\n/g, '\n');
-    if (!showJapaneseReadings || language !== 'ja' || !Object.keys(c.readings).length) return e(value);
-    let out = e(value);
-    for (const [word, reading] of Object.entries(c.readings).sort((a, b) => b[0].length - a[0].length))
-      out = out.split(e(word)).join(`<ruby>${e(word)}<rt>${e(reading)}</rt></ruby>`);
-    return out;
+    return language === 'ja' ? inlineRubyHTML(value, e, showReadings) : e(plainJapanese(value));
   };
-  return `<!doctype html><html lang="${['ja', 'en', 'zh'].includes(language) ? language : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(c.name)} — ${e(c.headline)}</title><style>body{font:16px/1.75 system-ui,sans-serif;color:#243046;background:white;margin:0}main{max-width:880px;box-sizing:border-box;margin:0 auto;padding:32px 40px;background:white;overflow-wrap:anywhere}h1{font-size:32px;margin:0}h2{font-size:20px;border-bottom:1px solid #ccd3dd;padding-bottom:8px;margin-top:32px}h3{font-size:17px;margin-bottom:0}p{white-space:pre-wrap}a{color:#28559c}small{color:#59677b}li{white-space:pre-wrap;margin-bottom:6px}nav a{margin-right:16px}ruby rt{font-size:.55em;color:#68758a;font-weight:400}@media(max-width:600px){main{margin:0;padding:24px}}@media print{body{background:white}main{margin:0;padding:0}article{break-inside:avoid}a{color:inherit}}</style></head><body><main><h1>${ruby(c.name)}</h1><p>${ruby(c.headline)}</p><small>${ruby(c.location)}</small><nav>${c.links.map((l) => `<a href="${e(l.url)}" target="_blank" rel="noopener noreferrer">${e(l.label)}</a>`).join('')}</nav><p>${ruby(c.summary)}</p>${c.sections.map((s) => `<section><h2>${ruby(s.heading)}</h2>${s.items.map((i) => `<article><h3>${ruby(i.title)}</h3>${i.subtitle || i.period ? `<small>${[ruby(i.subtitle), e(i.period)].filter(Boolean).join(' · ')}</small>` : ''}${i.bullets.length ? `<ul>${i.bullets.map((b) => `<li>${ruby(b)}</li>`).join('')}</ul>` : ''}</article>`).join('')}</section>`).join('')}</main></body></html>`;
+  return `<!doctype html><html lang="${['ja', 'en', 'zh'].includes(language) ? language : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(plainJapanese(c.name))} — ${e(plainJapanese(c.headline))}</title><style>body{font:16px/1.75 system-ui,sans-serif;color:#243046;background:white;margin:0}main{max-width:880px;box-sizing:border-box;margin:0 auto;padding:32px 40px;background:white;overflow-wrap:anywhere}h1{font-size:32px;margin:0}h2{font-size:20px;border-bottom:1px solid #ccd3dd;padding-bottom:8px;margin-top:32px}h3{font-size:17px;margin-bottom:0}p{white-space:pre-wrap}a{color:#28559c}small{color:#59677b}li{white-space:pre-wrap;margin-bottom:6px}nav a{margin-right:16px}ruby rt{font-size:.55em;color:#68758a;font-weight:400}@media(max-width:600px){main{margin:0;padding:24px}}@media print{body{background:white}main{margin:0;padding:0}article{break-inside:avoid}a{color:inherit}}</style></head><body><main><h1>${ruby(c.name)}</h1><p>${ruby(c.headline)}</p><small>${ruby(c.location)}</small><nav>${c.links.map((l) => `<a href="${e(l.url)}" target="_blank" rel="noopener noreferrer">${e(plainJapanese(l.label))}</a>`).join('')}</nav><p>${ruby(c.summary)}</p>${c.sections.map((s) => `<section><h2>${ruby(s.heading)}</h2>${s.items.map((i) => `<article><h3>${ruby(i.title)}</h3>${i.subtitle || i.period ? `<small>${[ruby(i.subtitle), e(i.period)].filter(Boolean).join(' · ')}</small>` : ''}${i.bullets.length ? `<ul>${i.bullets.map((b) => `<li>${ruby(b)}</li>`).join('')}</ul>` : ''}</article>`).join('')}</section>`).join('')}</main></body></html>`;
 }
 
 type SourceEntry = {
@@ -232,7 +232,7 @@ export function resumeFromEntries(
 
 /** A submission copy of the selected draft; never rehydrates from the master profile. */
 export function personalizedPrintHTML(content: PublicResume, language: string, date: string) {
-  return resumeHTML(content, language, false)
+  return resumeHTML(content, language)
     .replace('<title>', '<title>職務経歴書_')
     .replace('</style>', '@page{size:A4;margin:16mm}h2,h3{break-after:avoid}p{orphans:3;widows:3}li{break-inside:avoid}@media print{article{break-inside:auto}main{max-width:none}}.submission-date{text-align:right}</style>')
     .replace('<main>', '<main><h1>職務経歴書</h1><p class="submission-date">' + escape(date) + '現在</p>');

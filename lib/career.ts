@@ -132,6 +132,8 @@ export type State = {
   questionSets: QuestionSet[];
   attempts: Attempt[];
   reviews: AnswerReview[];
+  /** Study furigana glossary; absent in the agent summary view. */
+  readings?: import('./japanese-readings').ReadingEntry[];
 };
 let authToken: string | null = null;
 export function setAuthToken(nextToken: string | null) {

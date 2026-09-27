@@ -179,6 +179,12 @@ questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。题
 
 对于带 candidateContext 的新题组，reviews 必须同时包含非空 foreignApplicantNotes 和 simpleAnswer；旧题组和历史点评保持兼容，原回答不迁移或覆盖。questionSets 的其余字段与现有协议一致。
 
+## 日语资料的学习用假名
+
+Agent 生成或改写日语题目、点评、公司准备资料、文稿及日语个性化简历草稿时，直接在对应文本里保存读音，格式为 `{漢字词|かな}`，例如 `{開発経験|かいはつけいけん}`。读音跟随原句保存，不依赖全局词表；同形异读按当前语境分别标记。只给有把握的汉字词标记，送假名可包含在词里（`{取り組み|とりくみ}`）。人名、公司名、地名没有来源时保留原文，不猜读音。
+
+设置中的「日语显示假名」只控制应用内阅读和草稿预览。关闭时仍保留已保存的读音。公开简历和投递用打印版只输出原文，不显示假名或标记符号。履歴書的姓名、住所ふりがな是正式字段，只由用户填写或确认，不从学习注音生成。历史资料没有读音时仍正常显示原文，后续修订该资料时再补充。
+
 ## 来源收集与定时核对
 
 使用 career-source-sync 收集明确授权的网站或邮箱更新；简历版本、投递事件与结果分析分别处理。当前仅通过 reports 保存来源、事件时间、建议状态、去重键与待确认项。通用导入仍拒绝 status/history；无专用状态更新接口，不得声称已同步投递状态。定时任务的来源、频率、时区、窗口、通知与失败策略见 [配置说明](scheduled-sync.md)。无新事件的来源收集不重复写报告；明确要求每日复盘的任务仍按该任务约定生成报告。
@@ -190,3 +196,5 @@ questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。题
 本人が履歴の保存・更新を依頼した場合は `career_save_resume_entry` を使う。kindはbasics、employment、education、project、skill、achievement、language、preferences、document。id、revision、kind、language（ja/zh/en。言語ごとに独立したレコードで、省略時はja）、data（種類別の文字列フィールド）、parentId、sourceNotes、verification（recorded/confirmed/pending）、archivedを渡す。別言語版を作る場合は翻訳ではなく本人確認済みの事実を同じ構造で新しいidに保存し、parentIdは同じ言語のレコードへ向ける。新規は新しいidとrevision 0、更新は最新revisionと保持する全フィールドを渡す。確認済みの注記が原文にあるだけならrecordedとし、今回の本人確認と混同しない。
 
 documentの本文は更新できないため、新しい版は新しいidを使う。旧母版を保持し、雇主・顧客・成果・個人開発・未実装の計画を分ける。大量のMarkdownをexperienceやskillsへ再投入しない。書込み後は対象id・各フィールド・revisionを読んで確認する。失敗時は読み戻してから未完了レコードのみ再開する。仕様は[構造化履歴管理](structured-resume.md)を参照。
+
+本人が文書版の完全削除を明示的に依頼した場合のみ、対象をアーカイブしてから `career_delete_resume_document({ id, revision })` を呼ぶ。現在のrevisionを使い、削除後は一覧と履歴の両方で消えたことを確認する。個別化履歴書から参照されている場合は削除が拒否される。構造化された職歴・学歴などの事実レコードは削除対象にしない。
