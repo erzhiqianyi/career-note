@@ -4,7 +4,8 @@ import { DataMoreActions } from '@/components/data-table';
 import { useEffect, useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { JaChildren } from './japanese-text';
+import { Ja, JaChildren } from './japanese-text';
+import { plainJapanese } from '@/lib/japanese-readings';
 import {
   ChevronDown,
   Archive,
@@ -111,12 +112,34 @@ function lines(text = '') {
     .filter(Boolean);
 }
 function chips(text = '') {
-  return text
-    .split(/[,，、;；|\n]\s*|\s\/\s/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const parts: string[] = [];
+  let start = 0;
+  let inReading = false;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === '{') inReading = true;
+    else if (text[index] === '}') inReading = false;
+    else if (!inReading && (',，、;；|\n'.includes(text[index]) || (text[index] === '/' && text[index - 1] === ' ' && text[index + 1] === ' '))) {
+      const part = text.slice(start, text[index] === '/' ? index - 1 : index).trim();
+      if (part) parts.push(part);
+      if (text[index] === '/') index += 1;
+      start = index + 1;
+    }
+  }
+  const last = text.slice(start).trim();
+  if (last) parts.push(last);
+  return parts;
+}
+function headlineLead(text: string) {
+  let inReading = false;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === '{') inReading = true;
+    else if (text[index] === '}') inReading = false;
+    else if (!inReading && (text[index] === '｜' || text[index] === '|')) return text.slice(0, index).trim();
+  }
+  return text.trim();
 }
 function initials(name = '') {
+  name = plainJapanese(name);
   const parts = name.trim().split(/\s+/);
   if (parts.length > 1 && /^[A-Za-z]/.test(name))
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -338,7 +361,7 @@ export default function ResumeManager({
                   )
                   .map((e) => (
                     <option key={e.id} value={e.id}>
-                      {resumeTitle(e)}
+                      {plainJapanese(resumeTitle(e))}
                     </option>
                   ))}
               </select>
@@ -543,11 +566,11 @@ export default function ResumeManager({
                   {items.length > 1 ? (
                     <ul>
                       {items.map((l, i) => (
-                        <li key={i}>{l}</li>
+                        <li key={i}><Ja text={l} /></li>
                       ))}
                     </ul>
                   ) : (
-                    entry.data[f.key]
+                    <Ja text={entry.data[f.key]} />
                   )}
                 </dd>
               </div>
@@ -571,7 +594,7 @@ export default function ResumeManager({
                 <span className="resume-star-letter">{letter}</span>
                 <div>
                   <strong>{t(label)}</strong>
-                  <p>{entry.data[key] || t('待补充')}</p>
+                  <p><Ja text={entry.data[key] || t('待补充')} /></p>
                 </div>
               </div>
             ))}
@@ -581,7 +604,7 @@ export default function ResumeManager({
               {fields.filter((f) => f.key === 'measurement').map((f) => (
                 <div key={f.key}>
                   <dt>{t(f.label)}</dt>
-                  <dd>{entry.data[f.key] || t('尚未补充')}</dd>
+                  <dd><Ja text={entry.data[f.key] || t('尚未补充')} /></dd>
                 </div>
               ))}
             </dl>
@@ -626,14 +649,14 @@ export default function ResumeManager({
         <div className="resume-record-main">
           <div className="resume-record-head">
             <div>
-              <h3>{resumeTitle(entry)}</h3>
-              {subtitle && <p>{subtitle}</p>}
+              <h3><Ja text={resumeTitle(entry)} /></h3>
+              {subtitle && <p><Ja text={subtitle} /></p>}
               {(entry.data.location || entry.data.url) && (
                 <p className="resume-record-meta">
                   {entry.data.location && (
                     <span>
                       <MapPin size={13} />
-                      {entry.data.location}
+                      <Ja text={entry.data.location} />
                     </span>
                   )}
                   {entry.data.url && (
@@ -653,7 +676,7 @@ export default function ResumeManager({
             <div className="resume-chips">
               {tech.map((x) => (
                 <span key={x} className="tag">
-                  {x}
+                  <Ja text={x} />
                 </span>
               ))}
             </div>
@@ -670,7 +693,7 @@ export default function ResumeManager({
                   }}
                 >
                   <Link2 size={13} />
-                  {t('关联经历')}：{resumeTitle(parent)}
+                  {t('关联经历')}：<Ja text={resumeTitle(parent)} />
                 </button>
               )}
               {kidSummary.map(({ k, n }) => (
@@ -764,7 +787,7 @@ export default function ResumeManager({
           {(history || []).map((v) => (
             <details key={v.revision}>
               <summary>
-                {resumeTitle(v)} · {t('版本')} {v.revision} · {v.updatedAt}
+                <Ja text={resumeTitle(v)} /> · {t('版本')} {v.revision} · {v.updatedAt}
                 {v.archived ? ' · ' + t('已归档') : ''}
               </summary>
               <dl className="resume-details">
@@ -776,11 +799,11 @@ export default function ResumeManager({
                           ?.label || k,
                       )}
                     </dt>
-                    <dd>{value}</dd>
+                    <dd><Ja text={value} /></dd>
                   </div>
                 ))}
               </dl>
-              <p>{v.sourceNotes}</p>
+              <p><Ja text={v.sourceNotes} /></p>
             </details>
           ))}
         </section></div>;
@@ -792,8 +815,8 @@ export default function ResumeManager({
       <section className="resume-identity" aria-label={t('基本资料')}>
         <div className="resume-avatar" aria-hidden="true">{initials(basics?.data.name) || '?'}</div>
         <div className="resume-identity-text">
-          <h2>{basics?.data.name || t('还没有基本资料')}</h2>
-          {basics?.data.headline && <p>{basics.data.headline.split(/[｜|]/)[0].trim()}</p>}
+          <h2><Ja text={basics?.data.name || t('还没有基本资料')} /></h2>
+          {basics?.data.headline && <p><Ja text={headlineLead(basics.data.headline)} /></p>}
         </div>
         <div className="resume-identity-actions">
           <button className="text-button" disabled={busy} onClick={() => basics ? setSelected(basics) : start('basics')}><Pencil size={16} />{t('基本资料')}</button>
@@ -851,16 +874,16 @@ export default function ResumeManager({
           {error && <p role="alert" className="resume-error">{error}</p>}
           {basics ? (
             <dl className="resume-details resume-basics-details">
-              {basics.data.summary && <div className="wide resume-summary-first"><dt className="sr-only">{t('职业摘要')}</dt><dd className="resume-basics-summary">{lines(basics.data.summary).map((p, i) => <p key={i}>{p}</p>)}</dd></div>}
-              <div><dt>{t('姓名')}</dt><dd>{basics.data.name}{basics.data.reading ? <span className="resume-basics-reading">{basics.data.reading}</span> : null}</dd></div>
-              {basics.data.headline && <div><dt>{t('职业定位')}</dt><dd>{basics.data.headline}</dd></div>}
-              {basics.data.location && <div><dt>{t('所在地')}</dt><dd>{basics.data.location}</dd></div>}
+              {basics.data.summary && <div className="wide resume-summary-first"><dt className="sr-only">{t('职业摘要')}</dt><dd className="resume-basics-summary">{lines(basics.data.summary).map((p, i) => <p key={i}><Ja text={p} /></p>)}</dd></div>}
+              <div><dt>{t('姓名')}</dt><dd><Ja text={basics.data.name} />{basics.data.reading ? <span className="resume-basics-reading">{basics.data.reading}</span> : null}</dd></div>
+              {basics.data.headline && <div><dt>{t('职业定位')}</dt><dd><Ja text={basics.data.headline} /></dd></div>}
+              {basics.data.location && <div><dt>{t('所在地')}</dt><dd><Ja text={basics.data.location} /></dd></div>}
               {(basics.data.website || basics.data.github) && <div><dt>{t('链接')}</dt><dd className="resume-basics-links">
                 {basics.data.website && <a href={basics.data.website} target="_blank" rel="noreferrer"><Globe size={13} />{basics.data.website.replace(/^https?:\/\//, '')}</a>}
                 {basics.data.github && <a href={basics.data.github} target="_blank" rel="noreferrer"><Link2 size={13} />{basics.data.github.replace(/^https?:\/\//, '')}</a>}
               </dd></div>}
               {active.some(e => e.kind === 'language') && <div><dt>{t('语言能力')}</dt><dd className="resume-chips">
-                {active.filter(e => e.kind === 'language').map(e => <span key={e.id} className="tag">{e.data.name}{e.data.qualification ? ' · ' + e.data.qualification : e.data.level ? ' · ' + e.data.level : ''}</span>)}
+                {active.filter(e => e.kind === 'language').map(e => <span key={e.id} className="tag"><Ja text={[e.data.name, e.data.qualification || e.data.level].filter(Boolean).join(' · ')} /></span>)}
               </dd></div>}
             </dl>
           ) : (
@@ -896,12 +919,12 @@ export default function ResumeManager({
                 const row = role ? { title: role, subtitle: '', period: '' } : rowOf(entry);
                 return <li key={key}>
                   <button className="resume-record-open" onClick={() => setSelected(role ? { ...entry, data: { ...entry.data, role } } : entry)}>
-                    <span className="resume-record-title">{row.title}</span>
-                    {row.subtitle && <span className="resume-record-subtitle">{row.subtitle}</span>}
+                    <span className="resume-record-title"><Ja text={row.title} /></span>
+                    {row.subtitle && <span className="resume-record-subtitle"><Ja text={row.subtitle} /></span>}
                     {row.period && <span className="resume-record-period">{row.period}</span>}
                     {entry.verification === 'pending' && <span className="resume-record-pending">{t('待确认')}</span>}
                   </button>
-                  <button className="icon-button resume-record-edit" title={t('编辑')} aria-label={t('编辑') + ' ' + row.title} disabled={busy} onClick={() => start(k, entry)}><Pencil size={19} /></button>
+                  <button className="icon-button resume-record-edit" title={t('编辑')} aria-label={t('编辑') + ' ' + plainJapanese(row.title)} disabled={busy} onClick={() => start(k, entry)}><Pencil size={19} /></button>
                 </li>;
               })}
             </ul>
