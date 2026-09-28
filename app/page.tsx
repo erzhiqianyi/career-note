@@ -25,6 +25,7 @@ import StatusMark from '@/components/status-mark';
 import DailyBrief, { collectBrief, briefSize } from '@/components/daily-brief';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { MaterialPrint } from '@/components/material-print';
+import { MaterialPublications } from '@/components/material-publications';
 import ResumeManager from '@/components/resume-manager';
 import PersonalizedResumes from '@/components/personalized-resumes';
 import {
@@ -1571,6 +1572,7 @@ export default function Home() {
             <h3>{tr('依据与待确认事项')}</h3>
             <p className="prewrap"><Ja text={doc.sourceNotes} /></p>
           </div>
+          {'kind' in doc && doc.jobId && ['履歴書', '職務経歴書'].includes(doc.kind) && <MaterialPublications material={doc} />}
         </RecordPage>
       )}
       {importOpen && (

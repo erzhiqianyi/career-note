@@ -1,0 +1,34 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { Miniflare } from 'miniflare';
+
+test('company documents publish exact snapshots and revoke safely', async t => {
+  const bundle = await build({ entryPoints: ['worker/index.ts'], bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022' });
+  const mf = new Miniflare({ modules: true, script: bundle.outputFiles[0].text, compatibilityDate: '2026-05-22', d1Databases: ['CAREER_DB'] });
+  t.after(() => mf.dispose());
+  const send = (path, body) => mf.dispatchFetch('http://local/api/career/' + path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  await send('state');
+  const db = await mf.getD1Database('CAREER_DB');
+  const material = { id: 'doc-1', jobId: 'job-1', kind: '職務経歴書', title: 'Private management title', content: '# 職務経歴書\n\n氏名：テスト 太郎\n\n## 職務要約\n\n' + '実務経験。'.repeat(30) + '\n\n<script>alert(1)</script>', sourceNotes: 'SECRET SOURCE NOTE' };
+  await db.prepare('INSERT INTO records(kind,id,body) VALUES(?,?,?)').bind('materials', material.id, JSON.stringify(material)).run();
+  const published = await send('material-publications', { materialId: material.id, mode: 'unlisted', expiresAt: '' });
+  assert.equal(published.status, 200);
+  const p = await published.json();
+  const page = await mf.dispatchFetch('http://local' + p.path);
+  assert.equal(page.headers.get('x-robots-tag'), 'noindex, nofollow');
+  const html = await page.text();
+  assert.match(html, /<h1>職務経歴書<\/h1>/);
+  assert.match(html, /実務経験/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.doesNotMatch(html, /SECRET SOURCE NOTE|Private management title/);
+  await db.prepare('UPDATE records SET body=? WHERE kind=? AND id=?').bind(JSON.stringify({ ...material, content: 'Changed' }), 'materials', material.id).run();
+  assert.match(await (await mf.dispatchFetch('http://local' + p.path)).text(), /実務経験/);
+  const list = await (await send('material-publications')).json();
+  assert.equal(list[0].materialId, material.id);
+  assert.equal((await send('material-publications/revoke', { id: p.id })).status, 200);
+  assert.equal((await mf.dispatchFetch('http://local' + p.path)).status, 404);
+  await db.prepare('INSERT INTO records(kind,id,body) VALUES(?,?,?)').bind('materials', 'bad', JSON.stringify({ ...material, id: 'bad', content: '# 履歴書\n\n## 出典・確認範囲\n' + 'x'.repeat(200) })).run();
+  assert.equal((await send('material-publications', { materialId: 'bad', mode: 'public', expiresAt: '' })).status, 400);
+});

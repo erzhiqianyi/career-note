@@ -1,4 +1,5 @@
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
+import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
 import { ensureResumeSchema, readResume, writeResume, deleteResumeDocument, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
 import { inspectorResponse } from '@ninomae/mcp-app-server/inspector';
@@ -10,6 +11,7 @@ import { verifyFirebaseToken } from './firebase-auth';
 import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-platforms';
 import { findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-bank';
 import type { ExportedHandler } from '@cloudflare/workers-types';
+import type { Material } from '../lib/career';
 
 type JobStatus = '关注中' | '准备投递' | '已投递' | '书类选考' | '面试中' | '内定' | '未通过' | '已撤回';
 type JobPriority = '高' | '普通' | '低';
@@ -981,6 +983,7 @@ function createGateway(env: Env, db: D1Database): McpAppServer {
 let schemaReady: Promise<void> | undefined;
 async function ensureAllSchemas(db: D1Database, gateway: McpAppServer): Promise<void> {
   await ensureSchema(db, gateway);
+  await ensureMaterialPublicationSchema(db);
   await ensureResumeSchema(db);
   await ensurePersonalizedSchema(db);
 }
@@ -1002,6 +1005,8 @@ const handler = async (
   await schemaReady;
   const publicMatch = new URL(request.url).pathname.match(/^\/api\/career\/public-resumes\/([a-f0-9-]{36})$/);
   if (publicMatch && request.method === 'GET') return publicResumeResponse(rawDb, publicMatch[1]);
+  const publicMaterialMatch = new URL(request.url).pathname.match(/^\/api\/career\/public-materials\/([a-f0-9-]{36})$/);
+  if (publicMaterialMatch && request.method === 'GET') return publicMaterialResponse(rawDb, publicMaterialMatch[1]);
   const audioMatch = new URL(request.url).pathname.match(/^\/api\/career\/attempts\/audio\/([a-f0-9]{48})$/);
   if (audioMatch && request.method === 'GET') return audioLinkResponse(rawDb, env, audioMatch[1]);
 
@@ -1044,6 +1049,10 @@ const handler = async (
   if (method === 'GET' && pathname === '/api/career/personalized-resumes') {
     ensureScopes(context, ['career:read']);
     return jsonResponse(await listPersonalized(rawDb, db.namespace));
+  }
+  if (method === 'GET' && pathname === '/api/career/material-publications') {
+    ensureScopes(context, ['career:read']);
+    return jsonResponse(await listMaterialPublications(rawDb, db.namespace));
   }
 
   if (method === 'GET' && pathname === '/api/career/readings') {
@@ -1152,6 +1161,13 @@ const handler = async (
       ensureScopes(context, ['career:write']);
       if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中预览并管理公开链接');
       return pathname.endsWith('/revoke') ? revokePublication(rawDb, db.namespace, payload.id) : publishResume(rawDb, db.namespace, payload);
+    case '/api/career/material-publications':
+    case '/api/career/material-publications/revoke':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中预览并管理公开链接');
+      return pathname.endsWith('/revoke')
+        ? revokeMaterialPublication(rawDb, db.namespace, payload.id)
+        : publishMaterial(rawDb, db.namespace, payload, await getRecord(db, 'materials', String(payload.materialId || '')) as Material | null);
     case '/api/career/platforms': {
       ensureScopes(context, ['career:write']);
       const kind = 'platforms:' + context.uid;

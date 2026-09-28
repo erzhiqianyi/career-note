@@ -122,7 +122,13 @@ export default function InterviewPractice({
   const day = (v: string) => (v ? v.slice(0, 10).replaceAll('-', '.') : '—');
   // 准备资料（企业研究、志望动机、面试准备等）和练习题同属一家公司的面试准备，放在同一页。
   const materials = data.materials || [];
-  const materialsFor = (jobId: string) => materials.filter(m => (m.jobId || '') === jobId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const materialsFor = (jobId: string) => materials.filter(m => (m.jobId || '') === jobId).sort((a, b) => {
+    const kindOrder = (kind: string) => {
+      const index = materialKinds.indexOf(kind === '業務経歴書' ? '職務経歴書' : kind);
+      return index < 0 ? materialKinds.length : index;
+    };
+    return kindOrder(a.kind) - kindOrder(b.kind) || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id);
+  });
   const materialTable = (rows: Material[], label: string, withCompany = false) => <DataTable label={label} columns={[
     { key: 'title', label: tr(withCompany ? '标题 / 公司' : '标题'), width: 'minmax(0,1fr)' },
     { key: 'kind', label: tr('类型'), width: '110px' },
