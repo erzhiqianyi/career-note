@@ -52,15 +52,13 @@ const emptyDraft: Draft = {
 };
 type PrepSortKey = 'company' | 'status' | 'schedule' | 'prep';
 type PrepColumn = PrepSortKey;
-/** Sections of one company's preparation page; shown as tabs so nothing stacks. */
-type PrepTab = 'company' | 'posting' | 'materials' | 'practice' | 'summary' | 'feedback';
+/** Four sections of one company's preparation page. */
+type PrepTab = 'info' | 'materials' | 'practice' | 'summary';
 const PREP_TABS: Array<[PrepTab, string]> = [
-  ['company', '公司信息'],
-  ['posting', '招聘信息'],
-  ['materials', '准备资料'],
-  ['practice', '面试练习'],
-  ['summary', '总结分析'],
-  ['feedback', '反馈'],
+  ['info', '信息'],
+  ['materials', '资料'],
+  ['practice', '练习'],
+  ['summary', '总结'],
 ];
 const RECORD_MAX_SECONDS = 600;
 const fmtClock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -413,8 +411,8 @@ export default function InterviewPractice({
   }
   const currentJob = data.jobs.find(j => j.id === jobId);
   if (company && !practiceRecord && !guide && !help) {
-    // One company's preparation page: facts, posting, materials, practice, summary and feedback as tabs.
-    const tabs = PREP_TABS.filter(([id]) => !isBank || (id !== 'company' && id !== 'posting'));
+    // Keep the company and posting together, and show practice feedback with its summary.
+    const tabs = PREP_TABS.filter(([id]) => !isBank || id !== 'info');
     const activeTab = tabs.some(([id]) => id === tab) ? tab : 'practice';
     const companyMaterials = materialsFor(isBank ? '' : jobId);
     const packIds = new Set(packs.map(p => p.id));
@@ -443,52 +441,49 @@ export default function InterviewPractice({
       </div>
       <div className="prep-tabs" role="tablist" aria-label={tr('面试准备')}>
         {tabs.map(([id, label]) => {
-          const count = id === 'materials' ? companyMaterials.length : id === 'feedback' ? companyReviews.length : 0;
+          const count = id === 'materials' ? companyMaterials.length : 0;
           return <button key={id} type="button" role="tab" aria-selected={id === activeTab} className={id === activeTab ? 'is-active' : ''} onClick={() => setTab(id)}>
             {tr(label)}{count > 0 && <span className="prep-tab-count">{count}</span>}
           </button>;
         })}
       </div>
-      {/* Phone (CSS): the tab row can hold 6 items and runs wider than the screen, so a picker replaces it there instead of a sideways swipe. */}
-      <select className="prep-tabs-select" aria-label={tr('面试准备')} value={activeTab} onChange={e => setTab(e.target.value as PrepTab)}>
-        {tabs.map(([id, label]) => {
-          const count = id === 'materials' ? companyMaterials.length : id === 'feedback' ? companyReviews.length : 0;
-          return <option key={id} value={id}>{tr(label)}{count > 0 ? ' · ' + count : ''}</option>;
-        })}
-      </select>
-      {activeTab === 'company' && currentJob && <section className="panel prep-tab-panel">
-        {factList([
-          ['工作地点', currentJob.location, true],
-          ['外国人招聘信息', currentJob.foreigner, true],
-          ['在留资格支持', currentJob.visa, true],
-          ['投递状态', currentJob.status ? tr(currentJob.status) : ''],
-          ['优先级', currentJob.priority ? tr(currentJob.priority) : ''],
-          ['下一步', currentJob.nextAction ? currentJob.nextAction + (currentJob.nextDate ? '（' + day(currentJob.nextDate) + '）' : '') : '', true],
-        ])}
-        {textSections([
-          ['公司业务与特点', currentJob.business],
-          ['我的跟进记录', currentJob.notes],
-        ], ['公司业务与特点'])}
-        <details className="text-section detail-disclosure"><summary>{tr('投递时间线')} · {currentJob.history.length}</summary>
-          <div className="timeline">
-            {currentJob.history.map((h, i) => <div key={i}><span className="timeline-dot" /><b>{tr(h.status)}</b><small>{day(h.at)}</small></div>)}
-          </div>
-        </details>
-      </section>}
-      {activeTab === 'posting' && currentJob && <section className="panel prep-tab-panel">
-        <div className="section-head"><h2>{currentJob.role}</h2>{currentJob.url && <a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a>}</div>
-        {factList([
-          ['薪资范围', currentJob.salary, true],
-          ['日语要求', currentJob.japanese, true],
-          ['信息确认日期', currentJob.sourceDate ? day(currentJob.sourceDate) : ''],
-          ['匹配评价', currentJob.matchLevel ? tr(currentJob.matchLevel) : ''],
-        ])}
-        {textSections([
-          ['岗位要求', currentJob.requirements],
-          ['工作内容', currentJob.description],
-          ['匹配点', currentJob.matchNotes],
-          ['待确认事项', currentJob.unknowns],
-        ], ['岗位要求', '匹配点'])}
+      {activeTab === 'info' && currentJob && <section className="panel prep-tab-panel prep-info">
+        <div className="prep-info-section">
+          <h2>{tr('公司信息')}</h2>
+          {factList([
+            ['工作地点', currentJob.location, true],
+            ['外国人招聘信息', currentJob.foreigner, true],
+            ['在留资格支持', currentJob.visa, true],
+            ['投递状态', currentJob.status ? tr(currentJob.status) : ''],
+            ['优先级', currentJob.priority ? tr(currentJob.priority) : ''],
+            ['下一步', currentJob.nextAction ? currentJob.nextAction + (currentJob.nextDate ? '（' + day(currentJob.nextDate) + '）' : '') : '', true],
+          ])}
+          {textSections([
+            ['公司业务与特点', currentJob.business],
+            ['我的跟进记录', currentJob.notes],
+          ], ['公司业务与特点'])}
+          <details className="text-section detail-disclosure"><summary>{tr('投递时间线')} · {currentJob.history.length}</summary>
+            <div className="timeline">
+              {currentJob.history.map((h, i) => <div key={i}><span className="timeline-dot" /><b>{tr(h.status)}</b><small>{day(h.at)}</small></div>)}
+            </div>
+          </details>
+        </div>
+        <div className="prep-info-section">
+          <div className="section-head"><h2>{tr('招聘信息')}</h2>{currentJob.url && <a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a>}</div>
+          <p className="prep-posting-role">{currentJob.role}</p>
+          {factList([
+            ['薪资范围', currentJob.salary, true],
+            ['日语要求', currentJob.japanese, true],
+            ['信息确认日期', currentJob.sourceDate ? day(currentJob.sourceDate) : ''],
+            ['匹配评价', currentJob.matchLevel ? tr(currentJob.matchLevel) : ''],
+          ])}
+          {textSections([
+            ['岗位要求', currentJob.requirements],
+            ['工作内容', currentJob.description],
+            ['匹配点', currentJob.matchNotes],
+            ['待确认事项', currentJob.unknowns],
+          ], ['岗位要求', '匹配点'])}
+        </div>
       </section>}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
         {!isBank && requestPreparation && <div className="section-head material-actions">
@@ -518,7 +513,7 @@ export default function InterviewPractice({
         </section>
       ) : (
         <>
-          <div className="section-head prep-practice-head"><h2>{bt(pack.title)}</h2><span className="muted">{tr('已练问题')} {practiced.size} / {pack.questions.length}</span><button className="secondary" onClick={() => setGuide(pack.id)}>{tr('面试前要做什么')}</button></div>
+          <div className="section-head prep-practice-head"><h2>{tr('练习题目')}</h2><span className="muted">{tr('已练问题')} {practiced.size} / {pack.questions.length}</span><button className="secondary" onClick={() => setGuide(pack.id)}>{tr('面试前要做什么')}</button></div>
           <section className="panel question-list prep-tab-panel">
             {pack.questions.map((q, i) => (
               <button
@@ -585,8 +580,7 @@ export default function InterviewPractice({
           </ul>
         </>}
         {!companyReviews.length && !pack && <p className="muted">{tr('还没有练习总结。')}</p>}
-      </section>}
-      {activeTab === 'feedback' && <section className="panel prep-tab-panel">
+        <h3>{tr('反馈')}</h3>
         {companyReviews.length ? <ul className="prep-feedback-list">
           {companyReviews.map(r => { const a = companyAttempts.find(x => x.id === r.attemptId); const q = a && questionOf(a); return <li key={r.id}>
             <div className="prep-feedback-head"><b>{q ? <Ja text={bt(q.title)} /> : tr('回答点评')}</b><span className="num muted">{day(r.createdAt)}</span></div>

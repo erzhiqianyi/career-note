@@ -4691,6 +4691,18 @@
     "ja": "ブラウザでマイクの使用が許可されていません。",
     "en": "The browser did not allow microphone access."
   },
+  "信息": {
+    "ja": "情報",
+    "en": "Info"
+  },
+  "总结": {
+    "ja": "まとめ",
+    "en": "Summary"
+  },
+  "练习题目": {
+    "ja": "練習問題",
+    "en": "Practice questions"
+  },
   "公司信息": {
     "ja": "企業情報",
     "en": "Company"

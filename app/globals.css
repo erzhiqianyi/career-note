@@ -3548,28 +3548,23 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .list-toolbar .secondary.icon-only { padding: 0; width: 40px; height: 40px; justify-content: center; align-items: center; cursor: pointer; color: var(--ink-3); }
 .list-toolbar .secondary.icon-only:hover { color: var(--accent); }
 
-/* One company's interview-prep page: horizontal tabs, one panel visible at a time. */
-.prep-tabs { display: flex; gap: 2px; margin: 4px 0 18px; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.prep-tabs-select { display: none; }
+/* One company's preparation page: four short tabs fit on a phone. */
+.prep-tabs { display: flex; gap: 2px; margin: 4px 0 18px; border-bottom: 1px solid var(--line); }
 .prep-tabs button { flex: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: -1px; padding: 10px 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-3); font: inherit; font-size: 0.875rem; cursor: pointer; white-space: nowrap; }
 .prep-tabs button:hover { color: var(--ink); }
 .prep-tabs button.is-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 .prep-tab-count { padding: 1px 7px; border-radius: 999px; background: #eef2f8; color: var(--ink-3); font-size: 0.6875rem; font-weight: 500; }
 .prep-tabs button.is-active .prep-tab-count { background: #e3ebf9; color: var(--accent); }
-/* Prep tabs (公司信息/招聘信息/…) can run to 6 items, wider than the screen; a picker replaces the horizontal-scrolling row on phones so nothing needs a sideways swipe. */
 @media (max-width: 640px) {
-  .prep-tabs {
-    display: none;
-  }
-  .prep-tabs-select {
-    display: block;
-    width: 100%;
-    margin: 4px 0 18px;
-    font-weight: 600;
-  }
+  .prep-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
+  .prep-tabs button { min-width: 0; justify-content: center; gap: 4px; padding: 12px 2px; font-size: 0.8125rem; }
 }
 .prep-tab-panel .facts { margin-bottom: 8px; }
 .prep-tab-panel .empty { display: grid; gap: 12px; justify-items: center; }
+.prep-info-section + .prep-info-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
+.prep-info-section > h2 { margin-bottom: 14px; }
+.prep-posting-role { margin: 0 0 14px; color: var(--ink-2); font-weight: 600; overflow-wrap: anywhere; }
+.practice-workspace > .practice-materials { margin-top: 0; }
 .prep-practice-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 .prep-practice-head h2 { margin: 0; flex: 1; min-width: 0; }
 @media (max-width: 640px) {
