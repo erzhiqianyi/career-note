@@ -17,7 +17,7 @@ export type Hints = {
   resume: { id: string; kind: string; title: string; lines: string[] }[];
 };
 
-const JOB_FIELDS: Array<[Exclude<keyof Job, 'history' | 'revision'>, string]> = [
+const JOB_FIELDS: Array<[keyof Pick<Job, 'requirements' | 'description' | 'matchNotes' | 'business' | 'japanese' | 'unknowns'>, string]> = [
   ['requirements', '応募要件'],
   ['description', '仕事内容'],
   ['matchNotes', 'マッチ理由'],

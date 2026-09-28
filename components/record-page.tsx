@@ -38,19 +38,21 @@ export function useRecordPage<T>(base: string, view: string, resolve: (id: strin
   return [value, setValue] as const;
 }
 
-export type SubView = { title?: string; onBack: () => void };
+export type SubView = { title?: string; onBack: () => void; action?: { label: string; onClick: () => void } };
 /** The page shell provides this; drilled-in views register here so the header's back arrow controls every return. */
 export const SubViewContext = createContext<(id: string, view: SubView | null) => void>(() => {});
 
 /** Registers a drilled-in view with the header (back arrow + optional title); renders nothing itself, so all pages return the same way. */
-export function RecordBack({ onBack, title }: { onBack: () => void; title?: string }) {
+export function RecordBack({ onBack, title, action }: { onBack: () => void; title?: string; action?: { label: string; onClick: () => void } }) {
   const register = useContext(SubViewContext);
   const id = useId();
   const latest = useRef(onBack);
+  const latestAction = useRef(action);
   latest.current = onBack;
+  latestAction.current = action;
   useEffect(() => {
-    register(id, { title, onBack: () => latest.current() });
+    register(id, { title, onBack: () => latest.current(), action: action ? { label: action.label, onClick: () => latestAction.current?.onClick() } : undefined });
     return () => register(id, null);
-  }, [register, id, title]);
+  }, [register, id, title, action?.label]);
   return null;
 }

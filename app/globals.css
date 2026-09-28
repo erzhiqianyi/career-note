@@ -3262,6 +3262,25 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 .question-help-link { margin: 0 0 16px; display: inline-flex; align-items: center; gap: 4px; }
 .answer-panel .answer-editor { margin-top: 0; }
 .practice-workspace .question-option { padding: 18px 12px; }
+.practice-record-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-bottom: 20px; }
+.practice-record-layout > .panel { min-width: 0; margin: 0; }
+.practice-prompt-panel { padding: 28px; }
+.practice-prompt-panel .japanese-question { margin: 20px 0 8px; overflow-wrap: anywhere; }
+.practice-question-meaning { color: var(--ink-3); line-height: 1.8; margin: 0 0 18px; }
+.practice-reference { border-top: 1px solid var(--line); padding: 16px 0; }
+.practice-reference:first-of-type { margin-top: 22px; }
+.practice-reference summary { color: var(--ink-2); font-weight: 600; cursor: pointer; }
+.practice-reference p { margin: 12px 0 0; color: var(--ink-3); line-height: 1.9; overflow-wrap: anywhere; }
+.practice-prompt-panel .question-help-link { margin: 6px 0 0; }
+.practice-record-layout .answer-editor { padding-top: 0; border-top: 0; }
+.practice-record-layout .answer-editor textarea { min-height: 300px; }
+@media (max-width: 900px) {
+  .practice-record-layout { grid-template-columns: 1fr; }
+  .practice-record-layout .answer-editor textarea { min-height: 220px; }
+}
+@media (max-width: 640px) {
+  .practice-prompt-panel { padding: 21px; }
+}
 @media (max-width: 700px) { .practice-company-heading { align-items: flex-start; flex-direction: column; gap: 12px; } }
 
 /* Profile library: compact identity, one category row, full-width records. */
@@ -3519,13 +3538,17 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .practice-materials .section-head select { padding: 7px 10px; border: 1px solid #e1e7ef; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-size: 0.8125rem; }
 /* Interview prep: one row per company, with the question-bank template and daily analysis as small entries underneath. */
 .prep-list .dt-row.is-closed { opacity: .6; }
+.job-bulk-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: -6px 0 16px; }
+.job-bulk-actions .secondary { display: inline-flex; align-items: center; gap: 6px; }
+.job-bulk-actions .secondary:disabled { opacity: .5; cursor: not-allowed; }
+.prep-list .job-select { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.prep-list input[type='checkbox'] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
 .prep-list .dt-cell b { font-weight: 600; color: var(--ink-2); }
 .prep-list .dt-cell b.prep-when { display: inline-flex; align-items: center; gap: 5px; color: #b58a2e; font-variant-numeric: tabular-nums; }
 .prep-list .dt-cell b.prep-interview { color: #2f6fd6; }
 .prep-list .dt-cell b.prep-overdue { color: #b42318; }
 .prep-list .record-title-button { display: inline-flex; align-items: center; gap: 8px; }
 .prep-list .record-title-button .status-mark { width: 22px; height: 22px; }
-.practice-company-heading p { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .job-summary .status-mark { margin-left: auto; }
 .prep-list .dt-cell .status-mark { width: auto; height: auto; padding: 3px 9px 3px 7px; border-radius: 999px; font-size: 0.75rem; white-space: nowrap; }
 /* Preparation stage: one labelled pill per row, same tones as the application status. */
@@ -3548,32 +3571,68 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .list-toolbar .secondary.icon-only { padding: 0; width: 40px; height: 40px; justify-content: center; align-items: center; cursor: pointer; color: var(--ink-3); }
 .list-toolbar .secondary.icon-only:hover { color: var(--accent); }
 
-/* One company's preparation page: four short tabs fit on a phone. */
-.prep-tabs { display: flex; gap: 2px; margin: 4px 0 18px; border-bottom: 1px solid var(--line); }
-.prep-tabs button { flex: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: -1px; padding: 10px 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-3); font: inherit; font-size: 0.875rem; cursor: pointer; white-space: nowrap; }
-.prep-tabs button:hover { color: var(--ink); }
-.prep-tabs button.is-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+/* Keep company sections directly below the page header. */
+.page:has(.practice-company-page) { padding-top: 0; }
+.prep-tabs { display: flex; gap: 5px; margin: 0 0 18px; padding: 10px 0; }
+.prep-tabs button { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 15px; border: 1px solid transparent; border-radius: 9px; background: none; color: var(--ink-3); font: inherit; font-size: 0.875rem; cursor: pointer; white-space: nowrap; }
+.prep-tabs button:hover { color: var(--ink); background: #edf1f6; }
+.prep-tabs button.is-active { color: #194777; background: #e3edfa; border-color: #a9c5e5; font-weight: 700; box-shadow: inset 0 0 0 1px #c6d9ee; }
 .prep-tab-count { padding: 1px 7px; border-radius: 999px; background: #eef2f8; color: var(--ink-3); font-size: 0.6875rem; font-weight: 500; }
-.prep-tabs button.is-active .prep-tab-count { background: #e3ebf9; color: var(--accent); }
+.prep-tabs button.is-active .prep-tab-count { background: #fff; color: var(--accent); }
 @media (max-width: 640px) {
-  .prep-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
-  .prep-tabs button { min-width: 0; justify-content: center; gap: 4px; padding: 12px 2px; font-size: 0.8125rem; }
+  .prep-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0 -18px 18px; padding: 8px 18px; background: #fff; border-bottom: 1px solid var(--line); }
+  .prep-tabs button { min-width: 0; gap: 3px; padding: 8px 2px; font-size: 0.8125rem; }
 }
+.header-context-action { display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 0 9px; color: var(--accent); }
+.prep-action-dialog { width: min(420px, calc(100% - 28px)); padding: 20px; }
+.prep-action-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.prep-action-head h2 { margin: 0; }
+.prep-action-list { display: grid; gap: 10px; }
+.prep-action-list > .secondary { display: flex; align-items: center; justify-content: flex-start; gap: 9px; width: 100%; min-height: 44px; text-align: left; }
+.prep-pack-picker { display: grid; gap: 7px; font-size: 0.875rem; font-weight: 600; }
+.prep-pack-picker select { width: 100%; min-width: 0; }
 .prep-tab-panel .facts { margin-bottom: 8px; }
 .prep-tab-panel .empty { display: grid; gap: 12px; justify-items: center; }
 .prep-info, .prep-summary { display: grid; gap: 16px; }
 .prep-block-heading { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; font-size: 1rem; line-height: 1.4; }
 .prep-block-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+.prep-info-section { min-width: 0; padding: 20px; border: 1px solid #d9e4f1; border-left: 4px solid #416c9b; border-radius: 12px; background: #fff; box-shadow: 0 3px 14px #2339510a; }
+.prep-info-section:nth-child(2) { border-color: #d9e9e3; border-left-color: #348270; }
+.prep-info-section:nth-child(2) .prep-block-icon { color: #287661; background: #e8f5ef; }
+.prep-info-section .facts { margin: 0 0 18px; }
+.prep-info-section .facts > div { border-bottom: 1px solid #e8edf3; }
+.prep-info-section .facts > div:last-child { border-bottom: 0; }
+.prep-info-section .detail-disclosure { margin: 10px 0 0; padding: 0; border: 1px solid #e2eaf3; border-radius: 9px; background: #f8fafc; }
+.prep-info-section:nth-child(2) .detail-disclosure { border-color: #e0ece7; background: #f8fbf9; }
+.prep-info-section .detail-disclosure summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px; list-style: none; font-size: 0.9375rem; }
+.prep-info-section .detail-disclosure summary::-webkit-details-marker { display: none; }
+.prep-info-section .detail-disclosure summary::after { content: ''; width: 7px; height: 7px; margin-left: auto; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); transition: transform .15s ease; }
+.prep-info-section .detail-disclosure[open] summary::after { transform: rotate(225deg); }
+.prep-detail-icon { display: grid; flex: none; place-items: center; width: 28px; height: 28px; border-radius: 7px; color: #416c9b; background: #e7eff8; }
+.prep-info-section:nth-child(2) .prep-detail-icon { color: #287661; background: #e7f2ec; }
+.prep-info-section .detail-disclosure > p, .prep-info-section .detail-disclosure > .timeline { margin: 0; padding: 0 14px 16px 50px; }
 .prep-info-section > .section-head { margin-bottom: 14px; }
 .prep-info-section > .section-head .prep-block-heading { margin: 0; }
 .prep-posting-role { margin: 0 0 14px; color: var(--ink-2); font-weight: 600; overflow-wrap: anywhere; }
+.prep-source-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.prep-source-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 32px; padding: 5px 9px; border: 1px solid #dce8e2; border-radius: 8px; background: #f2f8f4; color: #4b6660; font-size: 0.8125rem; }
+.prep-source-chip svg { flex: none; }
+.prep-source-chip b { min-width: 0; color: #245d4e; font-weight: 650; overflow-wrap: anywhere; }
+.prep-source-chip[data-source-channel="AI 搜索"] { border-color: #d4e2f1; background: #eef5fc; color: #486b8e; }
+.prep-source-chip[data-source-channel="AI 搜索"] b { color: #28558a; }
+.prep-source-chip[data-source-channel="Agent 推荐"] { border-color: #e2dcf1; background: #f5f1fb; color: #74608e; }
+.prep-source-chip[data-source-channel="Agent 推荐"] b { color: #634885; }
+@media (max-width: 640px) {
+  .prep-info { gap: 14px; }
+  .prep-info-section { padding: 16px 14px; }
+  .prep-info-section .detail-disclosure > p, .prep-info-section .detail-disclosure > .timeline { padding-left: 12px; }
+}
 .practice-workspace > .practice-materials { margin-top: 0; }
 .prep-practice-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 .prep-practice-head h2 { margin: 0; flex: 1; min-width: 0; }
 @media (max-width: 640px) {
   .prep-practice-head { flex-direction: column; align-items: stretch; gap: 10px; }
   .prep-practice-head h2 { display: block; overflow-wrap: anywhere; line-height: 1.45; }
-  .prep-practice-head > .secondary { width: 100%; justify-content: center; }
   .prep-tab-panel.question-list { display: block; overflow: visible; padding: 4px 14px; }
   .prep-tab-panel.question-list .question-option { width: 100%; min-width: 0; min-height: 64px; }
   .prep-tab-panel.question-list .question-option > span:nth-child(2) { min-width: 0; }
@@ -3775,6 +3834,8 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 
   /* Company list: application status is the first decision point; preparation is supporting context. */
   .prep-list .dt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'company status' 'schedule schedule' 'progress progress'; align-items: start; gap: 8px 10px; padding: 16px 0; }
+  .prep-list .dt-row.is-managing { grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: 'select company status' 'select schedule schedule' 'select progress progress'; }
+  .prep-list .dt-row.is-managing > .job-select { grid-area: select; align-self: start; padding-top: 3px; }
   .prep-list .dt-row.dt-head { display: none; }
   .prep-list .dt-row::before { display: none; }
   .prep-list .dt-row > .dt-cell[data-label]::before { content: none; }
@@ -3810,4 +3871,12 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .personalized-manager .list-toolbar .toolbar select { min-width: 0; max-width: 100%; }
 @media (max-width: 700px) {
   .personalized-manager .list-toolbar .toolbar select { flex: 1 1 100%; }
+}
+.company-number {
+  display: inline-block;
+  margin-right: .55em;
+  color: var(--accent, #315d8d);
+  font-size: .8em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }

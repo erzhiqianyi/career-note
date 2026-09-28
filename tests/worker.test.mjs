@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { Miniflare } from 'miniflare';
-const bundled=await build({entryPoints:['worker/index.ts'],bundle:true,write:false,format:'esm',platform:'browser',target:'es2022'});
+const bundled=await build({entryPoints:['worker/index.ts'],bundle:true,write:false,format:'esm',platform:'browser',conditions:['workerd'],target:'es2022'});
 async function worker(t,bindings={}) {
  const mf=new Miniflare({workers:[{name:'career',modules:true,script:bundled.outputFiles[0].text,compatibilityDate:'2026-05-22',d1Databases:['CAREER_DB'],r2Buckets:['CAREER_AUDIO'],bindings}]});
  t.after(()=>mf.dispose());return mf;
@@ -16,6 +16,76 @@ void test('local Worker state and profile persistence use D1',async t=>{
  const conflict=await send('profile',{...state.profile,summary:'Stale update'});assert.equal(conflict.status,400);
  assert.equal((await (await send('state')).json()).profile.summary,'Test profile');
  const preview=await send('import/preview',{schemaVersion:1,jobs:[],materials:[],reports:[],completeTaskIds:[]});assert.equal(preview.status,200);
+});
+void test('job provenance keeps platform and discovery channel across research updates',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const job={id:'source-job',company:'Example Company',role:'Engineer',url:'https://example.com/jobs/1',sourcePlatform:'Green',sourceChannel:'AI 搜索'};
+ assert.equal((await send('import',{schemaVersion:1,jobs:[job],completeTaskIds:[]})).status,200);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:job.id,company:job.company,role:'Senior Engineer',url:job.url}],completeTaskIds:[]})).status,200);
+ let saved=(await (await send('state')).json()).jobs[0];
+ assert.equal(saved.sourcePlatform,'Green');assert.equal(saved.sourceChannel,'AI 搜索');
+ assert.equal((await send('jobs',{...saved,sourcePlatform:'公司官网',sourceChannel:'主动发现'})).status,200);
+ saved=(await (await send('state')).json()).jobs[0];
+ assert.equal(saved.sourcePlatform,'公司官网');assert.equal(saved.sourceChannel,'主动发现');
+ const invalid=await send('import',{schemaVersion:1,jobs:[{...job,sourceChannel:'猜测来源'}],completeTaskIds:[]});
+ assert.equal(invalid.status,400);
+ assert.equal((await (await send('state')).json()).jobs[0].sourceChannel,'主动发现');
+});
+void test('bulk job deletion checks revisions and removes only selected jobs with their dependent records',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const jobs=[{id:'delete-a',company:'Company A',role:'Engineer'},{id:'keep-b',company:'Company B',role:'Designer'},{id:'delete-c',company:'Company C',role:'Analyst'}];
+ assert.equal((await send('import',{schemaVersion:1,jobs,completeTaskIds:[]})).status,200);
+ const content='応募書類の本文です。'.repeat(15);
+ assert.equal((await send('import',{schemaVersion:1,materials:[{id:'material-a',jobId:'delete-a',kind:'履歴書',title:'Application',content,sourceNotes:'Test source'}],completeTaskIds:[]})).status,200);
+ const publication=await (await send('material-publications',{materialId:'material-a',mode:'unlisted',expiresAt:''})).json();
+ assert.ok(publication.id);
+ const question={id:'intro',title:'Introduction',questionJa:'自己紹介をお願いします。',meaning:'Introduce yourself',why:'Practice',outline:'Experience',followUps:'Why?',category:'Opening',targetSeconds:60};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[{id:'pack-a',jobId:'delete-a',title:'Practice',scenario:'Interview',plan:'Practice',sourceNotes:'Test source',questions:[question]}],completeTaskIds:[]})).status,200);
+ const attempt=await (await send('attempts',{questionSetId:'pack-a',questionId:'intro',answer:'My answer',language:'日语',durationSeconds:45})).json();
+ assert.equal((await mf.dispatchFetch('http://local/api/career/attempts/audio?id='+attempt.id,{method:'POST',headers:{'Content-Type':'audio/webm'},body:new Uint8Array([0x1a,0x45,0xdf,0xa3,1,2,3,4])})).status,200);
+ const audioLink=await (await send('attempts/audio-link',{attemptId:attempt.id})).json();
+ const review={id:'review-a',attemptId:attempt.id};
+ for(const key of ['summary','strengths','improvements','japaneseNotes','factChecks','revisedAnswer','followUps','nextPractice','sourceNotes']) review[key]='Test '+key;
+ assert.equal((await send('import',{schemaVersion:1,reviews:[review],completeTaskIds:[]})).status,200);
+ assert.equal((await send('tasks',{kind:'公司准备',jobId:'delete-a'})).status,200);
+ assert.equal((await send('jobs/delete',{jobs:[{id:'delete-a',revision:2}]})).status,409);
+ assert.equal((await send('jobs/delete',{jobs:[{id:'delete-a',revision:1},{id:'missing',revision:1}]})).status,409);
+ assert.equal((await send('jobs/delete',{jobs:[{id:'delete-a',revision:1},{id:'delete-c',revision:1}]})).status,200);
+ const state=await (await send('state')).json();
+ assert.deepEqual(state.jobs.map(job=>job.id),['keep-b']);
+ for(const kind of ['materials','questionSets','attempts','reviews','tasks']) assert.equal(state[kind].length,0,kind);
+ assert.equal((await send('material-publications')).status,200);
+ assert.ok((await (await send('material-publications')).json())[0].revokedAt);
+ assert.equal((await mf.dispatchFetch(audioLink.url)).status,404);
+ assert.equal((await send('jobs/delete',{jobs:[{id:'keep-b',revision:1},{id:'keep-b',revision:1}]})).status,400);
+ assert.equal((await (await send('state')).json()).jobs.length,1);
+});
+void test('company numbers increment per workspace and remain stable on updates',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const jobs=[{id:'first-long-job-id',company:'First',role:'Engineer'},{id:'second-long-job-id',company:'Second',role:'Designer'}];
+ assert.equal((await send('import',{schemaVersion:1,jobs,completeTaskIds:[]})).status,200);
+ let saved=(await (await send('state')).json()).jobs;
+ assert.deepEqual(saved.map(j=>j.companyNumber).sort((a,b)=>a-b),[1,2]);
+ const first=saved.find(j=>j.id===jobs[0].id);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{...jobs[0],company:'First renamed',companyNumber:999}],completeTaskIds:[]})).status,200);
+ saved=(await (await send('state')).json()).jobs;
+ assert.equal(saved.find(j=>j.id===jobs[0].id).companyNumber,first.companyNumber);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'third-long-job-id',company:'Third',role:'Engineer',companyNumber:999}],completeTaskIds:[]})).status,200);
+ saved=(await (await send('state')).json()).jobs;
+ assert.equal(saved.find(j=>j.id==='third-long-job-id').companyNumber,3);
+});
+void test('existing companies receive numbers in insertion order before another save',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ await send('state');
+ const db=await mf.getD1Database('CAREER_DB');
+ for(const id of ['legacy-a','legacy-b']) await db.prepare('INSERT INTO records(kind,id,body) VALUES (?1,?2,?3)').bind('jobs',id,JSON.stringify({id,company:id,role:'Engineer',revision:1})).run();
+ const state=await (await send('state')).json();
+ assert.equal(state.jobs.find(j=>j.id==='legacy-a').companyNumber,1);
+ assert.equal(state.jobs.find(j=>j.id==='legacy-b').companyNumber,2);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'new-job',company:'New',role:'Engineer'}],completeTaskIds:[]})).status,200);
+ const after=(await (await send('state')).json()).jobs;
+ assert.equal(after.find(j=>j.id==='new-job').companyNumber,3);
+ assert.equal(after.find(j=>j.id==='legacy-a').companyNumber,1);
 });
 void test('configured Google mode exposes only public config and rejects anonymous/forged access',async t=>{
  const mf=await worker(t,{FIREBASE_PROJECT_ID:'test-project',FIREBASE_API_KEY:'public-key',FIREBASE_AUTH_DOMAIN:'test.firebaseapp.com',FIREBASE_APP_ID:'app',CAREER_ALLOWED_EMAILS:'private@example.com'});
@@ -63,6 +133,30 @@ void test('built-in question bank accepts attempts and review requests without a
  // Imports must not shadow a built-in pack id.
  const clash=await send('import',{schemaVersion:1,questionSets:[{id:'builtin-basics',jobId:'none',title:'t',scenario:'s',plan:'p',sourceNotes:'n',questions:[]}]});
  assert.equal(clash.status,400);
+});
+void test('one company question set is updated in place while answers keep their question snapshot',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const job={id:'fixture-job',company:'Example Company',role:'Engineer'};
+ assert.equal((await send('import',{schemaVersion:1,jobs:[job],completeTaskIds:[]})).status,200);
+ const question={id:'intro',title:'Introduction',questionJa:'自己紹介をお願いします。',meaning:'Introduce yourself',why:'Opening question',outline:'Experience',sampleAnswer:'経験を簡単に説明します。',followUps:'What did you build?',category:'Opening',targetSeconds:60};
+ const pack={id:'fixture-pack',jobId:job.id,title:'Practice',scenario:'First interview',plan:'Practice once',sourceNotes:'Fixture only',questions:[question]};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[pack],completeTaskIds:[]})).status,200);
+ const originalCreatedAt=(await (await send('state')).json()).questionSets[0].createdAt;
+ const duplicate=await send('import',{schemaVersion:1,questionSets:[{...pack,id:'fixture-pack-v2'}],completeTaskIds:[]});
+ assert.equal(duplicate.status,400);assert.match((await duplicate.json()).error,/现有题组 id/);
+ const attempt=await (await send('attempts',{questionSetId:pack.id,questionId:question.id,answer:'My answer',language:'日语',durationSeconds:60})).json();
+ const removed=await send('import',{schemaVersion:1,questionSets:[{...pack,questions:[{...question,id:'replacement'}]}],completeTaskIds:[]});
+ assert.equal(removed.status,400);assert.match((await removed.json()).error,/已有回答的问题 id/);
+ const updated={...pack,title:'Updated practice',questions:[{...question,title:'Revised introduction',questionJa:'これまでの経験を教えてください。'}]};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[updated],completeTaskIds:[]})).status,200);
+ const state=await (await send('state')).json();
+ assert.equal(state.questionSets.length,1);
+ assert.equal(state.questionSets[0].id,pack.id);
+ assert.equal(state.questionSets[0].createdAt,originalCreatedAt);
+ assert.equal(state.questionSets[0].questions[0].title,'Revised introduction');
+ assert.equal(state.questionSets[0].questions[0].sampleAnswer,question.sampleAnswer);
+ assert.equal(state.attempts.find(a=>a.id===attempt.id).question.title,'Introduction');
+ assert.equal(state.attempts.find(a=>a.id===attempt.id).question.sampleAnswer,question.sampleAnswer);
 });
 void test('a saved answer can carry a recording: owner playback, agent download link, expiry',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});

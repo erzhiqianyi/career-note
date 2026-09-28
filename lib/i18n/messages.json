@@ -1,4 +1,15 @@
 {
+  "批量管理": { "ja": "一括管理", "en": "Manage multiple" },
+  "完成管理": { "ja": "管理を終了", "en": "Done managing" },
+  "已选择 {0} 项": { "ja": "{0} 件選択中", "en": "{0} selected" },
+  "选择当前列表": { "ja": "表示中の項目を選択", "en": "Select visible items" },
+  "取消选择当前列表": { "ja": "表示中の項目の選択を解除", "en": "Deselect visible items" },
+  "选择 {0} · {1}": { "ja": "{0}・{1} を選択", "en": "Select {0} · {1}" },
+  "删除所选": { "ja": "選択項目を削除", "en": "Delete selected" },
+  "删除中…": { "ja": "削除中…", "en": "Deleting…" },
+  "永久删除 {0} 个职位及其关联内容？": { "ja": "{0} 件の求人と関連データを完全に削除しますか？", "en": "Permanently delete {0} jobs and their related data?" },
+  "资料 {0} 份、题组 {1} 套、回答 {2} 条、点评 {3} 条、任务 {4} 项也会删除；公开的资料链接会撤下。此操作无法恢复。": { "ja": "資料 {0} 件、問題集 {1} 件、回答 {2} 件、評価 {3} 件、タスク {4} 件も削除され、公開リンクは無効になります。元に戻せません。", "en": "This also deletes {0} materials, {1} question sets, {2} answers, {3} reviews, and {4} tasks, and revokes public material links. This cannot be undone." },
+  "每日分析报告和独立保存的个性化简历会保留。": { "ja": "日次分析レポートと別に保存した個別の履歴書は残ります。", "en": "Daily reports and separately saved personalized résumés are kept." },
   "还没有保存的回答。": {
     "ja": "保存した回答はまだありません。",
     "en": "No saved answers yet."
@@ -4035,6 +4046,26 @@
     "ja": "回答のヒント",
     "en": "Answer hints"
   },
+  "回答思路": {
+    "ja": "回答の組み立て方",
+    "en": "Answer outline"
+  },
+  "保存时的题目": {
+    "ja": "回答を保存したときの質問",
+    "en": "Question when this answer was saved"
+  },
+  "参考回答": {
+    "ja": "参考回答",
+    "en": "Sample answer"
+  },
+  "查看完整回答提示": {
+    "ja": "回答のヒントを詳しく見る",
+    "en": "See all answer hints"
+  },
+  "这道题尚未提供题目级参考回答。保存并获得点评后，可以查看针对你回答的参考改写。": {
+    "ja": "この質問にはまだ参考回答がありません。回答を保存して講評を受けると、自分の回答に合わせた参考表現を確認できます。",
+    "en": "This question has no sample answer yet. Save your answer and get feedback to see a suggested rewrite based on it."
+  },
   "通用题库": {
     "ja": "共通問題",
     "en": "General practice"
@@ -4714,6 +4745,34 @@
   "招聘信息": {
     "ja": "求人情報",
     "en": "Posting"
+  },
+  "来源平台": {
+    "ja": "掲載元",
+    "en": "Source platform"
+  },
+  "发现方式": {
+    "ja": "見つけた方法",
+    "en": "How found"
+  },
+  "主动发现": {
+    "ja": "自分で見つけた",
+    "en": "Found independently"
+  },
+  "AI 搜索": {
+    "ja": "AI で検索",
+    "en": "AI search"
+  },
+  "Agent 推荐": {
+    "ja": "Agent のおすすめ",
+    "en": "Agent recommendation"
+  },
+  "未记录": {
+    "ja": "未記録",
+    "en": "Not recorded"
+  },
+  "公司官网": {
+    "ja": "企業公式サイト",
+    "en": "Company website"
   },
   "总结分析": {
     "ja": "まとめ",

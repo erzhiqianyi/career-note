@@ -1,17 +1,20 @@
 'use client';
-import { useRecordPage } from './record-page';
+import { RecordBack, useRecordPage } from './record-page';
 import { DataTable, DataRow, DataTitle, DataCell } from './data-table';
 import { useLocale } from '@/components/locale-provider';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   BookOpen,
   BriefcaseBusiness,
   Building2,
   Check,
   Clock3,
+  Compass,
   Copy,
   ExternalLink,
+  Globe2,
+  Bot,
   ListChecks,
   MessageSquare,
   MessageSquareText,
@@ -25,6 +28,7 @@ import {
   Upload,
   Search,
   Sparkles,
+  X,
 } from 'lucide-react';
 import StatusMark from '@/components/status-mark';
 import { api, apiBlob, apiUpload, materialKinds, statuses, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
@@ -138,11 +142,24 @@ export default function InterviewPractice({
     <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
     <DataCell label={tr('状态')} corner><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
   </DataRow>)}</DataTable>;
-  const [company, setCompany] = useRecordPage<string>('#jobs', 'company', id => id === BANK_JOB_ID || data.jobs.some(j => j.id === id) ? id : null, id => id);
+  const [company, setCompany] = useRecordPage<string>('#jobs', 'company', id => id === BANK_JOB_ID ? id : (data.jobs.find(j => j.companyNumber && String(j.companyNumber) === id) || data.jobs.find(j => j.id === id))?.id || null, id => String(data.jobs.find(j => j.id === id)?.companyNumber || id));
+  useEffect(() => {
+    if (!company || company === BANK_JOB_ID) return;
+    const number = data.jobs.find(j => j.id === company)?.companyNumber;
+    if (!number || window.location.hash !== '#jobs/company/' + encodeURIComponent(company)) return;
+    window.history.replaceState(null, '', '#jobs/company/' + number);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  }, [company, data.jobs]);
   const [help, setHelp] = useRecordPage<string>('#jobs', 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('进行中');
+  const [managing, setManaging] = useState(false);
+  const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
+  const [deletingJobs, setDeletingJobs] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [tab, setTab] = useState<PrepTab>('practice');
+  const [actionOpen, setActionOpen] = useState(false);
+  const actionDialog = useRef<HTMLDialogElement>(null);
   const [sort, setSort] = useState<{ key: PrepSortKey; desc: boolean }>({ key: 'schedule', desc: false });
   const [practiceRecord, setPracticeRecord] = useRecordPage<string>('#jobs', 'question', id => {
     const [p, q] = id.split('|');
@@ -167,6 +184,11 @@ export default function InterviewPractice({
     [recSeconds, setRecSeconds] = useState(0);
   const recorder = useRef<{ media: MediaRecorder; stream: MediaStream; chunks: Blob[]; ticks: number; timer: number } | null>(null);
   const canRecord = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && !!recordingMimeType();
+  useEffect(() => {
+    const dialog = actionDialog.current;
+    if (actionOpen && dialog && !dialog.open) dialog.showModal();
+    if (!actionOpen && dialog?.open) dialog.close();
+  }, [actionOpen]);
   function discardRecording() {
     setRecording((current) => { if (current) URL.revokeObjectURL(current.url); return null; });
   }
@@ -225,8 +247,8 @@ export default function InterviewPractice({
     ? builtinQuestionSets
     : (data.questionSets || [])
         .filter((p) => p.jobId === jobId)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const pack = routePack || packs.find((p) => p.id === packId) || packs[0];
+        .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
+  const pack = routePack || (isBank ? packs.find((p) => p.id === packId) : undefined) || packs[0];
   const question =
     pack?.questions.find((q) => q.id === ((practiceRecord || help)?.split('|')[1] || questionId)) || pack?.questions[0];
   const key = pack && question ? pack.id + ':' + question.id : '';
@@ -282,6 +304,35 @@ export default function InterviewPractice({
       setBusy(false);
     }
   }
+  async function deleteSelectedJobs() {
+    const selected = data.jobs.filter(job => selectedJobIds.has(job.id));
+    if (!selected.length || deletingJobs) return;
+    const ids = new Set(selected.map(job => job.id));
+    const packIds = new Set(data.questionSets.filter(pack => ids.has(pack.jobId)).map(pack => pack.id));
+    const attemptIds = new Set(data.attempts.filter(attempt => ids.has(attempt.jobId) || packIds.has(attempt.questionSetId)).map(attempt => attempt.id));
+    const materialCount = materials.filter(material => ids.has(material.jobId)).length;
+    const questionCount = packIds.size;
+    const answerCount = attemptIds.size;
+    const reviewCount = data.reviews.filter(review => ids.has(review.jobId) || attemptIds.has(review.attemptId)).length;
+    const taskCount = data.tasks.filter(task => ids.has(task.jobId) || (task.attemptId && attemptIds.has(task.attemptId))).length;
+    const prompt = tr('永久删除 {0} 个职位及其关联内容？', [String(selected.length)]) + '\n' +
+      tr('资料 {0} 份、题组 {1} 套、回答 {2} 条、点评 {3} 条、任务 {4} 项也会删除；公开的资料链接会撤下。此操作无法恢复。',
+        [String(materialCount), String(questionCount), String(answerCount), String(reviewCount), String(taskCount)]) + '\n' +
+      tr('每日分析报告和独立保存的个性化简历会保留。');
+    if (!window.confirm(prompt)) return;
+    setDeletingJobs(true);
+    setDeleteError('');
+    try {
+      await api('jobs/delete', { jobs: selected.map(job => ({ id: job.id, revision: job.revision })) });
+      await reload();
+      setSelectedJobIds(new Set());
+      setManaging(false);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : '删除失败');
+    } finally {
+      setDeletingJobs(false);
+    }
+  }
   async function save(requestReview: boolean) {
     if (!pack || !question) return;
     const currentKey = key;
@@ -335,7 +386,7 @@ export default function InterviewPractice({
   if (!company && !practiceRecord && !guide && !help) {
     const closed = ['未通过', '已撤回'];
     const progress = (jobId: string) => {
-      const latest = data.questionSets.filter(p => p.jobId === jobId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      const latest = data.questionSets.filter(p => p.jobId === jobId).sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))[0];
       const answered = latest ? new Set(data.attempts.filter(a => a.questionSetId === latest.id).map(a => a.questionId)).size : 0;
       return latest ? { answered, total: latest.questions.length } : null;
     };
@@ -361,13 +412,21 @@ export default function InterviewPractice({
       }
     };
     const jobs = data.jobs
-      .filter(j => (j.company + ' ' + j.role).toLowerCase().includes(search.toLowerCase()))
+      .filter(j => (j.company + ' ' + j.role + ' ' + (j.companyNumber || '')).toLowerCase().includes(search.toLowerCase()))
       .filter(j => statusFilter === '全部' ? true : statusFilter === '进行中' ? !closed.includes(j.status) : statusFilter === '有面试' ? isInterview(j) : j.status === statusFilter)
       .sort((a, b) => {
         const x = keyOf(a), y = keyOf(b);
         const c = x < y ? -1 : x > y ? 1 : 0;
         return sort.desc ? -c : c;
       });
+    const visibleIds = jobs.map(job => job.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedJobIds.has(id));
+    const toggleVisible = () => setSelectedJobIds(current => {
+      const next = new Set(current);
+      if (allVisibleSelected) visibleIds.forEach(id => next.delete(id));
+      else visibleIds.forEach(id => next.add(id));
+      return next;
+    });
     const toggleSort = (key: PrepColumn) => setSort(s => ({ key, desc: s.key === key ? !s.desc : false }));
     const bankAnswered = new Set(data.attempts.filter(a => builtinQuestionSets.some(p => p.id === a.questionSetId)).map(a => a.questionSetId + '|' + a.questionId)).size;
     const bankTotal = builtinQuestionSets.reduce((n, p) => n + p.questions.length, 0);
@@ -380,12 +439,22 @@ export default function InterviewPractice({
           {['进行中', '有面试', '全部', ...statuses].map(s => <option key={s} value={s}>{s === '全部' ? tr('全部状态') : tr(s)}</option>)}
         </select>
         <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span>
+        {data.jobs.length > 0 && <button type="button" className="secondary" onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
+          {tr(managing ? '完成管理' : '批量管理')}
+        </button>}
         <button className="secondary icon-only" onClick={() => setCompany(BANK_JOB_ID)} title={tr('通用题库（模板）') + ' · ' + tr('练习 {0} / {1} 题', [String(bankAnswered), String(bankTotal)])} aria-label={tr('通用题库（模板）')}><BookOpen size={21} /></button>
         {onImport && <button className="secondary phone-hidden" onClick={onImport}><Upload size={16} />{tr('导入')}</button>}
         {onAddJob && <button className="primary" onClick={onAddJob}><Plus size={18} />{tr('添加职位')}</button>}
       </div>
+      {managing && <div className="job-bulk-actions">
+        <span>{tr('已选择 {0} 项', [String(selectedJobIds.size)])}</span>
+        <button type="button" className="secondary" disabled={!jobs.length} onClick={toggleVisible}>{tr(allVisibleSelected ? '取消选择当前列表' : '选择当前列表')}</button>
+        <button type="button" className="secondary" disabled={!selectedJobIds.size || deletingJobs} onClick={() => void deleteSelectedJobs()}><Trash2 size={16} />{tr(deletingJobs ? '删除中…' : '删除所选')}</button>
+      </div>}
+      {deleteError && <p className="form-error" role="alert">{tr(deleteError)}</p>}
       <section className="panel dt-panel prep-list">
         {jobs.length ? <DataTable<PrepColumn> label={tr('面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
+          ...(managing ? [{ key: 'select' as PrepColumn, label: <input type="checkbox" aria-label={tr('选择当前列表')} checked={allVisibleSelected} onChange={toggleVisible} />, width: '32px' }] : []),
           { key: 'company', label: tr('公司 / 职位'), width: 'minmax(0,2fr)', sortable: true },
           { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', sortable: true },
           { key: 'schedule', label: tr('面试 / 跟进'), width: 'minmax(0,1.2fr)', sortable: true },
@@ -395,8 +464,9 @@ export default function InterviewPractice({
           const stage = prepStage(prep);
           const interview = isInterview(job);
           const overdue = !!job.nextDate && job.nextDate < data.today;
-          return <DataRow key={job.id} className={closed.includes(job.status) ? 'is-closed' : ''} onOpen={() => setCompany(job.id)}>
-            <DataTitle title={job.company} meta={job.role} onClick={() => setCompany(job.id)} />
+          return <DataRow key={job.id} className={(closed.includes(job.status) ? 'is-closed ' : '') + (managing ? 'is-managing' : '')} onOpen={managing ? undefined : () => setCompany(job.id)}>
+            {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
+            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={job.role} onClick={() => setCompany(job.id)} />
             <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label /></DataCell>
             <DataCell label={tr('面试 / 跟进')} className="prep-schedule">
               {job.nextDate ? <>
@@ -429,25 +499,28 @@ export default function InterviewPractice({
     const attemptIds = new Set(companyAttempts.map(a => a.id));
     const companyReviews = (data.reviews || []).filter(r => attemptIds.has(r.attemptId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const reviewedAttemptIds = new Set(companyReviews.map(r => r.attemptId));
-    const questionOf = (a: Attempt) => packs.find(p => p.id === a.questionSetId)?.questions.find(q => q.id === a.questionId);
+    const questionOf = (a: Attempt) => a.question || packs.find(p => p.id === a.questionSetId)?.questions.find(q => q.id === a.questionId);
     const openAttempt = (a: Attempt) => { setPicked(p => ({ ...p, [a.questionSetId + ':' + a.questionId]: a.id })); setQuestionId(a.questionId); setPracticeRecord(a.questionSetId + '|' + a.questionId); };
     const mentions = !isBank && currentJob ? (data.reports || []).filter(r => (r.title + '\n' + r.content).includes(currentJob.company)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5) : [];
     const factList = (items: Array<[string, string, boolean?]>) => <dl className="facts">
       {items.map(([k, v, own]) => <div key={k}><dt>{tr(k)}</dt><dd>{v ? own ? <Ja text={v} /> : v : <span className="muted">{tr('待确认')}</span>}</dd></div>)}
     </dl>;
+    const detailIcons: Record<string, ReactNode> = {
+      公司业务与特点: <Building2 size={16} />,
+      我的跟进记录: <ListChecks size={16} />,
+      岗位要求: <BriefcaseBusiness size={16} />,
+      工作内容: <BookOpen size={16} />,
+      匹配点: <Check size={16} />,
+      待确认事项: <MessageSquare size={16} />,
+    };
     const textSections = (items: Array<[string, string]>, openKeys: string[] = []) => items.map(([k, v]) => (
       <details className="text-section detail-disclosure" key={k} open={openKeys.includes(k)}>
-        <summary>{tr(k)}</summary>
+        <summary><span className="prep-detail-icon" aria-hidden="true">{detailIcons[k]}</span><span>{tr(k)}</span></summary>
         <p className="prewrap">{v ? <Ja text={v} /> : tr('尚未补充')}</p>
       </details>
     ));
-    // The page header already shows the back arrow and the company (or template) name; only the meta line lives here.
-    return <div className="practice-workspace">
-      <div className="section-head practice-company-heading">
-        <div>{isBank ? <p className="muted">{tr('自我介绍、志望动机、条件确认等大多数公司都会问的问题。')}</p> : currentJob && <p><StatusMark status={currentJob.status} label />{currentJob.role}{currentJob.nextDate ? <> · {tr(currentJob.status === '面试中' || /面试|面接|interview/i.test(currentJob.nextAction || '') ? '面试' : '跟进')} {day(currentJob.nextDate)}</> : null}</p>}</div>
-        {!isBank && currentJob && onEditJob && <button className="secondary" onClick={() => onEditJob(currentJob)}><Pencil size={16} />{tr('更新进展')}</button>}
-        {activeTab === 'practice' && packs.length > 1 && <select aria-label={tr('题组版本')} value={pack?.id || ''} onChange={e => {setPackId(e.target.value);setQuestionId('');}}>{packs.map(p => <option key={p.id} value={p.id}>{bt(p.title)}</option>)}</select>}
-      </div>
+    return <div className="practice-workspace practice-company-page">
+      <RecordBack onBack={() => setCompany(null)} title={currentJob?.companyNumber ? `${tr('公司')} #${currentJob.companyNumber}` : tr('面试准备')} action={{ label: tr('操作'), onClick: () => setActionOpen(true) }} />
       <div className="prep-tabs" role="tablist" aria-label={tr('面试准备')}>
         {tabs.map(([id, label]) => {
           const count = id === 'materials' ? companyMaterials.length : 0;
@@ -471,7 +544,7 @@ export default function InterviewPractice({
             ['公司业务与特点', currentJob.business],
             ['我的跟进记录', currentJob.notes],
           ], ['公司业务与特点'])}
-          <details className="text-section detail-disclosure"><summary>{tr('投递时间线')} · {currentJob.history.length}</summary>
+          <details className="text-section detail-disclosure"><summary><span className="prep-detail-icon" aria-hidden="true"><Clock3 size={16} /></span><span>{tr('投递时间线')} · {currentJob.history.length}</span></summary>
             <div className="timeline">
               {currentJob.history.map((h, i) => <div key={i}><span className="timeline-dot" /><b>{tr(h.status)}</b><small>{day(h.at)}</small></div>)}
             </div>
@@ -479,6 +552,13 @@ export default function InterviewPractice({
         </section>
         <section className="panel prep-info-section">
           <div className="section-head"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><BriefcaseBusiness size={18} /></span>{tr('招聘信息')}</h2>{currentJob.url && <a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a>}</div>
+          <div className="prep-source-row">
+            <span className="prep-source-chip"><Globe2 size={15} aria-hidden="true" /><span>{tr('来源平台')}</span><b>{currentJob.sourcePlatform ? tr(currentJob.sourcePlatform) : tr('未记录')}</b></span>
+            <span className="prep-source-chip" data-source-channel={currentJob.sourceChannel || ''}>
+              {currentJob.sourceChannel === 'AI 搜索' ? <Search size={15} aria-hidden="true" /> : currentJob.sourceChannel === 'Agent 推荐' ? <Bot size={15} aria-hidden="true" /> : <Compass size={15} aria-hidden="true" />}
+              <span>{tr('发现方式')}</span><b>{currentJob.sourceChannel ? tr(currentJob.sourceChannel) : tr('未记录')}</b>
+            </span>
+          </div>
           <p className="prep-posting-role">{currentJob.role}</p>
           {factList([
             ['薪资范围', currentJob.salary, true],
@@ -495,11 +575,6 @@ export default function InterviewPractice({
         </section>
       </div>}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
-        {!isBank && requestPreparation && <div className="section-head material-actions">
-          {requestPreparation && (pendingJobIds.includes(jobId)
-            ? <p className="muted">{tr('已加入待处理队列，等待 AI Agent 生成。')}</p>
-            : <button className="secondary" disabled={requesting} onClick={() => requestPreparation(jobId)}><Sparkles size={16} />{tr(companyMaterials.length ? '请求准备新版本' : '交给 AI Agent 准备')}</button>)}
-        </div>}
         {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p></div>}
       </section>}
       {activeTab === 'practice' && (!pack || !question ? (
@@ -522,7 +597,7 @@ export default function InterviewPractice({
         </section>
       ) : (
         <>
-          <div className="section-head prep-practice-head"><h2>{tr('练习题目')}</h2><span className="muted">{tr('已练问题')} {practiced.size} / {pack.questions.length}</span><button className="secondary" onClick={() => setGuide(pack.id)}>{tr('面试前要做什么')}</button></div>
+          <div className="section-head prep-practice-head"><h2>{tr('练习题目')}</h2><span className="muted">{tr('已练问题')} {practiced.size} / {pack.questions.length}</span></div>
           <section className="panel question-list prep-tab-panel">
             {pack.questions.map((q, i) => (
               <button
@@ -603,6 +678,30 @@ export default function InterviewPractice({
         </ul> : <div className="empty"><p>{tr('还没有点评。')}</p></div>}
         </section>
       </div>}
+      <dialog ref={actionDialog} className="prep-action-dialog" aria-label={tr('操作')} onClose={() => setActionOpen(false)}>
+        <div className="prep-action-head">
+          <h2>{tr(tabs.find(([id]) => id === activeTab)?.[1] || '操作')}</h2>
+          <button type="button" className="icon-button" aria-label={tr('关闭')} onClick={() => setActionOpen(false)}><X size={20} /></button>
+        </div>
+        <div className="prep-action-list">
+          {activeTab === 'info' && currentJob && onEditJob && <button type="button" className="secondary" onClick={() => { setActionOpen(false); onEditJob(currentJob); }}><Pencil size={17} />{tr('编辑职位与投递进展')}</button>}
+          {activeTab === 'materials' && !isBank && requestPreparation && (pendingJobIds.includes(jobId)
+            ? <p className="muted">{tr('已加入待处理队列，等待 AI Agent 生成。')}</p>
+            : <button type="button" className="secondary" disabled={requesting} onClick={() => { setActionOpen(false); requestPreparation(jobId); }}><Sparkles size={17} />{tr(companyMaterials.length ? '请求准备新版本' : '交给 AI Agent 准备')}</button>)}
+          {activeTab === 'practice' && <>
+            {isBank && packs.length > 1 && <label className="prep-pack-picker">{tr('通用题库')}
+              <select value={pack?.id || ''} onChange={e => { setPackId(e.target.value); setQuestionId(''); setActionOpen(false); }}>
+                {packs.map(p => <option key={p.id} value={p.id}>{bt(p.title)}</option>)}
+              </select>
+            </label>}
+            {pack && <button type="button" className="secondary" onClick={() => { setActionOpen(false); setGuide(pack.id); }}><BookOpen size={17} />{tr('面试前要做什么')}</button>}
+          </>}
+          {activeTab === 'summary' && <>
+            {companyReviews.length > 0 && (() => { const attempt = companyAttempts.find(a => a.id === companyReviews[0].attemptId); return attempt && <button type="button" className="secondary" onClick={() => { setActionOpen(false); openAttempt(attempt); }}><MessageSquareText size={17} />{tr('查看完整点评')}</button>; })()}
+            <button type="button" className="secondary" onClick={() => { setActionOpen(false); setTab('practice'); }}><BookOpen size={17} />{tr('练习')}</button>
+          </>}
+        </div>
+      </dialog>
     </div>;
   }
   return (
@@ -757,7 +856,7 @@ export default function InterviewPractice({
               </details>
 </section>}
           <div className="practice-record-layout">
-            {practiceRecord && <section className="panel answer-panel">
+            {practiceRecord && <section className="panel practice-prompt-panel">
               <div className="section-head">
                 <span className="tag">{tr(question.category)}</span>
                 <span className="row small">
@@ -770,8 +869,20 @@ export default function InterviewPractice({
               <h2 className="japanese-question" lang="ja">
                 <Ja text={question.questionJa} mode="ja" />
               </h2>
-              <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('回答提示')}</button>
+              <p className="practice-question-meaning">{bt(question.meaning)}</p>
               {hints && keywordChips(hints)}
+              <details className="practice-reference">
+                <summary>{tr('回答思路')}</summary>
+                <p className="prewrap"><Ja text={bt(question.outline)} /></p>
+              </details>
+              <details className="practice-reference">
+                <summary>{tr('参考回答')}</summary>
+                {question.sampleAnswer ? <p className="prewrap" lang="ja"><Ja text={question.sampleAnswer} mode="ja" /></p> :
+                  <p>{tr('这道题尚未提供题目级参考回答。保存并获得点评后，可以查看针对你回答的参考改写。')}</p>}
+              </details>
+              <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('查看完整回答提示')}</button>
+            </section>}
+            {practiceRecord && <section className="panel answer-panel">
               <div className="answer-editor">
                 <label htmlFor="practice-answer">
                   {tr('你的回答')}
@@ -785,7 +896,7 @@ export default function InterviewPractice({
                   placeholder={tr(
                     '用日语或中文写下你的回答。',
                   )}
-                  rows={6}
+                  rows={10}
                   maxLength={20000}
                 />
                 {canRecord && <div className="answer-recorder">
@@ -903,6 +1014,7 @@ export default function InterviewPractice({
                       ? tr(' · {0} 秒', [attempt.durationSeconds])
                       : ''}
                   </summary>
+                  <p className="muted">{tr('保存时的题目')} · <Ja text={attempt.question.questionJa} mode="ja" /></p>
                   <p className="prewrap"><Ja text={attempt.answer} /></p>
                   {attempt.audio && <AttemptAudio attemptId={attempt.id} size={attempt.audio.size} />}
                 </details>

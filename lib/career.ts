@@ -11,6 +11,7 @@ export const statuses = [
   '已撤回',
 ];
 export const matchLevels = ['优先准备', '先确认条件', '暂不匹配'];
+export const sourceChannels = ['主动发现', 'AI 搜索', 'Agent 推荐'] as const;
 export const materialKinds = [
   '履歴書',
   '職務経歴書',
@@ -20,6 +21,8 @@ export const materialKinds = [
 ];
 export type Job = {
   id: string;
+  /** Per-account, server-assigned number used for display and company URLs. */
+  companyNumber?: number;
   company: string;
   role: string;
   url: string;
@@ -32,6 +35,10 @@ export type Job = {
   salary: string;
   location: string;
   sourceDate: string;
+  /** The site or service where this posting was found, independent of its source URL. */
+  sourcePlatform?: string;
+  /** Who surfaced the posting; absent on older records. */
+  sourceChannel?: string;
   matchLevel: string;
   matchNotes: string;
   unknowns: string;
@@ -206,6 +213,8 @@ export type Question = {
   meaning: string;
   why: string;
   outline: string;
+  /** Optional illustrative answer supplied with the question set; never the learner's answer. */
+  sampleAnswer?: string;
   followUps: string;
   category: string;
   targetSeconds: number;
@@ -226,6 +235,7 @@ export type QuestionSet = {
   sourceNotes: string;
   questions: Question[];
   createdAt: string;
+  updatedAt?: string;
 };
 export type Attempt = {
   id: string;

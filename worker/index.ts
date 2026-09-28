@@ -62,6 +62,7 @@ const STATUSES: JobStatus[] = ['关注中', '准备投递', '已投递', '书类
 const PRIORITIES: JobPriority[] = ['高', '普通', '低'];
 // Research verdict from the company-search skill; empty means not yet assessed.
 const MATCH_LEVELS = ['优先准备', '先确认条件', '暂不匹配'];
+const SOURCE_CHANNELS = ['主动发现', 'AI 搜索', 'Agent 推荐'];
 const MATERIAL_KINDS: MaterialKind[] = ['履歴書', '職務経歴書', '志望動機', '面试准备', '公司研究'];
 const REVIEW_FIELDS = [
   'summary',
@@ -182,6 +183,39 @@ async function putRecord(db: Workspace, kind: string, item: Record<string, unkno
     .run();
 }
 
+// The sequence is scoped to the verified user's workspace. Allocation is one atomic
+// SQLite statement, so concurrent imports cannot receive the same number.
+async function nextCompanyNumber(db: Workspace): Promise<number> {
+  const kind = workspaceKey(db, 'jobs');
+  const row = await db.connection.prepare(`
+    INSERT INTO meta(id, body)
+    VALUES (?1, CAST(COALESCE((SELECT MAX(CAST(json_extract(body, '$.companyNumber') AS INTEGER)) FROM records WHERE kind = ?2), 0) + 1 AS TEXT))
+    ON CONFLICT(id) DO UPDATE SET body = CAST(
+      MAX(CAST(meta.body AS INTEGER), COALESCE((SELECT MAX(CAST(json_extract(body, '$.companyNumber') AS INTEGER)) FROM records WHERE kind = ?2), 0)) + 1 AS TEXT
+    )
+    RETURNING body
+  `).bind(workspaceKey(db, 'companyNumberSequence'), kind).first<{ body: string }>();
+  if (!row || !Number.isSafeInteger(Number(row.body))) throw new AppError(500, '无法分配公司编号');
+  return Number(row.body);
+}
+
+async function ensureCompanyNumbers(db: Workspace): Promise<void> {
+  const kind = workspaceKey(db, 'jobs');
+  const missing = await db.connection.prepare(`
+    SELECT id FROM records WHERE kind = ?1
+      AND (json_type(body, '$.companyNumber') IS NULL OR json_type(body, '$.companyNumber') = 'null')
+    ORDER BY rowid ASC
+  `).bind(kind).all<{ id: string }>();
+  for (const row of missing.results || []) {
+    const number = await nextCompanyNumber(db);
+    await db.connection.prepare(`
+      UPDATE records SET body = json_set(body, '$.companyNumber', ?3)
+      WHERE kind = ?1 AND id = ?2
+        AND (json_type(body, '$.companyNumber') IS NULL OR json_type(body, '$.companyNumber') = 'null')
+    `).bind(kind, row.id, number).run();
+  }
+}
+
 function defaultProfile() {
   return {
     revision: 0,
@@ -221,6 +255,7 @@ async function getProfile(db: Workspace) {
 }
 
 async function state(db: Workspace, uid = 'local', resumeSummary = false) {
+  await ensureCompanyNumbers(db);
   const profile = await getProfile(db);
   return {
     platforms: mergePlatforms(await records(db, 'platforms:' + uid) as JobPlatform[]),
@@ -278,6 +313,8 @@ function validateResearch(data: Record<string, unknown>) {
     salary: validateString(data.salary, 'salary', { max: 100000 }),
     location: validateString(data.location, 'location', { max: 1000 }),
     sourceDate: validateString(data.sourceDate, 'sourceDate', { max: 64 }),
+    sourcePlatform: validateString(data.sourcePlatform, 'sourcePlatform', { max: 120 }),
+    sourceChannel: validateString(data.sourceChannel, 'sourceChannel', { max: 30 }),
     matchLevel: validateString(data.matchLevel, 'matchLevel', { max: 20 }),
     matchNotes: validateString(data.matchNotes, 'matchNotes', { max: 100000 }),
     unknowns: validateString(data.unknowns, 'unknowns', { max: 100000 }),
@@ -294,10 +331,12 @@ function validateResearch(data: Record<string, unknown>) {
   }
   if (result.sourceDate) validateDate(result.sourceDate, 'sourceDate');
   if (result.matchLevel && !MATCH_LEVELS.includes(result.matchLevel)) throw new AppError(400, '无效的匹配评价');
+  if (result.sourceChannel && !SOURCE_CHANNELS.includes(result.sourceChannel)) throw new AppError(400, '无效的发现方式');
   return result;
 }
 
 async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnly = false) {
+  await ensureCompanyNumbers(db);
   const key = data.id ? validateString(data.id, 'id', { required: true, max: 120 }) : toId();
   const old = await getRecord(db, 'jobs', key);
   if (old && !researchOnly && data.revision !== old.revision) {
@@ -308,7 +347,11 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
     ...((old || {}) as Record<string, unknown>),
     ...validateResearch(data),
     id: key,
+    companyNumber: old?.companyNumber || await nextCompanyNumber(db),
   };
+  // Older import clients do not know these fields; their research refresh must not erase provenance.
+  if (old && data.sourcePlatform === undefined) base.sourcePlatform = old.sourcePlatform || '';
+  if (old && data.sourceChannel === undefined) base.sourceChannel = old.sourceChannel || '';
 
   if (!researchOnly) {
     const status = validateString(data.status, 'status', { required: true, max: 20 }) as JobStatus;
@@ -363,6 +406,48 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
   return base;
 }
 
+async function deleteJobs(db: Workspace, env: Env, uid: string, data: Record<string, unknown>) {
+  const targets = data.jobs;
+  if (!Array.isArray(targets) || !targets.length || targets.length > 200)
+    throw new AppError(400, '请选择 1–200 个职位');
+  const selected = new Map<string, number>();
+  for (const item of targets) {
+    if (!item || typeof item !== 'object') throw new AppError(400, '职位参数不正确');
+    const entry = item as Record<string, unknown>;
+    const id = validateString(entry.id, 'id', { required: true, max: 120 });
+    const revision = Number(entry.revision);
+    if (selected.has(id) || !Number.isSafeInteger(revision) || revision < 1)
+      throw new AppError(400, '职位参数不正确');
+    selected.set(id, revision);
+  }
+  for (const [id, revision] of selected) {
+    const job = await getRecord(db, 'jobs', id);
+    if (!job || job.revision !== revision) throw new AppError(409, '职位已更新，请刷新后重新选择');
+  }
+  const ids = new Set(selected.keys());
+  const materials = (await records(db, 'materials')).filter(item => ids.has(String(item.jobId)));
+  const packs = (await records(db, 'questionSets')).filter(item => ids.has(String(item.jobId)));
+  const packIds = new Set(packs.map(item => String(item.id)));
+  const attempts = (await records(db, 'attempts')).filter(item => ids.has(String(item.jobId)) || packIds.has(String(item.questionSetId)));
+  const attemptIds = new Set(attempts.map(item => String(item.id)));
+  const reviews = (await records(db, 'reviews')).filter(item => ids.has(String(item.jobId)) || attemptIds.has(String(item.attemptId)));
+  const tasks = (await records(db, 'tasks')).filter(item => ids.has(String(item.jobId)) || attemptIds.has(String(item.attemptId)));
+  const audioKeys = new Set(attempts.filter(item => item.audio).map(item => audioKey(uid, String(item.id))));
+  const links = (await records(audioLinks(db.connection), 'audioLinks')).filter(item => audioKeys.has(String(item.key)));
+  const statements = [
+    ...[...selected].map(([id, revision]) => db.connection.prepare("DELETE FROM records WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?3").bind(workspaceKey(db, 'jobs'), id, revision)),
+    ...([['materials', materials], ['questionSets', packs], ['attempts', attempts], ['reviews', reviews], ['tasks', tasks]] as const)
+      .flatMap(([kind, items]) => items.map(item => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(db, kind), item.id))),
+    ...links.map(item => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(audioLinks(db.connection), 'audioLinks'), item.id)),
+    ...materials.map(item => db.connection.prepare("UPDATE material_publications SET revoked_at=?1 WHERE owner=?2 AND json_extract(body, '$.materialId')=?3 AND revoked_at=''").bind(now(), db.namespace, item.id)),
+  ];
+  const results = await db.connection.batch(statements);
+  if (results.slice(0, selected.size).some(result => result.meta.changes !== 1))
+    throw new AppError(409, '职位已更新，请刷新后重新选择');
+  if (env.CAREER_AUDIO) await Promise.allSettled([...audioKeys].map(key => env.CAREER_AUDIO!.delete(key)));
+  return { deleted: selected.size };
+}
+
 async function requestTask(db: Workspace, data: Record<string, unknown>) {
   const kind = validateString(data.kind, 'kind', { required: true, max: 20 });
   if (!validateTaskKind(kind)) throw new AppError(400, '任务类型不正确');
@@ -414,6 +499,7 @@ type ParsedQuestion = {
   meaning: string;
   why: string;
   outline: string;
+  sampleAnswer?: string;
   followUps: string;
   category: string;
   targetSeconds: number;
@@ -437,6 +523,7 @@ function parseQuestionSetQuestions(questions: unknown[]) {
       meaning: validateString(q.meaning, 'meaning', { required: true, max: 5000 }),
       why: validateString(q.why, 'why', { required: true, max: 5000 }),
       outline: validateString(q.outline, 'outline', { required: true, max: 10000 }),
+      sampleAnswer: validateString(q.sampleAnswer, 'sampleAnswer', { max: 30000 }),
       followUps: validateString(q.followUps, 'followUps', { required: true, max: 5000 }),
       category: validateString(q.category, 'category', { required: true, max: 1000 }),
       targetSeconds: Number(q.targetSeconds),
@@ -460,10 +547,21 @@ function parseQuestionSetQuestions(questions: unknown[]) {
 
 async function importQuestionSet(db: Workspace, data: Record<string, unknown>) {
   const key = validateString(data.id, 'id', { required: true, max: 120 });
-  if (isBuiltinQuestionSet(key) || (await getRecord(db, 'questionSets', key)))
-    throw new AppError(400, '题组已存在，请使用新的版本 id');
+  if (isBuiltinQuestionSet(key)) throw new AppError(400, '内置题库不能修改');
   const jobId = validateString(data.jobId, 'jobId', { required: true, max: 120 });
   if (!(await getRecord(db, 'jobs', jobId))) throw new AppError(400, '题组关联的职位不存在');
+  const existing = await getRecord(db, 'questionSets', key);
+  if (existing && existing.jobId !== jobId) throw new AppError(400, '题组不能改关联职位');
+  if (!existing && (await records(db, 'questionSets')).some((pack) => pack.jobId === jobId))
+    throw new AppError(400, '该职位已有练习题组，请沿用现有题组 id 更新题目');
+  const questions = parseQuestionSetQuestions((data.questions as unknown[]) || []);
+  if (existing) {
+    const answeredIds = new Set((await records(db, 'attempts'))
+      .filter((attempt) => attempt.questionSetId === key)
+      .map((attempt) => attempt.questionId));
+    if ([...answeredIds].some((id) => !questions.some((question) => question.id === id)))
+      throw new AppError(400, '已有回答的问题 id 必须保留；可直接修改题目内容');
+  }
   const result = {
     id: key,
     jobId,
@@ -473,8 +571,9 @@ async function importQuestionSet(db: Workspace, data: Record<string, unknown>) {
     sourceNotes: validateString(data.sourceNotes, 'sourceNotes', { required: true, max: 15000 }),
     candidateContext: validateString(data.candidateContext, 'candidateContext', { max: 15000 }),
     communicationGuide: validateString(data.communicationGuide, 'communicationGuide', { max: 15000 }),
-    questions: parseQuestionSetQuestions((data.questions as unknown[]) || []),
-    createdAt: now(),
+    questions,
+    createdAt: existing?.createdAt || now(),
+    updatedAt: now(),
   };
   await putRecord(db, 'questionSets', result);
   return result;
@@ -1207,6 +1306,11 @@ const handler = async (
     case '/api/career/jobs':
       ensureScopes(context, ['career:write']);
       result = await saveJob(db, payload);
+      break;
+    case '/api/career/jobs/delete':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中确认删除职位');
+      result = await deleteJobs(db, env, context.uid, payload);
       break;
     case '/api/career/tasks':
       ensureScopes(context, ['agent:write']);

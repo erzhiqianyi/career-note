@@ -63,6 +63,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  MoreHorizontal,
   Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
@@ -82,6 +83,7 @@ import {
   download,
   statuses,
   matchLevels,
+  sourceChannels,
   type MpcTokenRecord,
   type AgentActivity,
   type AuthContext,
@@ -145,6 +147,8 @@ const researchFields = [
   ['company', '公司名称'],
   ['role', '职位名称'],
   ['url', '招聘来源链接'],
+  ['sourcePlatform', '来源平台'],
+  ['sourceChannel', '发现方式'],
   ['sourceDate', '信息确认日期'],
   ['location', '工作地点'],
   ['salary', '薪资范围'],
@@ -326,15 +330,16 @@ export default function Home() {
         if (hash === '#jobs/new') {
           setJobEdit({});
         } else if (data) {
-          const editing = data.jobs.find((item) => encodeURIComponent(item.id) === editMatch?.[1]);
+          const editing = data.jobs.find((item) => encodeURIComponent(item.id) === editMatch?.[1] || (item.companyNumber && String(item.companyNumber) === editMatch?.[1]));
           setJobEdit(editing || null);
           if (!editing) setError('职位不存在或已移除');
         }
       } else {
         setJobEdit(null);
-        if (detailMatch && detailMatch[1] !== 'new' && data?.jobs.some((item) => encodeURIComponent(item.id) === detailMatch[1])) {
+        if (detailMatch && detailMatch[1] !== 'new' && data?.jobs.some((item) => encodeURIComponent(item.id) === detailMatch[1] || (item.companyNumber && String(item.companyNumber) === detailMatch[1]))) {
           // Old-style company link: the company page now lives under the merged page's own routes.
-          window.location.replace('#jobs/company/' + detailMatch[1]);
+          const job = data.jobs.find((item) => encodeURIComponent(item.id) === detailMatch[1] || (item.companyNumber && String(item.companyNumber) === detailMatch[1]));
+          window.location.replace('#jobs/company/' + encodeURIComponent(job?.companyNumber ? String(job.companyNumber) : job?.id || detailMatch[1]));
           return;
         } else {
           const target = hash.startsWith('#documents/view/') && data?.reports.some(r => encodeURIComponent(r.id) === hash.slice('#documents/view/'.length)) ? '公司' : hashes[hash] || hashes[hash.split('/')[0]];
@@ -565,23 +570,27 @@ export default function Home() {
     const kind = row.detail && typeof row.detail.kind === 'string' ? row.detail.kind : '';
     return tr(base) + (requested ? `（${requested}）` : kind ? `（${kind}）` : '') + (row.ok ? '' : ' · ' + tr('失败'));
   }
+  function companyRouteKey(id: string) {
+    const job = data?.jobs.find((item) => item.id === id);
+    return job?.companyNumber ? String(job.companyNumber) : id;
+  }
   function openJob(id: string) {
     setActive('公司');
-    window.location.hash = 'jobs/company/' + encodeURIComponent(id);
+    window.location.hash = 'jobs/company/' + encodeURIComponent(companyRouteKey(id));
   }
   function openJobEditor(value: Partial<Job>) {
-    const parent = value.id ? '#jobs/company/' + encodeURIComponent(value.id) : active === '今日准备' ? '#today' : '#jobs';
+    const parent = value.id ? '#jobs/company/' + encodeURIComponent(companyRouteKey(value.id)) : active === '今日准备' ? '#today' : '#jobs';
     window.history.replaceState(null, '', parent);
     setJobEdit(value);
     setActive('公司');
-    window.location.hash = value.id ? 'jobs/' + encodeURIComponent(value.id) + '/edit' : 'jobs/new';
+    window.location.hash = value.id ? 'jobs/' + encodeURIComponent(companyRouteKey(value.id)) + '/edit' : 'jobs/new';
     window.scrollTo(0, 0);
   }
   function closeJobEditor() {
     const id = jobEdit?.id;
     setJobEdit(null);
     setActive('公司');
-    window.history.replaceState(null, '', id ? '#jobs/company/' + encodeURIComponent(id) : '#jobs');
+    window.history.replaceState(null, '', id ? '#jobs/company/' + encodeURIComponent(companyRouteKey(id)) : '#jobs');
     window.dispatchEvent(new HashChangeEvent('hashchange'));
     window.scrollTo(0, 0);
   }
@@ -681,11 +690,10 @@ export default function Home() {
     try { id = decodeURIComponent(match[2]); } catch { return null; }
     const [packId, questionId] = id.split('|');
     const pack = [...builtinQuestionSets, ...data.questionSets].find((p) => p.id === packId);
-    const companyOf = (jobId: string) => (jobId === BANK_JOB_ID ? tr('通用题库（模板）') : data.jobs.find((j) => j.id === jobId)?.company || '');
     switch (match[1]) {
-      case 'company': return { title: companyOf(id), back: '#jobs' };
-      case 'guide': return { title: tr('面试前要做什么'), back: '#jobs/company/' + encodeURIComponent(pack?.jobId || BANK_JOB_ID) };
-      case 'question': return { title: pack?.questions.find((q) => q.id === questionId)?.title || tr('面试练习'), back: '#jobs/company/' + encodeURIComponent(pack?.jobId || BANK_JOB_ID) };
+      case 'company': return { title: tr('面试准备'), back: '#jobs' };
+      case 'guide': return { title: tr('面试前要做什么'), back: '#jobs/company/' + encodeURIComponent(companyRouteKey(pack?.jobId || BANK_JOB_ID)) };
+      case 'question': return { title: pack?.questions.find((q) => q.id === questionId)?.title || tr('面试练习'), back: '#jobs/company/' + encodeURIComponent(companyRouteKey(pack?.jobId || BANK_JOB_ID)) };
       case 'help': return { title: tr('回答提示'), back: '#jobs/question/' + encodeURIComponent(id) };
     }
     return null;
@@ -919,6 +927,13 @@ export default function Home() {
             >
               <RefreshCw size={16} />
             </button>
+            {recordView?.action && <button
+              className="icon-button header-context-action"
+              aria-label={recordView.action.label}
+              onClick={recordView.action.onClick}
+            >
+              <MoreHorizontal size={20} /><span>{tr('操作')}</span>
+            </button>}
           </div>
         </header>
         <div className="page">
@@ -950,6 +965,19 @@ export default function Home() {
                     ))}
                   </select>
                 </label>
+              ) : k === 'sourceChannel' ? (
+                <label className="field" key={k}>
+                  <span>{tr(label)}</span>
+                  <select name={k} defaultValue={jobEdit.sourceChannel || ''}>
+                    <option value="">{tr('未记录')}</option>
+                    {sourceChannels.map((channel) => <option key={channel} value={channel}>{tr(channel)}</option>)}
+                  </select>
+                </label>
+              ) : k === 'sourcePlatform' ? (
+                <label className="field" key={k}>
+                  <span>{tr(label)}</span>
+                  <input name={k} list="job-source-platforms" defaultValue={jobEdit.sourcePlatform || ''} maxLength={120} />
+                </label>
               ) : (
                 <Field
                   key={k}
@@ -969,6 +997,10 @@ export default function Home() {
                   ].includes(k)}
                 />
               ))}
+              <datalist id="job-source-platforms">
+                <option value="公司官网" label={tr('公司官网')} />
+                {data?.platforms.filter((platform) => !platform.deleted).map((platform) => <option key={platform.id} value={platform.name} />)}
+              </datalist>
               <label className="field">
                 <span>{tr('投递状态')}</span>
                 <select name="status" defaultValue={jobEdit.status || '关注中'}>
