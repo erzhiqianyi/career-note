@@ -6,10 +6,13 @@ import { useLocale } from '@/components/locale-provider';
 import { useEffect, useRef, useState } from 'react';
 import {
   BookOpen,
+  BriefcaseBusiness,
+  Building2,
   Check,
   Clock3,
   Copy,
   ExternalLink,
+  ListChecks,
   MessageSquare,
   MessageSquareText,
   Mic,
@@ -447,9 +450,9 @@ export default function InterviewPractice({
           </button>;
         })}
       </div>
-      {activeTab === 'info' && currentJob && <section className="panel prep-tab-panel prep-info">
-        <div className="prep-info-section">
-          <h2>{tr('公司信息')}</h2>
+      {activeTab === 'info' && currentJob && <div className="prep-tab-panel prep-info">
+        <section className="panel prep-info-section">
+          <h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><Building2 size={18} /></span>{tr('公司信息')}</h2>
           {factList([
             ['工作地点', currentJob.location, true],
             ['外国人招聘信息', currentJob.foreigner, true],
@@ -467,9 +470,9 @@ export default function InterviewPractice({
               {currentJob.history.map((h, i) => <div key={i}><span className="timeline-dot" /><b>{tr(h.status)}</b><small>{day(h.at)}</small></div>)}
             </div>
           </details>
-        </div>
-        <div className="prep-info-section">
-          <div className="section-head"><h2>{tr('招聘信息')}</h2>{currentJob.url && <a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a>}</div>
+        </section>
+        <section className="panel prep-info-section">
+          <div className="section-head"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><BriefcaseBusiness size={18} /></span>{tr('招聘信息')}</h2>{currentJob.url && <a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a>}</div>
           <p className="prep-posting-role">{currentJob.role}</p>
           {factList([
             ['薪资范围', currentJob.salary, true],
@@ -483,8 +486,8 @@ export default function InterviewPractice({
             ['匹配点', currentJob.matchNotes],
             ['待确认事项', currentJob.unknowns],
           ], ['岗位要求', '匹配点'])}
-        </div>
-      </section>}
+        </section>
+      </div>}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
         {!isBank && requestPreparation && <div className="section-head material-actions">
           {requestPreparation && (pendingJobIds.includes(jobId)
@@ -543,7 +546,9 @@ export default function InterviewPractice({
           </section>
         </>
       ))}
-      {activeTab === 'summary' && <section className="panel prep-tab-panel prep-summary">
+      {activeTab === 'summary' && <div className="prep-tab-panel prep-summary">
+        <section className="panel prep-summary-block">
+        <h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><ListChecks size={18} /></span>{tr('练习概览')}</h2>
         <div className="stats prep-stats">
           <div><span>{tr('题目')}</span><strong>{pack ? pack.questions.length : 0}</strong></div>
           <div><span>{tr('已练问题')}</span><strong>{practiced.size}</strong></div>
@@ -580,7 +585,9 @@ export default function InterviewPractice({
           </ul>
         </>}
         {!companyReviews.length && !pack && <p className="muted">{tr('还没有练习总结。')}</p>}
-        <h3>{tr('反馈')}</h3>
+        </section>
+        <section className="panel prep-summary-block">
+        <h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><MessageSquareText size={18} /></span>{tr('反馈')}</h2>
         {companyReviews.length ? <ul className="prep-feedback-list">
           {companyReviews.map(r => { const a = companyAttempts.find(x => x.id === r.attemptId); const q = a && questionOf(a); return <li key={r.id}>
             <div className="prep-feedback-head"><b>{q ? <Ja text={bt(q.title)} /> : tr('回答点评')}</b><span className="num muted">{day(r.createdAt)}</span></div>
@@ -588,7 +595,8 @@ export default function InterviewPractice({
             {a && <button className="text-button" onClick={() => openAttempt(a)}>{tr('查看完整点评')}</button>}
           </li>; })}
         </ul> : <div className="empty"><p>{tr('还没有点评。')}</p></div>}
-      </section>}
+        </section>
+      </div>}
     </div>;
   }
   return (

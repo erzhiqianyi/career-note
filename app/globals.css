@@ -3561,8 +3561,11 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 }
 .prep-tab-panel .facts { margin-bottom: 8px; }
 .prep-tab-panel .empty { display: grid; gap: 12px; justify-items: center; }
-.prep-info-section + .prep-info-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
-.prep-info-section > h2 { margin-bottom: 14px; }
+.prep-info, .prep-summary { display: grid; gap: 16px; }
+.prep-block-heading { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; font-size: 1rem; line-height: 1.4; }
+.prep-block-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+.prep-info-section > .section-head { margin-bottom: 14px; }
+.prep-info-section > .section-head .prep-block-heading { margin: 0; }
 .prep-posting-role { margin: 0 0 14px; color: var(--ink-2); font-weight: 600; overflow-wrap: anywhere; }
 .practice-workspace > .practice-materials { margin-top: 0; }
 .prep-practice-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
