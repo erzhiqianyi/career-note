@@ -2,9 +2,11 @@
 import { RecordBack, useRecordPage } from './record-page';
 import { ResumePreview } from './resume-preview';
 import { useEffect, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil, ChevronRight } from 'lucide-react';
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import { api } from '@/lib/career';
+import { API_ORIGIN } from '@/lib/api-base';
 import { useLocale } from './locale-provider';
 import { useAppearance } from './appearance-provider';
 import {
@@ -45,9 +47,11 @@ export default function PersonalizedResumes({
   const [mode, setMode] = useState<'unlisted' | 'public'>('unlisted'),
     [expiry, setExpiry] = useState(''),
     [confirmed, setConfirmed] = useState(false);
+  const [pageOrigin, setPageOrigin] = useState('');
   const visibleDrafts = drafts.filter((d) => d.language === selectedLanguage);
   const visiblePublications = publications.filter((p) => p.language === selectedLanguage);
   useEffect(() => setSelectedLanguage(resumeLanguage), [resumeLanguage]);
+  useEffect(() => setPageOrigin(window.location.origin), []);
   const refresh = async () => {
     const d = (await api('personalized-resumes')) as {
       drafts: PersonalizedResume[];
@@ -285,17 +289,17 @@ export default function PersonalizedResumes({
                         </button>
 
                       </DataActions></div><ResumePreview title={t('简历详情')} html={resumeHTML(d.content, d.language, showReadings)} /></section>; })()}
-      {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</p><div className="record-detail-actions">                      <DataActions>
+      {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); const publicUrl = pageOrigin ? new URL(API_ORIGIN + p.path, pageOrigin).href : ''; return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</p><div className="record-detail-actions">                      <DataActions>
                         {active ? (
                           <>
-                            <a className="icon-button" href={p.path} target="_blank" rel="noreferrer" title={t('打开公开页')} aria-label={t('打开公开页') + ' ' + p.title}>
+                            <a className="icon-button" href={API_ORIGIN + p.path} target="_blank" rel="noreferrer" title={t('打开公开页')} aria-label={t('打开公开页') + ' ' + p.title}>
                               <ExternalLink size={16} />
                             </a>
                             <button
                               className="icon-button"
                               title={t('复制链接')}
                               aria-label={t('复制链接') + ' ' + p.title}
-                              onClick={() => act(() => copy(new URL(p.path, window.location.origin).href))}
+                              onClick={() => act(() => copy(publicUrl))}
                             >
                               <Copy size={16} />
                             </button>
@@ -318,7 +322,7 @@ export default function PersonalizedResumes({
                         ) : (
                           <span className="icon-button placeholder" aria-hidden />
                         )}
-                      </DataActions></div></section>; })()}
+                      </DataActions></div>{active && publicUrl && <div className="resume-qr"><h3>{t('扫码打开简历')}</h3><QRCodeSVG value={publicUrl} size={196} marginSize={2} level="M" role="img" aria-label={t('简历链接二维码')} /><a href={publicUrl} target="_blank" rel="noreferrer">{publicUrl}</a>{['localhost', '127.0.0.1', '::1'].includes(new URL(publicUrl).hostname) && <p>{t('当前为本机地址，其他设备扫码无法访问。请在公开部署后使用该页面的二维码。')}</p>}</div>}</section>; })()}
       {draft && (
         <form
           className="panel personalized-editor"
@@ -649,7 +653,7 @@ export default function PersonalizedResumes({
       {tab === 'public' && !draft && !preview && !selected && !publication && (
         <>
           <div className="inline-note">
-            {t('管理每一份简历的公开链接。当前链接在本机运行，互联网发布需要独立的公开服务。归档草稿不会撤下链接。')}
+            {t('管理每一份简历的公开链接。本机链接无法从其他设备访问；公开部署时使用 API 域名。归档草稿不会撤下链接。')}
           </div>
           {!visiblePublications.length && (
             <div className="panel">

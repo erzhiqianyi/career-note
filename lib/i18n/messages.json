@@ -4491,9 +4491,9 @@
     "ja": "管理名（非公開）",
     "en": "Internal name (private)"
   },
-  "管理每一份简历的公开链接。当前链接在本机运行，互联网发布需要独立的公开服务。归档草稿不会撤下链接。": {
-    "ja": "各履歴書の公開リンクを管理します。現在のリンクはローカルで動作し、インターネット公開には別の公開サービスが必要です。草稿をアーカイブしてもリンクは取り下げられません。",
-    "en": "Manage public links for each resume. Links currently run locally; internet publishing needs a separate public service. Archiving a draft does not revoke its links."
+  "管理每一份简历的公开链接。本机链接无法从其他设备访问；公开部署时使用 API 域名。归档草稿不会撤下链接。": {
+    "ja": "各履歴書の公開リンクを管理します。ローカルのリンクは他の端末から利用できません。公開デプロイでは API ドメインを使用します。草稿をアーカイブしてもリンクは取り下げられません。",
+    "en": "Manage public links for each resume. Local links cannot be opened from another device; public deployments use the API domain. Archiving a draft does not revoke its links."
   },
   "经历要点（每行一项）": {
     "ja": "要点（1行に1項目）",
@@ -4954,6 +4954,18 @@
   "打开公开页": {
     "ja": "公開ページを開く",
     "en": "Open published page"
+  },
+  "扫码打开简历": {
+    "ja": "QRコードで履歴書を開く",
+    "en": "Scan to open resume"
+  },
+  "简历链接二维码": {
+    "ja": "履歴書リンクのQRコード",
+    "en": "Resume link QR code"
+  },
+  "当前为本机地址，其他设备扫码无法访问。请在公开部署后使用该页面的二维码。": {
+    "ja": "現在はローカルアドレスです。他の端末からは開けません。公開デプロイ後、このページのQRコードを使用してください。",
+    "en": "This is a local address and cannot be opened from another device. Use this page's QR code after public deployment."
   },
   "出生日期（YYYY-MM-DD，兼容旧年月）": {
     "ja": "生年月日（YYYY-MM-DD、旧年月形式も対応）",

@@ -10,6 +10,8 @@
 
 `POST /api/career/resume-publications/revoke` 输入 id，立即撤下本用户链接。MCP 令牌无法发布或撤下；应用登录或本地 auth-off 开发模式可管理。所有管理接口仍需现有鉴权。
 
+有效链接的详情页显示二维码，编码的是公开简历的完整 URL。部署时使用 `NEXT_PUBLIC_CAREER_API_URL` 指向的 API 域名；本地开发时使用当前页面域名。二维码与复制链接、打开公开页指向同一份发布快照；撤下或过期后不再显示。本机 `localhost` 链接无法从其他设备扫码访问，需要在可访问的部署环境打开管理页面后再使用二维码。
+
 唯一匿名入口 `GET /api/career/public-resumes/:token` 返回转义后的 HTML，排除内部字段；无脚本、远程资源或公开工作区列表。unlisted 返回 noindex/nofollow，public 允许索引，均不保证搜索引擎行为。任何拥有链接的人均可访问，没有密码功能。过期或撤下均返回 404，响应禁止缓存。无法收回浏览者保存的副本。
 
-当前服务仍仅监听 loopback，链接仅供本地预览。此变更不部署互联网服务，也不能把整个管理 Worker 直接公开。真正发布需用户选择独立公开服务和域名，并实现选定快照的传输、撤销同步；保持私人管理数据库在本机。skill 在 Agent 协作中可下载，名称 career-personalized-resume。
+`npm run dev` 仍仅监听 loopback，链接只能本地预览。按 `docs/deployment.md` 将 API Worker 部署到自己的 Cloudflare 账户后，匿名入口可由公开域名访问，管理接口继续要求严格登录。部署与本机使用不同的数据环境；本机发布的快照不会自动出现在生产环境。skill 在 Agent 协作中可下载，名称 career-personalized-resume。
