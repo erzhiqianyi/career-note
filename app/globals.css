@@ -3572,6 +3572,15 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .prep-tab-panel .empty { display: grid; gap: 12px; justify-items: center; }
 .prep-practice-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 .prep-practice-head h2 { margin: 0; flex: 1; min-width: 0; }
+@media (max-width: 640px) {
+  .prep-practice-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .prep-practice-head h2 { display: block; overflow-wrap: anywhere; line-height: 1.45; }
+  .prep-practice-head > .secondary { width: 100%; justify-content: center; }
+  .prep-tab-panel.question-list { display: block; overflow: visible; padding: 4px 14px; }
+  .prep-tab-panel.question-list .question-option { width: 100%; min-width: 0; min-height: 64px; }
+  .prep-tab-panel.question-list .question-option > span:nth-child(2) { min-width: 0; }
+  .prep-tab-panel.question-list .question-option small { padding: 0; border: 0; }
+}
 .prep-summary h3 { margin: 22px 0 10px; font-size: 0.9375rem; }
 .prep-stats { grid-template-columns: repeat(4, 1fr); padding: 18px 0; margin-bottom: 0; }
 .prep-stats > div { display: block; padding: 0 20px; }
