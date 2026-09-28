@@ -15,10 +15,18 @@ export function MaterialPrint({ material, onBack }: { material: Material; onBack
   const body = renderToStaticMarkup(<ReactMarkdown remarkPlugins={[remarkGfm]}>{plainJapanese(material.content)}</ReactMarkdown>);
   const title = material.kind === '履歴書' ? '履歴書' : '職務経歴書';
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${title}</title><style>
-    @page{size:A4;margin:16mm}*{box-sizing:border-box}body{margin:0;color:#111;background:#eee;font:10.5pt/1.65 "Hiragino Mincho ProN","Yu Mincho",serif}
+    @page{size:A4;margin:16mm}*{box-sizing:border-box}
+    body{margin:0;color:#3e506a;background:#eee;font:11pt/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",sans-serif}
     main{width:210mm;max-width:100%;min-height:297mm;margin:0 auto;padding:16mm;background:white;overflow-wrap:anywhere}
-    h1{font-size:20pt}h2{font-size:12pt;border-bottom:1px solid #333;padding-bottom:2mm}h3{font-size:11pt}h1,h2,h3{break-after:avoid}
-    p{white-space:pre-wrap;orphans:3;widows:3}table{width:100%;border-collapse:collapse}td,th{border:1px solid #333;padding:2mm;text-align:left}thead{display:table-header-group}tr,li{break-inside:avoid}img{max-width:100%}a{color:inherit}
+    h1{margin:0 0 12px;font-size:22pt;line-height:1.3;color:#3e506a}
+    h2{margin:30px 0 18px;font-size:16pt;line-height:1.4;color:#3e506a}
+    h3{margin:26px 0 14px;font-size:12pt;color:#3e506a}
+    h1,h2,h3{break-after:avoid}
+    p{margin:0 0 20px;white-space:pre-wrap;orphans:3;widows:3}
+    table{width:100%;border-collapse:collapse;margin:16px 0}
+    td,th{border:1px solid #dde1e5;padding:10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+    th{background:#f5f6f8;color:#343a43}
+    thead{display:table-header-group}tr,li{break-inside:avoid}img{max-width:100%}a{color:inherit}
     @media print{body{background:white}main{width:auto;max-width:none;min-height:0;padding:0;margin:0}}
     </style></head><body><main>${body}</main></body></html>`;
   return <section className="panel material-print-page">
