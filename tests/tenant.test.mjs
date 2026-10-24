@@ -68,6 +68,8 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.equal((await send(undefined,'oauth/approve',{decision:'approve'})).status,401);
   const grant=await authorizeAgent(mf,{name:'Alice agent',scopes:['career:read'],approveHeaders:{Authorization:'Bearer '+a}});
   const issued={token:grant.issued.access_token,record:(await ok(a,'mcp/tokens')).tokens[0]};
+  assert.equal((await send('', 'reference-speech', { questionSetId:'alice-only', questionId:'q', source:'x', voice:'ja-JP-NanamiNeural' })).status,401);
+  assert.equal((await send(issued.token, 'reference-speech', { questionSetId:'alice-only', questionId:'q', source:'x', voice:'ja-JP-NanamiNeural' })).status,403);
   assert.equal(issued.record.name,'Alice agent');
   assert.equal((await ok(b,'mcp/tokens')).tokens.length,0);
   assert.equal((await send(b,'mcp/tokens/revoke',{id:issued.record.id})).status,400);

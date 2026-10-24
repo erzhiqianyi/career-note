@@ -24,6 +24,8 @@ export type Job = {
   /** Per-account, server-assigned number used for display and company URLs. */
   companyNumber?: number;
   company: string;
+  /** Source-verified reading of the official company name, normally in kana. */
+  companyReading?: string;
   role: string;
   url: string;
   description: string;

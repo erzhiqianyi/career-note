@@ -1,13 +1,8 @@
 import AVFoundation
+import CryptoKit
 import Foundation
 import Observation
 import Security
-
-struct SpeechConfiguration {
-    let region: String
-    let voice: String
-    let key: String
-}
 
 enum ReferenceSpeechSettings {
     static let voices = ["ja-JP-NanamiNeural", "ja-JP-KeitaNeural"]
@@ -15,59 +10,25 @@ enum ReferenceSpeechSettings {
     private static let voiceName = "azureSpeechVoice"
     private static let keyService = "CareerNote.AzureSpeech"
     private static let keyAccount = "subscriptionKey"
+    private static let migrationName = "referenceSpeechWorkerMigration"
 
-    static var region: String { UserDefaults.standard.string(forKey: regionName) ?? "" }
     static var voice: String {
         let saved = UserDefaults.standard.string(forKey: voiceName) ?? ""
         return voices.contains(saved) ? saved : voices[0]
     }
-    static var hasKey: Bool { key != nil }
 
-    static var configuration: SpeechConfiguration? {
-        guard !region.isEmpty, let key else { return nil }
-        return SpeechConfiguration(region: region, voice: voice, key: key)
-    }
-
-    static func save(region: String, voice: String, newKey: String) throws {
-        let cleanRegion = region.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard cleanRegion.range(of: #"^[a-z0-9]+$"#, options: .regularExpression) != nil else {
-            throw SpeechError.invalidRegion
-        }
-        guard voices.contains(voice) else { throw SpeechError.invalidVoice }
-        let cleanKey = newKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !cleanKey.isEmpty { try saveKey(cleanKey) }
-        UserDefaults.standard.set(cleanRegion, forKey: regionName)
+    static func saveVoice(_ voice: String) {
+        guard voices.contains(voice) else { return }
         UserDefaults.standard.set(voice, forKey: voiceName)
     }
 
-    static func removeKey() {
-        SecItemDelete(keyQuery() as CFDictionary)
-    }
-
-    private static var key: String? {
-        var query = keyQuery()
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    private static func saveKey(_ key: String) throws {
-        let bytes = Data(key.utf8)
-        var add = keyQuery()
-        add[kSecValueData as String] = bytes
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        let result = SecItemAdd(add as CFDictionary, nil)
-        if result == errSecDuplicateItem {
-            let update = [kSecValueData as String: bytes]
-            guard SecItemUpdate(keyQuery() as CFDictionary, update as CFDictionary) == errSecSuccess else {
-                throw SpeechError.keychain
-            }
-        } else if result != errSecSuccess {
-            throw SpeechError.keychain
-        }
+    /// The old device key is no longer used; erase it after this version is installed.
+    static func removeLegacyCredentials() {
+        guard !UserDefaults.standard.bool(forKey: migrationName) else { return }
+        let result = SecItemDelete(keyQuery() as CFDictionary)
+        guard result == errSecSuccess || result == errSecItemNotFound else { return }
+        UserDefaults.standard.removeObject(forKey: regionName)
+        UserDefaults.standard.set(true, forKey: migrationName)
     }
 
     private static func keyQuery() -> [String: Any] {
@@ -78,68 +39,28 @@ enum ReferenceSpeechSettings {
 }
 
 enum SpeechError: LocalizedError {
-    case invalidRegion, invalidVoice, keychain, missingConfiguration, emptyText, tooLong
-    case unauthorized, rateLimited, unavailable, invalidAudio
+    case emptyText, invalidAudio
 
     var errorDescription: String? {
         switch self {
-        case .invalidRegion: "请输入 Azure Speech 资源的区域代码，例如 japaneast。"
-        case .invalidVoice: "请选择受支持的日语语音。"
-        case .keychain: "本机密钥保存失败，请检查设备设置后重试。"
-        case .missingConfiguration: "请先在设置中填写 Azure 区域和密钥。"
         case .emptyText: "参考回答没有可朗读的文字。"
-        case .tooLong: "参考回答过长，暂时无法一次朗读。"
-        case .unauthorized: "Azure 密钥或区域不匹配，请检查设置。"
-        case .rateLimited: "Azure 请求过于频繁，请稍后重试。"
-        case .unavailable: "Azure 发音暂时不可用，请稍后重试。"
-        case .invalidAudio: "Azure 没有返回可播放的音频。"
+        case .invalidAudio: "サーバーから再生可能な音声が返りませんでした。"
         }
-    }
-}
-
-protocol SpeechSynthesisProvider {
-    func synthesize(text: String, configuration: SpeechConfiguration) async throws -> Data
-}
-
-struct AzureSpeechProvider: SpeechSynthesisProvider {
-    var session: URLSession = .shared
-
-    func synthesize(text: String, configuration: SpeechConfiguration) async throws -> Data {
-        guard !text.isEmpty else { throw SpeechError.emptyText }
-        guard text.count <= 3_000 else { throw SpeechError.tooLong }
-        guard let url = URL(string: "https://\(configuration.region).tts.speech.microsoft.com/cognitiveservices/v1") else {
-            throw SpeechError.invalidRegion
-        }
-        let escaped = text.replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
-            .replacingOccurrences(of: "'", with: "&apos;")
-        let ssml = "<speak version=\"1.0\" xml:lang=\"ja-JP\"><voice name=\"\(configuration.voice)\">\(escaped)</voice></speak>"
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 30
-        request.setValue(configuration.key, forHTTPHeaderField: "Ocp-Apim-Subscription-Key")
-        request.setValue("application/ssml+xml; charset=utf-8", forHTTPHeaderField: "Content-Type")
-        request.setValue("audio-24khz-96kbitrate-mono-mp3", forHTTPHeaderField: "X-Microsoft-OutputFormat")
-        request.setValue("CareerNote-iOS", forHTTPHeaderField: "User-Agent")
-        request.httpBody = Data(ssml.utf8)
-        let (data, response) = try await session.data(for: request)
-        guard let response = response as? HTTPURLResponse else { throw SpeechError.unavailable }
-        switch response.statusCode {
-        case 200: break
-        case 401, 403: throw SpeechError.unauthorized
-        case 429: throw SpeechError.rateLimited
-        default: throw SpeechError.unavailable
-        }
-        guard !data.isEmpty, response.value(forHTTPHeaderField: "Content-Type")?.lowercased().contains("audio") == true else {
-            throw SpeechError.invalidAudio
-        }
-        return data
     }
 }
 
 enum ReferenceSpeechText {
+    static func numberedQuestions(_ source: String) -> [String] {
+        let lines = source.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard lines.count > 1, lines.allSatisfy({ line in
+            guard let scalar = line.unicodeScalars.first else { return false }
+            return (0x2460...0x2473).contains(scalar.value)
+        }) else { return [] }
+        return lines.map { String($0.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
     static func plain(_ source: String) -> String {
         CareerRichText.plain(source)
             .replacingOccurrences(of: #"\[([^\]]+)\]\([^)]+\)"#, with: "$1", options: .regularExpression)
@@ -151,25 +72,93 @@ enum ReferenceSpeechText {
     }
 }
 
+/// Purgeable, user-scoped MP3 cache. Worker audio uses a new versioned key.
+actor ReferenceSpeechCache {
+    static let shared = ReferenceSpeechCache()
+    private let fileManager = FileManager.default
+
+    private func directory(for userID: String) -> URL {
+        fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ReferenceSpeech", isDirectory: true)
+            .appendingPathComponent(digest(userID), isDirectory: true)
+    }
+
+    private func digest(_ value: String) -> String {
+        SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func file(text: String, voice: String, userID: String) -> URL {
+        directory(for: userID)
+            .appendingPathComponent(digest("worker-v1\u{0}\(voice)\u{0}\(text)"))
+            .appendingPathExtension("mp3")
+    }
+
+    func audio(text: String, voice: String, userID: String) -> Data? {
+        let url = file(text: text, voice: voice, userID: userID)
+        guard let data = try? Data(contentsOf: url), !data.isEmpty else { return nil }
+        try? fileManager.setAttributes([.modificationDate: Date()], ofItemAtPath: url.path)
+        return data
+    }
+
+    func save(_ data: Data, text: String, voice: String, userID: String) {
+        let url = file(text: text, voice: voice, userID: userID)
+        do {
+            try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+            try fileManager.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                                          ofItemAtPath: url.path)
+            trim(directory: url.deletingLastPathComponent())
+        } catch {
+            try? fileManager.removeItem(at: url)
+        }
+    }
+
+    private func trim(directory: URL) {
+        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .fileSizeKey]
+        let urls = (try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys))) ?? []
+        let entries: [(url: URL, date: Date, size: Int)] = urls.compactMap { url in
+            guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
+            return (url, values.contentModificationDate ?? .distantPast, values.fileSize ?? 0)
+        }.sorted { $0.date < $1.date }
+        var count = entries.count
+        var size = entries.reduce(0) { $0 + $1.size }
+        for entry in entries {
+            guard count > 80 || size > 24 * 1024 * 1024 else { break }
+            try? fileManager.removeItem(at: entry.url)
+            count -= 1
+            size -= entry.size
+        }
+    }
+}
+
 @MainActor @Observable
 final class ReferenceSpeechPlayer {
     private(set) var isLoading = false
     private(set) var isPlaying = false
+    private(set) var activeSource: String?
     var errorMessage: String?
     @ObservationIgnored private var player: AVAudioPlayer?
     @ObservationIgnored private var generation = UUID()
 
-    func play(_ source: String, provider: any SpeechSynthesisProvider = AzureSpeechProvider()) async {
+    func play(_ source: String, userID: String, voice: String,
+              fetchAudio: () async throws -> Data) async {
         stop()
         errorMessage = nil
-        guard let configuration = ReferenceSpeechSettings.configuration else {
-            errorMessage = SpeechError.missingConfiguration.localizedDescription
+        let text = ReferenceSpeechText.plain(source)
+        guard !text.isEmpty else {
+            errorMessage = SpeechError.emptyText.localizedDescription
             return
         }
         let current = generation
+        activeSource = source
         isLoading = true
         do {
-            let data = try await provider.synthesize(text: ReferenceSpeechText.plain(source), configuration: configuration)
+            let cached = await ReferenceSpeechCache.shared.audio(text: text, voice: voice, userID: userID)
+            guard current == generation else { return }
+            let data: Data
+            if let cached {
+                data = cached
+            } else { data = try await fetchAudio() }
             guard current == generation else { return }
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback)
@@ -179,12 +168,16 @@ final class ReferenceSpeechPlayer {
             player = audio
             isPlaying = true
             isLoading = false
+            if cached == nil {
+                await ReferenceSpeechCache.shared.save(data, text: text, voice: voice, userID: userID)
+            }
             try? await Task.sleep(nanoseconds: UInt64(audio.duration * 1_000_000_000))
             if current == generation { stop() }
         } catch {
             guard current == generation else { return }
             isLoading = false
             isPlaying = false
+            activeSource = nil
             errorMessage = error.localizedDescription
         }
     }
@@ -195,5 +188,6 @@ final class ReferenceSpeechPlayer {
         player = nil
         isLoading = false
         isPlaying = false
+        activeSource = nil
     }
 }

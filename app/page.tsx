@@ -148,6 +148,7 @@ const hashes: Record<string, string> = {
 };
 const researchFields = [
   ['company', '公司名称'],
+  ['companyReading', '公司标准读音'],
   ['role', '职位名称'],
   ['url', '招聘来源链接'],
   ['sourcePlatform', '来源平台'],

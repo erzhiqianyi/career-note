@@ -111,6 +111,7 @@ struct CareerTask: Codable, Identifiable {
 struct CareerJob: Codable, Identifiable {
     let id: String
     let company: String
+    let companyReading: String?
     let role: String
     let status: String
     let description: String?

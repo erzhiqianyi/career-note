@@ -169,6 +169,33 @@ final class AppModel {
         return data
     }
 
+    func referenceSpeech(questionSetID: String, questionID: String, source: String,
+                         voice: String) async throws -> Data {
+        guard let baseURL else { throw NSError(domain: "CareerNote", code: 1, userInfo: [NSLocalizedDescriptionKey: "音声サーバーのアドレスが設定されていません。"]) }
+        guard let user = Auth.auth().currentUser, user.uid == userID else {
+            throw NSError(domain: "CareerNote", code: 2, userInfo: [NSLocalizedDescriptionKey: "先にログインしてください。"])
+        }
+        var request = URLRequest(url: baseURL.appending(path: "api/career/reference-speech"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 45
+        request.setValue("Bearer \(try await user.getIDToken())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "questionSetId": questionSetID, "questionId": questionID,
+            "source": source, "voice": voice
+        ])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+            let detail = (try? JSONDecoder().decode(APIError.self, from: data).error) ?? "音声の取得に失敗しました。"
+            throw NSError(domain: "CareerNote", code: 3, userInfo: [NSLocalizedDescriptionKey: detail])
+        }
+        guard !data.isEmpty, response.value(forHTTPHeaderField: "Content-Type")?.lowercased().contains("audio") == true else {
+            throw SpeechError.invalidAudio
+        }
+        ReferenceSpeechSettings.removeLegacyCredentials()
+        return data
+    }
+
     var canManageMaterialFiles: Bool {
         #if DEBUG
         if isDesignPreview { return false }

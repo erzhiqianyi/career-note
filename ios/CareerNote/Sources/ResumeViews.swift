@@ -5,8 +5,8 @@ import WebKit
 
 struct ResumeHomeView: View {
     @Bindable var model: AppModel
-    @State private var section = 0
-    @State private var language = "ja"
+    @AppStorage("resumeHomeSection") private var section = 0
+    @AppStorage("resumeHomeLanguage") private var language = "ja"
     @State private var showingSettings = false
 
     private var entries: [CareerResumeEntry] {
@@ -24,11 +24,7 @@ struct ResumeHomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("简历").font(.largeTitle.bold())
-                        Text("履历来源与已保存的版本")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
+                    Text("简历").font(.largeTitle.bold())
                     Spacer()
                     Button { showingSettings = true } label: {
                         Image(systemName: "gearshape")
@@ -61,6 +57,7 @@ struct ResumeHomeView: View {
             .padding(16)
             .padding(.bottom, 30)
         }
+        .refreshable { await model.sync() }
         .background(PhoneStyle.canvas)
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingSettings) {
@@ -91,7 +88,7 @@ struct ResumeHomeView: View {
                     .foregroundStyle(.secondary) }
             }
             ForEach(entries.sorted { ResumeLabels.rank($0.kind) < ResumeLabels.rank($1.kind) }) { entry in
-                NavigationLink { ResumeEntryDetail(entry: entry) } label: {
+                NavigationLink(value: AppRoute.resumeEntry(entry.id)) {
                     PhoneCard {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(ResumeLabels.kind(entry.kind)).font(.headline).foregroundStyle(.primary)
@@ -117,7 +114,7 @@ struct ResumeHomeView: View {
                     .foregroundStyle(.secondary) }
             }
             ForEach(drafts) { draft in
-                NavigationLink { PersonalizedResumeDetail(draft: draft) } label: {
+                NavigationLink(value: AppRoute.personalizedResume(draft.id)) {
                     PhoneCard {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(draft.title).font(.headline).foregroundStyle(.primary)
@@ -138,14 +135,7 @@ struct ResumeHomeView: View {
             if documents.isEmpty { PhoneCard { Text("暂无履歴書或職務経歴書文稿。")
                 .foregroundStyle(.secondary) } }
             ForEach(documents) { document in
-                NavigationLink {
-                    if ["履歴書", "職務経歴書"].contains(document.kind) {
-                        ApplicationDocumentView(model: model, document: document)
-                    } else {
-                        TextDetailView(title: document.title, subtitle: document.kind,
-                                       content: document.content)
-                    }
-                } label: {
+                NavigationLink(value: AppRoute.material(document.id)) {
                     PhoneCard {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(document.title).font(.headline).foregroundStyle(.primary)
@@ -166,10 +156,11 @@ struct ApplicationDocumentView: View {
     @State private var files: CareerMaterialFiles?
     @State private var pdf: Data?
     @State private var photo: Data?
-    @State private var showOriginal = true
+    @State private var showOriginal = false
     @State private var choosePDF = false
     @State private var choosePhoto = false
     @State private var busy = false
+    @State private var loadingFiles = false
     @State private var error: String?
 
     private var isResume: Bool { document.kind == "履歴書" }
@@ -187,6 +178,10 @@ struct ApplicationDocumentView: View {
                 .padding(.top, 10)
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red).padding(12) }
+            if showOriginal, isResume, files?.photo != nil {
+                Text("原版 PDF 不会自动加入后来上传的证件照。请选择 A4 排版版打印含照片的履歴書。")
+                    .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16).padding(.top, 8)
+            }
             if showOriginal, let pdf {
                 SavedPDFView(data: pdf)
             } else {
@@ -208,6 +203,7 @@ struct ApplicationDocumentView: View {
                     .disabled(busy)
                 }
                 Button("打印", systemImage: "printer") { printDocument() }
+                    .disabled(loadingFiles || (isResume && files?.photo != nil && photo == nil))
             }
         }
         .fileImporter(isPresented: $choosePDF, allowedContentTypes: [.pdf]) { result in
@@ -221,6 +217,8 @@ struct ApplicationDocumentView: View {
 
     private func loadFiles() async {
         guard model.canManageMaterialFiles else { return }
+        loadingFiles = true
+        defer { loadingFiles = false }
         do {
             let metadata = try JSONDecoder().decode(CareerMaterialFiles.self,
                 from: await model.materialFileRequest(id: document.id))
@@ -269,6 +267,7 @@ struct ApplicationDocumentView: View {
     }
 
     private func printDocument() {
+        guard !loadingFiles, !(isResume && files?.photo != nil && photo == nil) else { return }
         let controller = UIPrintInteractionController.shared
         let info = UIPrintInfo(dictionary: nil)
         info.jobName = CareerRichText.plain(document.title)
@@ -312,7 +311,7 @@ private struct ApplicationHTMLView: UIViewRepresentable {
     final class Coordinator { var html = "" }
 }
 
-private struct ResumeEntryDetail: View {
+struct ResumeEntryDetail: View {
     let entry: CareerResumeEntry
 
     var body: some View {
@@ -353,7 +352,7 @@ private struct ResumeEntryDetail: View {
     }
 }
 
-private struct PersonalizedResumeDetail: View {
+struct PersonalizedResumeDetail: View {
     let draft: CareerPersonalizedResume
 
     var body: some View {

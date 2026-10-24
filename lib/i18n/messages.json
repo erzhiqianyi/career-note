@@ -25,6 +25,8 @@
   "原版 PDF": { "ja": "元の PDF", "en": "Original PDF" },
   "排版预览": { "ja": "レイアウトプレビュー", "en": "Layout preview" },
   "下载 PDF": { "ja": "PDF をダウンロード", "en": "Download PDF" },
+  "下载原版 PDF": { "ja": "元の PDF をダウンロード", "en": "Download original PDF" },
+  "原版 PDF 不会自动加入后来上传的证件照；请选择排版预览打印含照片的版本。": { "ja": "元の PDF に後からアップロードした証明写真は追加されません。写真入りの版はレイアウトプレビューから印刷してください。", "en": "A photo uploaded later is not added to the original PDF. Print the layout preview for a copy with the photo." },
   "移除 PDF": { "ja": "PDF を削除", "en": "Remove PDF" },
   "证件照已保存，同一账号的履歴書共用": { "ja": "証明写真を保存済み（同じアカウントの履歴書で共用）", "en": "ID photo saved and shared across this account's resumes" },
   "读取文件失败": { "ja": "ファイルを読み込めませんでした", "en": "Could not load file" },
@@ -99,6 +101,10 @@
   "公司名称": {
     "ja": "企業名",
     "en": "Company name"
+  },
+  "公司标准读音": {
+    "ja": "企業名の正式な読み方",
+    "en": "Official company name reading"
   },
   "职位名称": {
     "ja": "職種名",

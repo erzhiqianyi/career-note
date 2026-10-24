@@ -570,6 +570,7 @@ export default function InterviewPractice({
         <details className="panel prep-info-section" open>
           <summary className="prep-info-heading"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><Building2 size={18} /></span>{tr('公司信息')}</h2></summary>
           {factList([
+            ['公司标准读音', currentJob.companyReading || '', true],
             ['工作地点', currentJob.location, true],
             ['员工人数', currentJob.employeeCount || '', true],
             ['公司类型', currentJob.companyType || '', true],

@@ -6,6 +6,10 @@ FIREBASE_PROJECT_ID=your-project
 FIREBASE_APP_ID=your-web-app-id
 CAREER_ADMIN_UIDS=
 
+# Optional reference-answer speech. Keep both values local here; production uses Worker secrets.
+# AZURE_SPEECH_REGION=japaneast
+# AZURE_SPEECH_KEY=your-speech-resource-key
+
 # OAuth token lifetimes for AI agents (optional).
 # CAREER_OAUTH_REFRESH_DAYS: refresh token lifetime (default 90). MCP_TOKEN_TTL_DAYS: access token lifetime (default 30).
 # The public address is NOT set here: `npm run dev` stays local, and `npm run dev:tunnel`

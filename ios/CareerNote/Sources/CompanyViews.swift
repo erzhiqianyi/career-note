@@ -21,21 +21,7 @@ struct CompanyListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("企业").font(.largeTitle.bold())
-                        Text("职位、公司研究与准备进度")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button { Task { await model.sync() } } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .frame(width: 44, height: 44)
-                            .background(PhoneStyle.card, in: Circle())
-                    }
-                    .disabled(model.busy)
-                    .accessibilityLabel("同步企业资料")
-                }
+                Text("企业").font(.largeTitle.bold())
                 Toggle("显示已结束的职位", isOn: $showClosed)
                     .font(.subheadline)
                 SectionHeading(title: "已保存的企业", detail: "\(jobs.count) / \(model.state.jobs.count)")
@@ -46,9 +32,7 @@ struct CompanyListView: View {
                     }
                 }
                 ForEach(jobs) { job in
-                    NavigationLink {
-                        CompanyDetailView(model: model, job: job)
-                    } label: {
+                    NavigationLink(value: AppRoute.job(job.id)) {
                         PhoneCard {
                             VStack(alignment: .leading, spacing: 9) {
                                 HStack(alignment: .top) {
@@ -83,6 +67,7 @@ struct CompanyListView: View {
             .padding(16)
             .padding(.bottom, 24)
         }
+        .refreshable { await model.sync() }
         .searchable(text: $search, prompt: "搜索企业或职位")
         .background(PhoneStyle.canvas)
         .toolbar(.hidden, for: .navigationBar)
@@ -92,7 +77,7 @@ struct CompanyListView: View {
 struct CompanyDetailView: View {
     @Bindable var model: AppModel
     let job: CareerJob
-    @State private var section = 0
+    @AppStorage("companyDetailSection") private var section = 0
 
     private var materials: [CareerMaterial] {
         model.state.materials.filter { $0.jobId == job.id }
@@ -144,6 +129,7 @@ struct CompanyDetailView: View {
     private var info: some View {
         VStack(alignment: .leading, spacing: 18) {
             CompanyInfoSection(title: "公司信息", fields: [
+                ("公司标准读音", job.companyReading),
                 ("工作地点", job.location), ("员工人数", job.employeeCount),
                 ("公司类型", job.companyType), ("雇用形式", job.employmentType),
                 ("外国人招聘信息", job.foreigner), ("在留资格支持", job.visa),
@@ -192,31 +178,7 @@ struct CompanyDetailView: View {
             SectionHeading(title: "准备资料", detail: "\(materials.count) 份")
             if materials.isEmpty { PhoneCard { Text("还没有这家公司的准备资料。").foregroundStyle(.secondary) } }
             ForEach(materials) { material in
-                NavigationLink {
-                    if ["履歴書", "職務経歴書"].contains(material.kind) {
-                        ApplicationDocumentView(model: model, document: material)
-                    } else {
-                      ScrollView {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text(material.kind).font(.caption).foregroundStyle(.secondary)
-                            if let source = material.sourceNotes, !source.isEmpty {
-                                PhoneCard {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("来源与核对").font(.headline)
-                                        RichContent(text: source)
-                                    }
-                                }
-                            }
-                            PhoneCard { RichContent(text: material.content) }
-                        }
-                        .padding(16)
-                        .padding(.bottom, 80)
-                    }
-                    .background(PhoneStyle.canvas)
-                    .navigationTitle(CareerRichText.plain(material.title))
-                    .toolbar { ReadingToggleButton() }
-                    }
-                } label: {
+                NavigationLink(value: AppRoute.companyMaterial(material.id)) {
                     PhoneCard {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(material.title).font(.headline).foregroundStyle(.primary)
@@ -233,22 +195,21 @@ struct CompanyDetailView: View {
 
     private var practiceList: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeading(title: "公司练习", detail: "\(packs.count) 组")
+            SectionHeading(title: "公司练习", detail: "\(packs.reduce(0) { $0 + $1.questions.count }) 道题")
             if packs.isEmpty { PhoneCard { Text("还没有这家公司的题组。").foregroundStyle(.secondary) } }
             ForEach(packs) { pack in
-                NavigationLink { QuestionList(model: model, pack: pack) } label: {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(pack.title).font(.headline).foregroundStyle(.primary)
-                            Text("\(pack.questions.count) 道题 · 已回答 \(Set(attempts.filter { $0.questionSetId == pack.id }.map(\.questionId)).count) 道")
-                                .font(.caption).foregroundStyle(.secondary)
-                            if let scenario = pack.scenario, !scenario.isEmpty {
-                                Text(scenario).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                            }
-                        }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(pack.title).font(.headline)
+                    Text("\(pack.questions.count) 道题 · 已回答 \(Set(attempts.filter { $0.questionSetId == pack.id }.map(\.questionId)).count) 道")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if let scenario = pack.scenario, !scenario.isEmpty {
+                        Text(scenario).font(.caption).foregroundStyle(.secondary)
+                    }
+                    ForEach(Array(pack.questions.enumerated()), id: \.element.id) { index, question in
+                        PracticeQuestionLink(model: model, pack: pack, question: question, number: index + 1)
                     }
                 }
-                .buttonStyle(.plain)
+                .padding(.top, 6)
             }
         }
     }
@@ -275,12 +236,38 @@ struct CompanyDetailView: View {
             if !reports.isEmpty {
                 SectionHeading(title: "相关分析", detail: "\(reports.count) 份")
                 ForEach(reports.sorted { $0.date > $1.date }) { report in
-                    NavigationLink {
-                        TextDetailView(title: report.title, subtitle: report.date, content: report.content)
-                    } label: { PhoneCard { Text(report.title).foregroundStyle(.primary) } }
+                    NavigationLink(value: AppRoute.report(report.id)) {
+                        PhoneCard { Text(report.title).foregroundStyle(.primary) }
+                    }
                 }
             }
         }
+    }
+}
+
+struct CompanyMaterialDetailView: View {
+    let material: CareerMaterial
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(material.kind).font(.caption).foregroundStyle(.secondary)
+                if let source = material.sourceNotes, !source.isEmpty {
+                    PhoneCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("来源与核对").font(.headline)
+                            RichContent(text: source)
+                        }
+                    }
+                }
+                PhoneCard { RichContent(text: material.content) }
+            }
+            .padding(16)
+            .padding(.bottom, 80)
+        }
+        .background(PhoneStyle.canvas)
+        .navigationTitle(CareerRichText.plain(material.title))
+        .toolbar { ReadingToggleButton() }
     }
 }
 

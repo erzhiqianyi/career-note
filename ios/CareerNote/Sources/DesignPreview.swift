@@ -18,7 +18,8 @@ enum DesignPreview {
           "tasks": [{"id":"sample-task","kind":"回答点评","status":"待处理","instructions":"等待 Agent 点评最新回答"}],
           "questionSets": [{"id":"sample-pack","jobId":"sample-job-1","title":"示例科技 · 第一轮面试","scenario":"以下为模拟练习题，并非公司真题。","questions":[
             {"id":"intro","title":"60 秒自我介绍","questionJa":"自己紹介をお願いします。","meaning":"请介绍自己。","outline":"当前方向 → 一个相关项目 → 想继续做的工作","sampleAnswer":"本人的事实请自行填写。","targetSeconds":60},
-            {"id":"project","title":"介绍项目经历","questionJa":"担当したプロジェクトについて教えてください。","meaning":"请介绍你负责的项目。","outline":"背景 → 个人行动 → 结果","targetSeconds":90}
+            {"id":"project","title":"介绍项目经历","questionJa":"担当したプロジェクトについて教えてください。","meaning":"请介绍你负责的项目。","outline":"背景 → 个人行动 → 结果","targetSeconds":90},
+            {"id":"reverse","title":"逆質問","questionJa":"{何|なに}か{質問|しつもん}はありますか。","meaning":"あなたからの質問","outline":"一つずつ質問し、回答を聞いてから次を選ぶ。","sampleAnswer":"① JavaやSpring Bootの{開発案件|かいはつあんけん}はありますか。\n\n② {設計|せっけい}から{運用|うんよう}まで、どの{工程|こうてい}を{担当|たんとう}しますか。\n\n③ {日本語|にほんご}はどのような{場面|ばめん}で{使います|つかいます}か。\n\n④ {募集|ぼしゅう}の{背景|はいけい}を{教えて|おしえて}いただけますか。","targetSeconds":90,"category":"逆質問"}
           ]}],
           "attempts": [{"id":"sample-attempt","questionSetId":"sample-pack","questionId":"intro","answer":"アプリ開発をしています。SwiftUIで画面を作りました。","language":"日语","createdAt":"2026-10-22T09:00:00Z"}],
           "reviews": [{"id":"sample-review","attemptId":"sample-attempt","summary":"可以补充你负责的具体功能。","revisedAnswer":"SwiftUIを使って、学習画面を開発しました。"}]

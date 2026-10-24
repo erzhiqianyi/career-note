@@ -9,6 +9,7 @@ import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools
 import { listReadings, saveReadings, builtinJapanese, ReadingsError } from './readings';
 import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } from './activity';
 import { verifyFirebaseToken } from './firebase-auth';
+import { deleteReferenceSpeechForPacks, referenceSpeechResponse, ReferenceSpeechError } from './reference-speech';
 import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-platforms';
 import { findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-bank';
 import type { ExportedHandler } from '@cloudflare/workers-types';
@@ -38,6 +39,8 @@ type Env = {
   CAREER_INSPECTOR?: string;
   /** Private binary files in R2: answer recordings, saved PDFs, and resume photos. */
   CAREER_AUDIO?: R2Bucket;
+  AZURE_SPEECH_REGION?: string;
+  AZURE_SPEECH_KEY?: string;
 };
 
 type AuthContext = {
@@ -303,6 +306,7 @@ function validateResearch(data: Record<string, unknown>) {
   const result: Record<string, string> = {
     id: validateString(data.id, 'id', { required: false, max: 120 }),
     company: validateString(data.company, 'company', { required: true, max: 1000 }),
+    companyReading: validateString(data.companyReading, 'companyReading', { max: 1000 }),
     role: validateString(data.role, 'role', { required: true, max: 1000 }),
     url: validateString(data.url, 'url', { max: 2000 }),
     description: validateString(data.description, 'description', { max: 100000 }),
@@ -356,7 +360,7 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
   // Older import clients do not know these fields; their research refresh must not erase provenance.
   if (old && data.sourcePlatform === undefined) base.sourcePlatform = old.sourcePlatform || '';
   if (old && data.sourceChannel === undefined) base.sourceChannel = old.sourceChannel || '';
-  for (const field of ['employeeCount', 'companyType', 'employmentType'] as const) {
+  for (const field of ['companyReading', 'employeeCount', 'companyType', 'employmentType'] as const) {
     if (old && data[field] === undefined) base[field] = old[field] || '';
   }
 
@@ -452,7 +456,13 @@ async function deleteJobs(db: Workspace, env: Env, uid: string, data: Record<str
   const results = await db.connection.batch(statements);
   if (results.slice(0, selected.size).some(result => result.meta.changes !== 1))
     throw new AppError(409, '职位已更新，请刷新后重新选择');
-  if (env.CAREER_AUDIO) await Promise.allSettled([...audioKeys, ...materials.map(item => materialFileKey(db.namespace, 'pdf', String(item.id)))].map(key => env.CAREER_AUDIO!.delete(key)));
+  if (env.CAREER_AUDIO) {
+    await Promise.allSettled([
+      ...[...audioKeys, ...materials.map(item => materialFileKey(db.namespace, 'pdf', String(item.id)))]
+        .map(key => env.CAREER_AUDIO!.delete(key)),
+      deleteReferenceSpeechForPacks(env.CAREER_AUDIO, uid, [...packIds]),
+    ]);
+  }
   return { deleted: selected.size };
 }
 
@@ -1332,6 +1342,36 @@ const handler = async (
       ensureScopes(context, ['career:write']);
       if (context.tokenType === 'mcp') throw new AppError(403, '录音只能由本人在应用中上传');
       return jsonResponse(await saveAttemptAudio(db, env, context.uid, id, request));
+    }
+  }
+
+  if (pathname === '/api/career/reference-speech') {
+    if (method !== 'POST') throw new AppError(405, '请求方法不支持');
+    ensureScopes(context, ['career:read']);
+    if (context.tokenType !== 'firebase') throw new AppError(403, '音声は本人のアプリからのみ再生できます');
+    if (!env.CAREER_AUDIO) throw new AppError(503, '音声ストレージが設定されていません');
+    if (Number(request.headers.get('content-length') || 0) > 16_000) throw new AppError(413, '请求体过大');
+    const body = await request.text();
+    if (body.length > 16_000) throw new AppError(413, '请求体过大');
+    let payload: Record<string, unknown>;
+    try { payload = JSON.parse(body) as Record<string, unknown>; }
+    catch { throw new AppError(400, '请求体必须是 JSON 对象'); }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new AppError(400, '请求体必须是 JSON 对象');
+    const packId = validateString(payload.questionSetId, 'questionSetId', { required: true, max: 120 });
+    const questionId = validateString(payload.questionId, 'questionId', { required: true, max: 120 });
+    const voice = validateString(payload.voice, 'voice', { required: true, max: 80 });
+    const source = typeof payload.source === 'string' ? payload.source : '';
+    if (!source || source.length > 6_000) throw new AppError(400, '参考回答が正しくありません');
+    const pack = await getRecord(db, 'questionSets', packId);
+    const question = Array.isArray(pack?.questions) ? pack.questions.find((item: { id?: string }) => item.id === questionId) : null;
+    if (!question?.sampleAnswer) throw new AppError(404, '参考回答が見つかりません');
+    try {
+      return await referenceSpeechResponse({ uid: context.uid, packId, questionId, source, voice,
+        sampleAnswer: String(question.sampleAnswer), category: String(question.category || ''),
+        bucket: env.CAREER_AUDIO, azureRegion: env.AZURE_SPEECH_REGION, azureKey: env.AZURE_SPEECH_KEY });
+    } catch (error) {
+      if (error instanceof ReferenceSpeechError) throw new AppError(error.status, error.message);
+      throw error;
     }
   }
 

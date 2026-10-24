@@ -58,19 +58,22 @@ void test('job provenance keeps platform and discovery channel across research u
  assert.equal(invalid.status,400);
  assert.equal((await (await send('state')).json()).jobs[0].sourceChannel,'主动发现');
 });
-void test('company size, type and employment terms survive older research imports',async t=>{
+void test('company reading and details survive older research imports',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
- const job={id:'company-details',company:'Example Company',role:'Engineer',employeeCount:'29人（2026年説明会）',companyType:'受託開発',employmentType:'正社員'};
+ const job={id:'company-details',company:'Example Company',companyReading:'エグザンプル・カンパニー',role:'Engineer',employeeCount:'29人（2026年説明会）',companyType:'受託開発',employmentType:'正社員'};
  assert.equal((await send('import',{schemaVersion:1,jobs:[job],completeTaskIds:[]})).status,200);
  assert.equal((await send('import',{schemaVersion:1,jobs:[{id:job.id,company:job.company,role:'Senior Engineer'}],completeTaskIds:[]})).status,200);
  let saved=(await (await send('state')).json()).jobs[0];
- assert.equal(saved.employeeCount,job.employeeCount);assert.equal(saved.companyType,job.companyType);assert.equal(saved.employmentType,job.employmentType);
+ assert.equal(saved.companyReading,job.companyReading);assert.equal(saved.employeeCount,job.employeeCount);assert.equal(saved.companyType,job.companyType);assert.equal(saved.employmentType,job.employmentType);
  assert.equal((await send('jobs',{...saved,employmentType:'派遣社員'})).status,200);
  saved=(await (await send('state')).json()).jobs[0];
  assert.equal(saved.employmentType,'派遣社員');
  assert.equal((await send('import',{schemaVersion:1,jobs:[{id:job.id,company:job.company,role:job.role,companyType:''}],completeTaskIds:[]})).status,200);
  saved=(await (await send('state')).json()).jobs[0];
- assert.equal(saved.companyType,'');assert.equal(saved.employeeCount,job.employeeCount);assert.equal(saved.employmentType,'派遣社員');
+ assert.equal(saved.companyReading,job.companyReading);assert.equal(saved.companyType,'');assert.equal(saved.employeeCount,job.employeeCount);assert.equal(saved.employmentType,'派遣社員');
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:job.id,company:job.company,role:job.role,companyReading:''}],completeTaskIds:[]})).status,200);
+ saved=(await (await send('state')).json()).jobs[0];
+ assert.equal(saved.companyReading,'');
 });
 void test('bulk job deletion checks revisions and removes only selected jobs with their dependent records',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
@@ -198,6 +201,18 @@ void test('one company question set is updated in place while answers keep their
  assert.equal(state.questionSets[0].questions[0].sampleAnswer,question.sampleAnswer);
  assert.equal(state.attempts.find(a=>a.id===attempt.id).question.title,'Introduction');
  assert.equal(state.attempts.find(a=>a.id===attempt.id).question.sampleAnswer,question.sampleAnswer);
+});
+void test('reference speech accepts only a saved question and needs server Azure settings on an R2 miss',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ await send('import',{schemaVersion:1,jobs:[{id:'speech-job',company:'Example',role:'Engineer'}],completeTaskIds:[]});
+ const sampleAnswer='① Javaの案件はありますか。\n\n② 日本語はどこで使いますか。';
+ const question={id:'reverse',title:'Reverse',questionJa:'何か質問はありますか。',meaning:'Your questions',why:'Clarify work',outline:'Ask one at a time',sampleAnswer,followUps:'More?',category:'逆質問',targetSeconds:90};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[{id:'speech-pack',jobId:'speech-job',title:'Practice',scenario:'Mock',plan:'Practice',sourceNotes:'Fixture',questions:[question]}],completeTaskIds:[]})).status,200);
+ const request={questionSetId:'speech-pack',questionId:'reverse',source:'Javaの案件はありますか。',voice:'ja-JP-NanamiNeural'};
+ assert.equal((await send('reference-speech',{...request,source:'別の文章'})).status,409);
+ assert.equal((await send('reference-speech',{...request,questionSetId:'another'})).status,404);
+ assert.equal((await send('reference-speech',request)).status,503);
+ assert.equal((await send('reference-speech')).status,405);
 });
 void test('a saved answer can carry a recording: owner playback, agent download link, expiry',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});

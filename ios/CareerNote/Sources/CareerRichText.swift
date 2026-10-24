@@ -157,7 +157,7 @@ enum CareerRichText {
         @media(prefers-color-scheme:dark){body{color:#f3f4f7}blockquote{color:#b7bfca}code,pre{background:#323540}hr{border-color:#515560}rt{color:#b8c3d9}a{color:#9bbcf5}}
         </style></head><body>\(body)
         <script>
-        const report=()=>window.webkit.messageHandlers.height.postMessage(Math.ceil(document.documentElement.scrollHeight)+2);
+        const report=()=>window.webkit.messageHandlers.height.postMessage(Math.ceil(document.body.getBoundingClientRect().height)+2);
         new ResizeObserver(report).observe(document.body);window.addEventListener('load',report);report();
         </script></body></html>
         """

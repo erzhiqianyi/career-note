@@ -2,12 +2,43 @@ import AuthenticationServices
 import AVFoundation
 import SwiftUI
 
+enum AppRoute: Hashable, Codable {
+    case job(String)
+    case companyMaterial(String)
+    case material(String)
+    case questionSet(String)
+    case answer(packID: String, questionID: String)
+    case report(String)
+    case resumeEntry(String)
+    case personalizedResume(String)
+    case settings
+}
+
+private struct SavedNavigation: Codable {
+    let userID: String
+    let selectedTab: Int
+    let companyPath: [AppRoute]
+    let practicePath: [AppRoute]
+    let resumePath: [AppRoute]
+}
+
 struct RootView: View {
+    private static var launchTab: Int {
+        if ProcessInfo.processInfo.arguments.contains("-careerDesignData") ||
+            ProcessInfo.processInfo.arguments.contains("-careerDesignCompany") { return 0 }
+        if ProcessInfo.processInfo.arguments.contains("-careerDesignResume") { return 2 }
+        return 1
+    }
+
     @Bindable var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
-    @State private var selectedTab = ProcessInfo.processInfo.arguments.contains("-careerDesignData") ||
-        ProcessInfo.processInfo.arguments.contains("-careerDesignCompany") ? 0 :
-        ProcessInfo.processInfo.arguments.contains("-careerDesignResume") ? 2 : 1
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @AppStorage("savedNavigation") private var savedNavigation = Data()
+    @State private var selectedTab = RootView.launchTab
+    @State private var companyPath: [AppRoute] = []
+    @State private var practicePath: [AppRoute] = []
+    @State private var resumePath: [AppRoute] = []
+    @State private var restoredUserID: String?
 
     var body: some View {
         Group {
@@ -28,12 +59,17 @@ struct RootView: View {
                     }
                 } else if ProcessInfo.processInfo.arguments.contains("-careerDesignCompanyDetail"),
                    let job = model.state.jobs.first {
-                    NavigationStack { CompanyDetailView(model: model, job: job) }
+                    NavigationStack {
+                        CompanyDetailView(model: model, job: job)
+                            .navigationDestination(for: AppRoute.self, destination: destination)
+                    }
                 } else if ProcessInfo.processInfo.arguments.contains("-careerDesignAnswer"),
                    let pack = model.state.questionSets.first,
-                   let question = pack.questions.first {
+                   let question = ProcessInfo.processInfo.arguments.contains("-careerDesignReverse")
+                        ? pack.questions.first(where: { $0.id == "reverse" }) : pack.questions.first {
                     NavigationStack {
                         AnswerView(model: model, pack: pack, question: question)
+                            .navigationDestination(for: AppRoute.self, destination: destination)
                     }
                 } else {
                     mainTabs
@@ -49,20 +85,176 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && model.userID != nil { Task { await model.sync() } }
         }
+        .onChange(of: model.userID) { _, userID in
+            if let userID {
+                restoreNavigation(for: userID)
+            } else {
+                restoredUserID = nil
+                selectedTab = RootView.launchTab
+                companyPath = []
+                practicePath = []
+                resumePath = []
+            }
+        }
     }
 
     private var mainTabs: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack { CompanyListView(model: model) }
-                .tabItem { Label("企业", systemImage: "building.2") }
-                .tag(0)
-            NavigationStack { PracticeList(model: model) }
-                .tabItem { Label("练习", systemImage: "text.book.closed") }
-                .tag(1)
-            NavigationStack { ResumeHomeView(model: model) }
-                .tabItem { Label("简历", systemImage: "doc.text") }
-                .tag(2)
+        Group {
+            if horizontalSizeClass == .regular {
+                NavigationSplitView {
+                    List {
+                        sidebarItem("企业", systemImage: "building.2", tab: 0)
+                        sidebarItem("练习", systemImage: "text.book.closed", tab: 1)
+                        sidebarItem("简历", systemImage: "doc.text", tab: 2)
+                    }
+                    .navigationTitle("Career Note")
+                    .listStyle(.sidebar)
+                } detail: {
+                    tabContent(selectedTab)
+                }
+            } else {
+                TabView(selection: tabSelection) {
+                    tabContent(0)
+                        .tabItem { Label("企业", systemImage: "building.2") }
+                        .tag(0)
+                    tabContent(1)
+                        .tabItem { Label("练习", systemImage: "text.book.closed") }
+                        .tag(1)
+                    tabContent(2)
+                        .tabItem { Label("简历", systemImage: "doc.text") }
+                        .tag(2)
+                }
+            }
         }
+        .onAppear {
+            if let userID = model.userID { restoreNavigation(for: userID) }
+        }
+    }
+
+    private var tabSelection: Binding<Int> {
+        Binding(get: { selectedTab }, set: { selectedTab = $0; saveNavigation() })
+    }
+
+    private func sidebarItem(_ title: String, systemImage: String, tab: Int) -> some View {
+        Button {
+            tabSelection.wrappedValue = tab
+        } label: {
+            Label(title, systemImage: systemImage)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+                .foregroundStyle(selectedTab == tab ? PhoneStyle.accent : Color.primary)
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(selectedTab == tab ? PhoneStyle.accent.opacity(0.12) : Color.clear)
+        .accessibilityValue(selectedTab == tab ? "已选中" : "")
+    }
+
+    @ViewBuilder
+    private func tabContent(_ tab: Int) -> some View {
+        switch tab {
+        case 0:
+            NavigationStack(path: pathBinding($companyPath)) {
+                CompanyListView(model: model)
+                    .navigationDestination(for: AppRoute.self, destination: destination)
+            }
+        case 1:
+            NavigationStack(path: pathBinding($practicePath)) {
+                PracticeList(model: model)
+                    .navigationDestination(for: AppRoute.self, destination: destination)
+            }
+        default:
+            NavigationStack(path: pathBinding($resumePath)) {
+                ResumeHomeView(model: model)
+                    .navigationDestination(for: AppRoute.self, destination: destination)
+            }
+        }
+    }
+
+    private func pathBinding(_ path: Binding<[AppRoute]>) -> Binding<[AppRoute]> {
+        Binding(get: { path.wrappedValue }, set: {
+            path.wrappedValue = $0
+            saveNavigation()
+        })
+    }
+
+    private func saveNavigation() {
+        guard let userID = model.userID, restoredUserID == userID else { return }
+        let state = SavedNavigation(userID: userID, selectedTab: selectedTab,
+                                    companyPath: companyPath, practicePath: practicePath,
+                                    resumePath: resumePath)
+        if let data = try? JSONEncoder().encode(state) { savedNavigation = data }
+    }
+
+    private func restoreNavigation(for userID: String) {
+        guard restoredUserID != userID else { return }
+        restoredUserID = nil
+        selectedTab = RootView.launchTab
+        companyPath = []
+        practicePath = []
+        resumePath = []
+        if let state = try? JSONDecoder().decode(SavedNavigation.self, from: savedNavigation),
+           state.userID == userID {
+            selectedTab = (0...2).contains(state.selectedTab) ? state.selectedTab : 1
+            companyPath = state.companyPath
+            practicePath = state.practicePath
+            resumePath = state.resumePath
+        }
+        restoredUserID = userID
+    }
+
+    @ViewBuilder
+    private func destination(_ route: AppRoute) -> some View {
+        switch route {
+        case .job(let id):
+            if let job = model.state.jobs.first(where: { $0.id == id }) {
+                CompanyDetailView(model: model, job: job)
+            } else { missingContent }
+        case .companyMaterial(let id):
+            if let material = model.state.materials.first(where: { $0.id == id }) {
+                if ["履歴書", "職務経歴書"].contains(material.kind) {
+                    ApplicationDocumentView(model: model, document: material)
+                } else {
+                    CompanyMaterialDetailView(material: material)
+                }
+            } else { missingContent }
+        case .material(let id):
+            if let material = model.state.materials.first(where: { $0.id == id }) {
+                if ["履歴書", "職務経歴書"].contains(material.kind) {
+                    ApplicationDocumentView(model: model, document: material)
+                } else {
+                    TextDetailView(title: material.title, subtitle: material.kind,
+                                   content: material.content)
+                }
+            } else { missingContent }
+        case .questionSet(let id):
+            if let pack = (model.state.questionSets + BuiltinBank.packs).first(where: { $0.id == id }) {
+                QuestionList(model: model, pack: pack)
+            } else { missingContent }
+        case .answer(let packID, let questionID):
+            if let pack = (model.state.questionSets + BuiltinBank.packs).first(where: { $0.id == packID }),
+               let question = pack.questions.first(where: { $0.id == questionID }) {
+                AnswerView(model: model, pack: pack, question: question)
+            } else { missingContent }
+        case .report(let id):
+            if let report = model.state.reports.first(where: { $0.id == id }) {
+                TextDetailView(title: report.title, subtitle: report.date, content: report.content)
+            } else { missingContent }
+        case .resumeEntry(let id):
+            if let entry = model.state.resume?.first(where: { $0.id == id }) {
+                ResumeEntryDetail(entry: entry)
+            } else { missingContent }
+        case .personalizedResume(let id):
+            if let draft = model.personalizedResumes.first(where: { $0.id == id }) {
+                PersonalizedResumeDetail(draft: draft)
+            } else { missingContent }
+        case .settings:
+            SettingsView(model: model)
+        }
+    }
+
+    private var missingContent: some View {
+        ContentUnavailableView("内容暂不可用", systemImage: "tray",
+                               description: Text("同步完成后可重试，或返回上一级。"))
     }
 }
 
@@ -215,23 +407,7 @@ private struct PracticeList: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("今日重点").font(.largeTitle.bold())
-                        Text("\(today) · 先完成今天最相关的练习")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                    Button { Task { await model.sync() } } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.headline)
-                            .frame(width: 44, height: 44)
-                            .background(PhoneStyle.card, in: Circle())
-                    }
-                    .disabled(model.busy)
-                    .accessibilityLabel("同步")
-                }
+                Text("今日重点").font(.largeTitle.bold())
                 if !model.pending.isEmpty || model.message != nil {
                     PhoneCard {
                         HStack(alignment: .top, spacing: 12) {
@@ -254,9 +430,7 @@ private struct PracticeList: View {
                 if let report = todayReport {
                     VStack(alignment: .leading, spacing: 10) {
                         SectionHeading(title: "今日简报", detail: nil)
-                        NavigationLink {
-                            TextDetailView(title: report.title, subtitle: report.date, content: report.content)
-                        } label: {
+                        NavigationLink(value: AppRoute.report(report.id)) {
                             PhoneCard {
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(report.title).font(.headline).foregroundStyle(.primary)
@@ -274,9 +448,7 @@ private struct PracticeList: View {
                             .foregroundStyle(.secondary) }
                     }
                     ForEach(Array(focus.enumerated()), id: \.offset) { _, item in
-                        NavigationLink {
-                            AnswerView(model: model, pack: item.pack, question: item.question)
-                        } label: {
+                        NavigationLink(value: AppRoute.answer(packID: item.pack.id, questionID: item.question.id)) {
                             PhoneCard {
                                 VStack(alignment: .leading, spacing: 7) {
                                     Text(item.reason).font(.caption.bold())
@@ -303,6 +475,7 @@ private struct PracticeList: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
+        .refreshable { await model.sync() }
         .background(PhoneStyle.canvas)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -319,9 +492,7 @@ private struct PracticeList: View {
                 }
             } else {
                 ForEach(packs) { pack in
-                    NavigationLink {
-                        QuestionList(model: model, pack: pack)
-                    } label: {
+                    NavigationLink(value: AppRoute.questionSet(pack.id)) {
                         PhoneCard {
                             HStack(spacing: 12) {
                                 Image(systemName: "list.bullet.rectangle")
@@ -372,30 +543,8 @@ struct QuestionList: View {
                     .foregroundStyle(.secondary)
                     .padding(.bottom, 6)
             }
-            ForEach(pack.questions) { question in
-                NavigationLink {
-                    AnswerView(model: model, pack: pack, question: question)
-                } label: {
-                    PhoneCard {
-                        HStack(alignment: .top, spacing: 12) {
-                            Text(String(format: "%02d", (pack.questions.firstIndex { $0.id == question.id } ?? 0) + 1))
-                                .font(.caption.bold().monospacedDigit())
-                                .foregroundStyle(PhoneStyle.accent)
-                                .frame(width: 28, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(question.title).font(.headline).foregroundStyle(.primary)
-                                Text(CareerRichText.plain(question.questionJa)).font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.right")
-                                .font(.caption.bold())
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
+            ForEach(Array(pack.questions.enumerated()), id: \.element.id) { index, question in
+                PracticeQuestionLink(model: model, pack: pack, question: question, number: index + 1)
             }
             }
             .frame(maxWidth: 620, alignment: .leading)
@@ -404,6 +553,37 @@ struct QuestionList: View {
         .background(PhoneStyle.canvas)
         .navigationTitle(CareerRichText.plain(pack.title))
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct PracticeQuestionLink: View {
+    @Bindable var model: AppModel
+    let pack: QuestionSet
+    let question: CareerQuestion
+    let number: Int
+
+    var body: some View {
+        NavigationLink(value: AppRoute.answer(packID: pack.id, questionID: question.id)) {
+            PhoneCard {
+                HStack(alignment: .top, spacing: 12) {
+                    Text(String(format: "%02d", number))
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(PhoneStyle.accent)
+                        .frame(width: 28, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(question.title).font(.headline).foregroundStyle(.primary)
+                        Text(CareerRichText.plain(question.questionJa)).font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -416,7 +596,7 @@ struct AnswerView: View {
     @State private var referenceSpeech = ReferenceSpeechPlayer()
     @State private var recognitionLanguage = "ja-JP"
     @State private var showOutline = true
-    @State private var showSample = false
+    @State private var showSample = ProcessInfo.processInfo.arguments.contains("-careerDesignReverse")
     @State private var showMoreHints = false
     @State private var saved = false
     @State private var historyPlayer: AVAudioPlayer?
@@ -448,6 +628,41 @@ struct AnswerView: View {
         PracticeKeywords.build(question: question,
                                job: model.state.jobs.first { $0.id == pack.jobId },
                                resume: model.state.resume ?? [])
+    }
+
+    private var reverseQuestions: [String] {
+        guard question.category == "逆質問", let sample = question.sampleAnswer else { return [] }
+        return ReferenceSpeechText.numberedQuestions(sample)
+    }
+
+    private func speechButton(for source: String, title: String) -> some View {
+        let active = referenceSpeech.activeSource == source
+        return Button {
+            if active && (referenceSpeech.isPlaying || referenceSpeech.isLoading) {
+                referenceSpeech.stop()
+            } else {
+                let voice = ReferenceSpeechSettings.voice
+                Task {
+                    await referenceSpeech.play(source, userID: model.userID ?? "local", voice: voice) {
+                        try await model.referenceSpeech(questionSetID: pack.id, questionID: question.id,
+                                                        source: source, voice: voice)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 7) {
+                if active && referenceSpeech.isLoading {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: active && referenceSpeech.isPlaying ? "stop.fill" : "speaker.wave.2.fill")
+                }
+                Text(active && referenceSpeech.isLoading ? "準備中…" :
+                     active && referenceSpeech.isPlaying ? "停止" : title)
+            }
+            .font(.subheadline.weight(.medium))
+        }
+        .buttonStyle(.bordered)
+        .disabled(speech.phase == .recording || speech.phase == .recognizing)
     }
 
     var body: some View {
@@ -534,34 +749,40 @@ struct AnswerView: View {
                 if let sample = question.sampleAnswer, !sample.isEmpty {
                     Divider()
                     DisclosureGroup("参考回答", isExpanded: $showSample) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            RichContent(text: sample)
-                            HStack {
-                                if referenceSpeech.isLoading {
-                                    ProgressView("正在生成发音…")
-                                } else {
-                                    Button {
-                                        if referenceSpeech.isPlaying {
-                                            referenceSpeech.stop()
-                                        } else {
-                                            Task { await referenceSpeech.play(sample) }
+                        VStack(alignment: .leading, spacing: 12) {
+                            if reverseQuestions.isEmpty {
+                                RichContent(text: sample)
+                                speechButton(for: sample, title: "朗読する")
+                            } else {
+                                ForEach(Array(reverseQuestions.enumerated()), id: \.offset) { index, item in
+                                    HStack(alignment: .top, spacing: 12) {
+                                        Text(String(format: "%02d", index + 1))
+                                            .font(.caption.bold().monospacedDigit())
+                                            .foregroundStyle(PhoneStyle.accent)
+                                            .frame(width: 30, height: 30)
+                                            .background(PhoneStyle.accent.opacity(0.10),
+                                                        in: RoundedRectangle(cornerRadius: 8))
+                                        VStack(alignment: .leading, spacing: 10) {
+                                            RichContent(text: item, markdown: false, fontSize: 18)
+                                                .accessibilityLabel(CareerRichText.plain(item))
+                                            speechButton(for: item, title: "この質問を朗読")
                                         }
-                                    } label: {
-                                        Label(referenceSpeech.isPlaying ? "停止朗读" : "朗读参考回答",
-                                              systemImage: referenceSpeech.isPlaying ? "stop.fill" : "speaker.wave.2.fill")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
-                                    .buttonStyle(.bordered)
-                                    .disabled(speech.phase == .recording || speech.phase == .recognizing)
+                                    .padding(14)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(PhoneStyle.accent.opacity(0.04),
+                                                in: RoundedRectangle(cornerRadius: 14))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .strokeBorder(PhoneStyle.accent.opacity(0.12))
+                                    }
                                 }
-                            }
-                            if !ReferenceSpeechSettings.hasKey || ReferenceSpeechSettings.region.isEmpty {
-                                NavigationLink("配置 Azure 发音") { SettingsView(model: model) }
-                                    .font(.caption)
                             }
                             if let message = referenceSpeech.errorMessage {
                                 Text(message).font(.caption).foregroundStyle(.red)
                             }
-                            Text("朗读时会把参考回答发送给 Azure Speech。")
+                            Text("初回はサーバーが Azure で生成し、Cloudflare R2 に保存します。次回は端末または R2 のキャッシュから再生します。")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         .padding(.top, 8)
@@ -871,11 +1092,7 @@ struct SettingsView: View {
     @Bindable var model: AppModel
     @AppStorage("showJapaneseReadings") private var showJapaneseReadings = true
     @State private var discardID: String?
-    @State private var speechRegion = ReferenceSpeechSettings.region
     @State private var speechVoice = ReferenceSpeechSettings.voice
-    @State private var speechKey = ""
-    @State private var speechHasKey = ReferenceSpeechSettings.hasKey
-    @State private var speechMessage: String?
 
     var body: some View {
         Form {
@@ -894,35 +1111,13 @@ struct SettingsView: View {
                 Text("只在应用内显示资料中已保存的读音；不会猜测人名或修改原文。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
-            Section("Azure 发音") {
-                TextField("资源区域，例如 japaneast", text: $speechRegion)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                SecureField(speechHasKey ? "已保存密钥；留空则不更换" : "输入 Azure Speech 密钥", text: $speechKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+            Section("参考回答の音声") {
                 Picker("日语语音", selection: $speechVoice) {
                     Text("Nanami · 女声").tag(ReferenceSpeechSettings.voices[0])
                     Text("Keita · 男声").tag(ReferenceSpeechSettings.voices[1])
                 }
-                Button("保存发音设置") {
-                    do {
-                        try ReferenceSpeechSettings.save(region: speechRegion, voice: speechVoice, newKey: speechKey)
-                        speechKey = ""
-                        speechHasKey = ReferenceSpeechSettings.hasKey
-                        speechMessage = "已保存在本机。"
-                    } catch { speechMessage = error.localizedDescription }
-                }
-                if speechHasKey {
-                    Button("删除本机 Azure 密钥", role: .destructive) {
-                        ReferenceSpeechSettings.removeKey()
-                        speechHasKey = false
-                        speechKey = ""
-                        speechMessage = "本机密钥已删除。"
-                    }
-                }
-                if let speechMessage { Text(speechMessage).font(.footnote).foregroundStyle(.secondary) }
-                Text("密钥保存在设备 Keychain。点击朗读参考回答时才会向 Azure 发送文字；需要联网，并可能产生 Azure 费用。")
+                .onChange(of: speechVoice) { _, voice in ReferenceSpeechSettings.saveVoice(voice) }
+                Text("音声は Career Note サーバーが生成して Cloudflare R2 に保存します。端末には再生用キャッシュだけを置き、Azure キーは不要です。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             if !model.pending.isEmpty {

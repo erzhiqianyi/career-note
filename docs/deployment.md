@@ -61,6 +61,10 @@ OAuth と MCP の公開アドレスは API 側（`CAREER_PUBLIC_ORIGIN`）、同
    | `CAREER_WEB_ORIGIN` | `https://career.example.com`（画面のオリジン。CORS と OAuth 同意画面の行き先） |
    | `CAREER_PUBLIC_ORIGIN` | `https://career-api.example.com`（API 自身のオリジン。OAuth メタデータに載る） |
    | `CAREER_CORS_ORIGINS` | 追加で許可するブラウザーオリジン（カンマ区切り、任意） |
+   | `AZURE_SPEECH_REGION` | Speech リソースのリージョンコード（例: `japaneast`） |
+   | `AZURE_SPEECH_KEY` | Speech リソースのキー。iOS アプリには設定せず、Worker secret にだけ保存 |
+
+   参考回答の初回朗読は認証済み iOS アプリから Worker に要求されます。Worker は保存済みの設問本文と照合して Azure Speech で MP3 を生成し、既存の非公開 `CAREER_AUDIO` R2 バケットにユーザー別で保存します。2 回目以降は R2 から返します。キーを登録していない場合、新規生成は 503 になり、保存済み音声は引き続き再生できます。
 
 3. **Pages プロジェクトを作り、カスタムドメインを付ける**
 
