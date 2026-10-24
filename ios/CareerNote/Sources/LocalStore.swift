@@ -24,6 +24,33 @@ enum LocalStore {
             .replacingOccurrences(of: "+", with: "-")
     }
 
+    private static func recordingURL(uid: String, attemptID: String) throws -> URL {
+        let folder = try directory().appendingPathComponent("Recordings", isDirectory: true)
+            .appendingPathComponent(name(for: uid), isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder.appendingPathComponent(attemptID + ".m4a")
+    }
+
+    static func storeRecording(from source: URL, uid: String, attemptID: String) throws {
+        let size = try source.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard size > 0 && size <= 12 * 1024 * 1024 else {
+            throw storeError("录音为空或超过 12 MB。")
+        }
+        let destination = try recordingURL(uid: uid, attemptID: attemptID)
+        try FileManager.default.copyItem(at: source, to: destination)
+        try FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUnlessOpen], ofItemAtPath: destination.path)
+    }
+
+    static func recordingData(uid: String, attemptID: String) throws -> Data {
+        try Data(contentsOf: recordingURL(uid: uid, attemptID: attemptID))
+    }
+
+    static func removeRecording(uid: String, attemptID: String) {
+        guard let url = try? recordingURL(uid: uid, attemptID: attemptID) else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
     static func load(uid: String) throws -> LocalSnapshot? {
         try load(uid: uid, in: directory())
     }

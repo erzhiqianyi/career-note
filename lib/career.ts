@@ -79,6 +79,8 @@ export type Material = {
   reviewStatus: string;
   jobRevision: number;
   profileRevision: number;
+  /** Set when the user retired this version; it stays readable but leaves default lists. */
+  archivedAt?: string;
 };
 export type Report = {
   id: string;

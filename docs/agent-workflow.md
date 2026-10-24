@@ -99,7 +99,7 @@ node scripts/career-data.mjs state
 }
 ```
 
-`matchLevel` 只能是 `优先准备`、`先确认条件`、`暂不匹配` 或空（待评估），与 `matchNotes` 中的理由一致。`sourcePlatform` 是最初发现职位的平台名称，可写“公司官网”或实际平台名；`sourceChannel` 只能是 `主动发现`、`AI 搜索`、`Agent 推荐` 或空。主动发现指用户自己找到，AI 搜索指用户请 AI 搜索，Agent 推荐指 Agent 主动提出候选；无法确认时留空。已有职位来源字段缺省时会保留原值。kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。示例是协议示意，不能作为真实招聘信息导入。
+`matchLevel` 只能是 `优先准备`、`先确认条件`、`暂不匹配` 或空（待评估），与 `matchNotes` 中的理由一致。`sourcePlatform` 是最初发现职位的平台名称，可写“公司官网”或实际平台名；`sourceChannel` 只能是 `主动发现`、`AI 搜索`、`Agent 推荐` 或空。主动发现指用户自己找到，AI 搜索指用户请 AI 搜索，Agent 推荐指 Agent 主动提出候选；无法确认时留空。已有职位来源字段缺省时会保留原值。kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。用户明确要求去掉旧版材料时，可在同一数据包中用 `"archiveMaterials": [{"id": "旧材料 id", "archived": true}]` 归档；归档只从默认列表隐藏，正文保留，`archived: false` 可恢复。不要自行归档用户未指定的材料。示例是协议示意，不能作为真实招聘信息导入。
 
 `employeeCount`、`companyType`、`employmentType` 可选；缺省时保留已有值，明确传空字符串才清除。员工人数可保留“约”“截至日期”等限定词。`employmentType` 记录聘用合同形式，不能仅因岗位在客户现场工作就写成派遣。
 

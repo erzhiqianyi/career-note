@@ -183,6 +183,13 @@ struct SavedAttempt: Codable, Identifiable {
     let answer: String
     let language: String
     let createdAt: String
+    let durationSeconds: Int?
+    let audio: SavedAttemptAudio?
+}
+
+struct SavedAttemptAudio: Codable {
+    let contentType: String
+    let size: Int
 }
 
 struct AnswerReview: Codable, Identifiable {
@@ -203,6 +210,7 @@ struct PendingAttempt: Codable, Identifiable {
     let durationSeconds: Int
     let requestReview: Bool
     let createdAt: Date
+    var hasRecording: Bool? = nil
 }
 
 struct APIError: Decodable {

@@ -14,6 +14,7 @@
 | POST `/platforms` | 求人サービス設定 | career:write |
 | POST `/tasks` | 作業依頼 | agent:write |
 | POST `/attempts` | 面接の元回答保存 | career:write |
+| POST `/materials/archive` | 材料版の非表示・復元（`{items:[{id, archived}]}`、本文は保持） | career:write |
 | POST `/import/preview` | Agent パッケージの部分的な検証・件数確認 | agent:write |
 | POST `/import` | Agent パッケージ取込 | agent:write |
 | GET `/mcp/tokens` | 許可済み Agent の一覧（失効・期限切れも `revoked` / `expired` 付きで返す） | ログイン本人（off モードはローカル） |
@@ -66,7 +67,7 @@ Agent のトークンは OAuth 2.1 の認可コードフロー（PKCE S256 必�
 
 ## Agent データパッケージ
 
-トップレベルは `schemaVersion: 1`、`jobs`、`materials`、`reports`、`questionSets`、`reviews`、`completeTaskIds`。省略できる配列と、必須の `completeTaskIds` を区別する。例は [examples](../../examples/README.md)。型ごとの上限は現行コード参照。Web import の 3 MB 制限はサーバー全体の一律制限ではない。
+トップレベルは `schemaVersion: 1`、`jobs`、`materials`、`archiveMaterials`（既存材料の `{id, archived}`。非表示化のみで本文は残る）、`reports`、`questionSets`、`reviews`、`completeTaskIds`。省略できる配列と、必須の `completeTaskIds` を区別する。例は [examples](../../examples/README.md)。型ごとの上限は現行コード参照。Web import の 3 MB 制限はサーバー全体の一律制限ではない。
 
 現在の import は逐次書込みで、完全なバッチ原子性を保証しない。preview も全保存処理と同等の検証ではない。新規求人とその資料は別々のパッケージで順に取り込む。失敗時は保存済み ID を読戻してから再試行する。
 

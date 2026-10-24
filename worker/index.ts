@@ -844,11 +844,35 @@ async function audioLinkResponse(rawDb: D1Database, env: Env, token: string) {
   return attemptAudioResponse(env, String(link.key), String(link.contentType));
 }
 
+// Archiving only hides a superseded version from default lists; content and history are kept and it can be restored.
+async function archiveMaterials(db: Workspace, items: unknown, preview = false) {
+  if (!Array.isArray(items) || items.length > 200) throw new AppError(400, 'archiveMaterials 必须是最多 200 条的数组');
+  const seen = new Set<string>();
+  const targets: { material: Record<string, unknown>; archived: boolean }[] = [];
+  for (const item of items) {
+    if (typeof item !== 'object' || item === null) throw new AppError(400, '每条数据必须是对象');
+    const obj = item as Record<string, unknown>;
+    const id = validateString(obj.id, 'id', { required: true, max: 120 });
+    if (seen.has(id)) throw new AppError(400, '数据包中存在重复 id');
+    seen.add(id);
+    if (typeof obj.archived !== 'boolean') throw new AppError(400, 'archived 必须是 true 或 false');
+    const material = await getRecord(db, 'materials', id);
+    if (!material) throw new AppError(400, '要归档的材料不存在');
+    targets.push({ material, archived: obj.archived });
+  }
+  if (!preview) for (const { material, archived } of targets) {
+    if (archived) material.archivedAt = String(material.archivedAt || '') || now();
+    else delete material.archivedAt;
+    await putRecord(db, 'materials', material);
+  }
+  return targets.length;
+}
+
 async function importBundle(db: Workspace, data: Record<string, unknown>, preview = false) {
   if (Number(data.schemaVersion) !== 1) throw new AppError(400, '需要 schemaVersion: 1 的 JSON 数据包');
 
   for (const key of Object.keys(data)) {
-    if (!['schemaVersion', 'jobs', 'materials', 'reports', 'questionSets', 'reviews', 'completeTaskIds'].includes(key)) {
+    if (!['schemaVersion', 'jobs', 'materials', 'archiveMaterials', 'reports', 'questionSets', 'reviews', 'completeTaskIds'].includes(key)) {
       throw new AppError(400, '数据包包含未知字段');
     }
   }
@@ -856,6 +880,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
   const counts: Record<string, number> = {
     jobs: 0,
     materials: 0,
+    archivedMaterials: 0,
     reports: 0,
     questionSets: 0,
     reviews: 0,
@@ -978,6 +1003,9 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
     }
     await handler(list);
   }
+
+  // After new materials, so one bundle can add a version and archive the one it replaces.
+  if (data.archiveMaterials !== undefined) counts.archivedMaterials = await archiveMaterials(db, data.archiveMaterials, preview);
 
   const completeTaskIds = data.completeTaskIds;
   if (!Array.isArray(completeTaskIds)) throw new AppError(400, 'completeTaskIds 必须是数组');
@@ -1387,6 +1415,10 @@ const handler = async (
     case '/api/career/attempts/audio-link':
       ensureScopes(context, ['career:read']);
       result = await createAudioLink(db, env, request, context.uid, validateString(payload.attemptId, 'attemptId', { required: true, max: 120 }));
+      break;
+    case '/api/career/materials/archive':
+      ensureScopes(context, ['career:write']);
+      result = { archivedMaterials: await archiveMaterials(db, payload.items) };
       break;
     case '/api/career/import':
       ensureScopes(context, ['agent:write']);

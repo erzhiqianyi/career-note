@@ -5475,5 +5475,11 @@
   "请调用 Career Note 的 career_get_contract，先告诉我这个工作区的使用约定。然后读取我的履历概况，列出可用于求职准备的资料和明显缺口；这一步先不要写入任何内容。": {
     "ja": "Career Note の career_get_contract を呼び出し、まずこのワークスペースの規約を説明してください。次に経歴の概要を読み、準備に使える資料と明らかな不足を挙げてください。この段階では何も書き込まないでください。",
     "en": "Call Career Note career_get_contract and explain the workspace rules first. Then read my résumé overview and list useful records and obvious gaps. Do not write anything yet."
-  }
+  },
+  "收起已归档的旧版本": { "ja": "アーカイブ済みの旧版を閉じる", "en": "Hide archived versions" },
+  "显示已归档的旧版本（{0}）": { "ja": "アーカイブ済みの旧版を表示（{0}）", "en": "Show archived versions ({0})" },
+  "归档此旧版本": { "ja": "この旧版をアーカイブ", "en": "Archive this version" },
+  "恢复到资料列表": { "ja": "資料一覧に戻す", "en": "Restore to materials" },
+  "已恢复到资料列表": { "ja": "資料一覧に戻しました", "en": "Restored to materials" },
+  "已归档，资料列表不再显示此版本": { "ja": "アーカイブしました。資料一覧には表示されません", "en": "Archived; it no longer appears in the materials list" }
 }

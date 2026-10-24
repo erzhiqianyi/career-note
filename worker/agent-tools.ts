@@ -48,6 +48,11 @@ const bundle = z
     schemaVersion: z.literal(1),
     jobs: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
     materials: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
+    archiveMaterials: z
+      .array(z.object({ id: z.string(), archived: z.boolean() }).strict())
+      .max(200)
+      .optional()
+      .describe('Hide (true) or restore (false) existing material versions the user asked to retire; content is kept.'),
     reports: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
     questionSets: z.array(questionSet).max(200).optional(),
     reviews: z.array(z.record(z.string(), z.unknown())).max(200).optional(),

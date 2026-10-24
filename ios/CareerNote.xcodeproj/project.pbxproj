@@ -18,6 +18,8 @@
 		8E54573F7AE15897153F95A1 /* CareerNoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EF3FD70B07C961DE2016F86 /* CareerNoteApp.swift */; };
 		CF84496699211C9B380C3DE5 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A286130647925600745728 /* Models.swift */; };
 		F42325671D45AEE28174243D /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8D59FA9093E18D1EBF4F77 /* RootView.swift */; };
+		A8D9B9218E49463C995B1031 /* PracticeSpeechRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8D9B9218E49463C995B1032 /* PracticeSpeechRecorder.swift */; };
+		B7169D6A3C204B82A51E9F01 /* ReferenceSpeech.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7169D6A3C204B82A51E9F02 /* ReferenceSpeech.swift */; };
 		F5DC8B64810946C105F9AF6E /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7967997DEBDC03235289ECDD /* FirebaseCore */; };
 		FACB37CD0CBB5C4403FC9BAD /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57ED8F941C926582A8BDB37C /* LocalStore.swift */; };
 		FD15B11B387ACBC0DB5F27E0 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = A17F4915CFBADA0EE0014CD7 /* GoogleSignIn */; };
@@ -35,6 +37,8 @@
 		8F2522E9414B054E0F335A96 /* interview-bank.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = "interview-bank.json"; sourceTree = "<group>"; };
 		9DB390700846DB23B6211676 /* RichContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RichContent.swift; sourceTree = "<group>"; };
 		9FDFCFB84F574288C93E5F3D /* DesignPreview.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DesignPreview.swift; sourceTree = "<group>"; };
+		A8D9B9218E49463C995B1032 /* PracticeSpeechRecorder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PracticeSpeechRecorder.swift; sourceTree = "<group>"; };
+		B7169D6A3C204B82A51E9F02 /* ReferenceSpeech.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReferenceSpeech.swift; sourceTree = "<group>"; };
 		AE32C9709845FC1DC830B2E1 /* CareerRichText.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareerRichText.swift; sourceTree = "<group>"; };
 		B584E7C25FAF3AAEC3CA7C1F /* ResumeViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ResumeViews.swift; sourceTree = "<group>"; };
 		BFD7A3CAB7DBBB56C1B88EC6 /* Local.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Local.xcconfig; sourceTree = "<group>"; };
@@ -89,6 +93,8 @@
 				9FDFCFB84F574288C93E5F3D /* DesignPreview.swift */,
 				57ED8F941C926582A8BDB37C /* LocalStore.swift */,
 				E1A286130647925600745728 /* Models.swift */,
+				A8D9B9218E49463C995B1032 /* PracticeSpeechRecorder.swift */,
+				B7169D6A3C204B82A51E9F02 /* ReferenceSpeech.swift */,
 				B584E7C25FAF3AAEC3CA7C1F /* ResumeViews.swift */,
 				9DB390700846DB23B6211676 /* RichContent.swift */,
 				6A8D59FA9093E18D1EBF4F77 /* RootView.swift */,
@@ -225,6 +231,8 @@
 				34DC73FA7E9CE3B6C28FB249 /* DesignPreview.swift in Sources */,
 				FACB37CD0CBB5C4403FC9BAD /* LocalStore.swift in Sources */,
 				CF84496699211C9B380C3DE5 /* Models.swift in Sources */,
+				A8D9B9218E49463C995B1031 /* PracticeSpeechRecorder.swift in Sources */,
+				B7169D6A3C204B82A51E9F01 /* ReferenceSpeech.swift in Sources */,
 				6FA359E1CE7434573CA25CEF /* ResumeViews.swift in Sources */,
 				842EA5EB963D625707658BD0 /* RichContent.swift in Sources */,
 				F42325671D45AEE28174243D /* RootView.swift in Sources */,

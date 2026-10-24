@@ -11,6 +11,8 @@
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>
 <key>CFBundleVersion</key><string>1</string>
+<key>NSMicrophoneUsageDescription</key><string>面试练习时录制你的口头回答，并将录音与回答一同保存。</string>
+<key>NSSpeechRecognitionUsageDescription</key><string>在设备上将你的面试练习录音转换为文字。</string>
 <key>LSRequiresIPhoneOS</key><true/>
 <key>UILaunchScreen</key><dict/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>

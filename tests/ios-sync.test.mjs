@@ -35,4 +35,13 @@ void test('an offline answer retry returns the original answer and review task',
     body: JSON.stringify({ ...body, answer: 'a different answer' })
   });
   assert.equal(conflict.status, 409);
+  const audio = Buffer.from([0, 0, 0, 24, 102, 116, 121, 112]);
+  const upload = await mf.dispatchFetch(`http://local/api/career/attempts/audio?id=${attempt.id}`, {
+    method: 'POST', headers: { 'Content-Type': 'audio/mp4' }, body: audio
+  });
+  assert.equal(upload.status, 200);
+  assert.equal((await upload.json()).audio.size, audio.length);
+  const fetchAudio = await mf.dispatchFetch(`http://local/api/career/attempts/audio?id=${attempt.id}`);
+  assert.equal(fetchAudio.status, 200);
+  assert.deepEqual(Buffer.from(await fetchAudio.arrayBuffer()), audio);
 });

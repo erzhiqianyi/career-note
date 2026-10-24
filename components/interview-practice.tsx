@@ -126,7 +126,8 @@ export default function InterviewPractice({
   const day = (v: string) => (v ? v.slice(0, 10).replaceAll('-', '.') : '—');
   // 准备资料（企业研究、志望动机、面试准备等）和练习题同属一家公司的面试准备，放在同一页。
   const materials = data.materials || [];
-  const materialsFor = (jobId: string) => materials.filter(m => (m.jobId || '') === jobId).sort((a, b) => {
+  // Archived versions are retired by the user; they stay readable under their own toggle.
+  const materialsFor = (jobId: string, archived = false) => materials.filter(m => (m.jobId || '') === jobId && !!m.archivedAt === archived).sort((a, b) => {
     const kindOrder = (kind: string) => {
       const index = materialKinds.indexOf(kind === '業務経歴書' ? '職務経歴書' : kind);
       return index < 0 ? materialKinds.length : index;
@@ -140,7 +141,7 @@ export default function InterviewPractice({
   ]}>{rows.map(m => <DataRow key={m.id} onOpen={() => openMaterial(m)}>
     <DataTitle title={m.title} meta={<>{withCompany ? (data.jobs.find(j => j.id === m.jobId)?.company || tr('整个求职工作区')) + ' · ' : ''}{day(m.createdAt)}</>} onClick={() => openMaterial(m)} />
     <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
-    <DataCell label={tr('状态')} corner><span className="badge amber">{tr(m.reviewStatus || '待核对')}</span></DataCell>
+    <DataCell label={tr('状态')} corner>{m.archivedAt ? <span className="badge">{tr('已归档')}</span> : <span className="badge amber">{tr(m.reviewStatus || '待核对')}</span>}</DataCell>
   </DataRow>)}</DataTable>;
   const [company, setCompany] = useRecordPage<string>('#jobs', 'company', id => id === BANK_JOB_ID ? id : (data.jobs.find(j => j.companyNumber && String(j.companyNumber) === id) || data.jobs.find(j => j.id === id))?.id || null, id => String(data.jobs.find(j => j.id === id)?.companyNumber || id));
   useEffect(() => {
@@ -152,6 +153,7 @@ export default function InterviewPractice({
   }, [company, data.jobs]);
   const [help, setHelp] = useRecordPage<string>('#jobs', 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
   const [search, setSearch] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [statusFilter, setStatusFilter] = useState('进行中');
   const [managing, setManaging] = useState(false);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
@@ -520,6 +522,7 @@ export default function InterviewPractice({
     const tabs = PREP_TABS.filter(([id]) => !isBank || id !== 'info');
     const activeTab = tabs.some(([id]) => id === tab) ? tab : 'practice';
     const companyMaterials = materialsFor(isBank ? '' : jobId);
+    const archivedMaterials = materialsFor(isBank ? '' : jobId, true);
     const packIds = new Set(packs.map(p => p.id));
     const companyAttempts = (data.attempts || []).filter(a => packIds.has(a.questionSetId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const attemptIds = new Set(companyAttempts.map(a => a.id));
@@ -609,6 +612,12 @@ export default function InterviewPractice({
       </div>}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
         {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p></div>}
+        {archivedMaterials.length > 0 && <>
+          <button type="button" className="text-button" aria-expanded={showArchived} onClick={() => setShowArchived(v => !v)}>
+            {tr(showArchived ? '收起已归档的旧版本' : '显示已归档的旧版本（{0}）', [String(archivedMaterials.length)])}
+          </button>
+          {showArchived && materialTable(archivedMaterials, tr('已归档'))}
+        </>}
       </section>}
       {activeTab === 'practice' && (!pack || !question ? (
         <section className="panel prep-tab-panel">

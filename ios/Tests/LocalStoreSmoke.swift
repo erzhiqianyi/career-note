@@ -9,12 +9,13 @@ import Foundation
         {"jobs":[{"id":"job-1","company":"Sample","role":"Engineer","status":"面试中","nextDate":"2026-10-24"}],"profile":null,"resume":[],"today":"2026-10-24","materials":[],"reports":[],"tasks":[],"questionSets":[],"attempts":[],"reviews":[]}
         """.utf8)
         let state = try JSONDecoder().decode(CareerState.self, from: stateData)
-        let pending = PendingAttempt(id: "pending-1", questionSetId: "pack-1", questionId: "q-1", answer: "offline answer", language: "ja", durationSeconds: 32, requestReview: true, createdAt: Date(timeIntervalSince1970: 12345))
+        let pending = PendingAttempt(id: "pending-1", questionSetId: "pack-1", questionId: "q-1", answer: "offline answer", language: "ja", durationSeconds: 32, requestReview: true, createdAt: Date(timeIntervalSince1970: 12345), hasRecording: true)
         let snapshot = LocalSnapshot(state: state, pending: [pending], lastUpdated: Date(timeIntervalSince1970: 45678), personalizedResumes: [])
         try LocalStore.save(snapshot, uid: "test-user", in: root)
         let read = try LocalStore.load(uid: "test-user", in: root)
         precondition(read?.state.jobs.first?.company == "Sample")
         precondition(read?.pending.first?.answer == "offline answer")
+        precondition(read?.pending.first?.hasRecording == true)
         precondition(read?.lastUpdated == snapshot.lastUpdated)
         var duplicate = snapshot
         duplicate.state.jobs.append(state.jobs[0])

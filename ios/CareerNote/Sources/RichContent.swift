@@ -2,22 +2,42 @@ import SwiftUI
 import WebKit
 
 /// Career Note's saved study text uses Markdown and inline {漢字|かな} readings.
-/// Rendering happens from escaped text in a local WebView; no network resource is loaded.
+/// Plain text uses SwiftUI; formatted text uses escaped HTML in a local WebView.
 struct RichContent: View {
     let text: String
     var markdown = true
+    var fontSize: CGFloat = 17
     @AppStorage("showJapaneseReadings") private var showReadings = true
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var textScale: CGFloat = 1
     @State private var height: CGFloat = 40
 
+    // Most short fields are plain prose. Avoid starting WebKit for each of them.
+    private var canUseNativeText: Bool {
+        if text.contains("{") || text.contains("http://") || text.contains("https://") ||
+            text.contains("mailto:") { return false }
+        if !markdown { return true }
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("- ") || trimmed.hasPrefix("+ ") ||
+            trimmed.range(of: #"^\d+\. "#, options: .regularExpression) != nil { return false }
+        return !text.contains("\n") && !text.contains(where: { "#*_`[]>".contains($0) })
+    }
+
     var body: some View {
-        RichWebView(
-            html: CareerRichText.html(text, markdown: markdown, showReadings: showReadings,
-                                      fontSize: UIFontMetrics.default.scaledValue(for: 17)),
-            height: $height
-        )
-        .frame(height: height)
-        .id("\(showReadings)-\(dynamicTypeSize)")
+        Group {
+            if canUseNativeText {
+                Text(text)
+                    .font(Font(UIFont.systemFont(ofSize: fontSize * textScale)))
+                    .lineSpacing(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                RichWebView(
+                    html: CareerRichText.html(text, markdown: markdown, showReadings: showReadings,
+                                              fontSize: fontSize * textScale),
+                    height: $height
+                )
+                .frame(height: height)
+            }
+        }
     }
 }
 

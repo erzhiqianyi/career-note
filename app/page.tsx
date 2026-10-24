@@ -1592,6 +1592,13 @@ export default function Home() {
               {day(doc.createdAt)}
               {!printableDoc && tr('· AI 草稿，使用前请核对')}
             </span>
+            {'kind' in doc && doc.archivedAt && <Badge>{tr('已归档')}</Badge>}
+            {'kind' in doc && <button type="button" className="text-button" disabled={busy} onClick={() => void action(async () => {
+              await api('materials/archive', { items: [{ id: doc.id, archived: !doc.archivedAt }] });
+              setDoc({ ...doc, archivedAt: doc.archivedAt ? undefined : new Date().toISOString() });
+            }, doc.archivedAt ? '已恢复到资料列表' : '已归档，资料列表不再显示此版本')}>
+              {tr(doc.archivedAt ? '恢复到资料列表' : '归档此旧版本')}
+            </button>}
           </div>
           {!printableDoc && 'jobId' in doc &&
             data &&

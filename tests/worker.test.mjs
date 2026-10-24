@@ -220,3 +220,20 @@ void test('a saved answer can carry a recording: owner playback, agent download 
  assert.equal((await mf.dispatchFetch(link.url.replace(/.{4}$/,'0000'))).status,404);
  assert.equal((await send('attempts/audio-link',{attemptId:'missing'})).status,404);
 });
+void test('archiving a material version hides it without losing content and can be undone',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const material=(id)=>({id,jobId:'archive-job',kind:'面试准备',title:id,content:'Prep body',sourceNotes:'Test'});
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'archive-job',company:'Example',role:'Engineer'}],completeTaskIds:[]})).status,200);
+ assert.equal((await send('import',{schemaVersion:1,materials:[material('prep-v1')],completeTaskIds:[]})).status,200);
+ const preview=await (await send('import/preview',{schemaVersion:1,archiveMaterials:[{id:'prep-v1',archived:true}],completeTaskIds:[]})).json();
+ assert.equal(preview.archivedMaterials,1);
+ let saved=(await (await send('state')).json()).materials.find(m=>m.id==='prep-v1');assert.equal(saved.archivedAt,undefined);
+ const both=await (await send('import',{schemaVersion:1,materials:[material('prep-v2')],archiveMaterials:[{id:'prep-v1',archived:true}],completeTaskIds:[]})).json();
+ assert.equal(both.materials,1);assert.equal(both.archivedMaterials,1);
+ saved=(await (await send('state')).json()).materials.find(m=>m.id==='prep-v1');assert.ok(saved.archivedAt);assert.equal(saved.content,'Prep body');
+ assert.equal((await send('import',{schemaVersion:1,archiveMaterials:[{id:'missing',archived:true}],completeTaskIds:[]})).status,400);
+ assert.equal((await send('import',{schemaVersion:1,archiveMaterials:[{id:'prep-v1'}],completeTaskIds:[]})).status,400);
+ assert.equal((await send('materials/archive',{items:[{id:'prep-v1',archived:false}]})).status,200);
+ saved=(await (await send('state')).json()).materials.find(m=>m.id==='prep-v1');assert.equal(saved.archivedAt,undefined);
+});

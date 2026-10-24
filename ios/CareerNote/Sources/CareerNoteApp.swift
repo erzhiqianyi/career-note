@@ -131,6 +131,44 @@ final class AppModel {
         return data
     }
 
+    private func uploadRecording(uid: String, localID: String, serverID: String) async throws {
+        guard let baseURL else { throw NSError(domain: "CareerNote", code: 1, userInfo: [NSLocalizedDescriptionKey: "应用未配置线上同步服务地址。"]) }
+        guard let user = Auth.auth().currentUser, user.uid == uid else {
+            throw NSError(domain: "CareerNote", code: 2, userInfo: [NSLocalizedDescriptionKey: "请先登录。"])
+        }
+        var components = URLComponents(url: baseURL.appending(path: "api/career/attempts/audio"),
+                                       resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "id", value: serverID)]
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await user.getIDToken())", forHTTPHeaderField: "Authorization")
+        request.setValue("audio/mp4", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try LocalStore.recordingData(uid: uid, attemptID: localID)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+            let detail = (try? JSONDecoder().decode(APIError.self, from: data).error) ?? "录音上传失败"
+            throw NSError(domain: "CareerNote", code: 4, userInfo: [NSLocalizedDescriptionKey: detail])
+        }
+    }
+
+    func savedRecording(id: String) async throws -> Data {
+        guard let baseURL else { throw NSError(domain: "CareerNote", code: 1, userInfo: [NSLocalizedDescriptionKey: "应用未配置线上同步服务地址。"]) }
+        guard let user = Auth.auth().currentUser, user.uid == userID else {
+            throw NSError(domain: "CareerNote", code: 2, userInfo: [NSLocalizedDescriptionKey: "请先登录。"])
+        }
+        var components = URLComponents(url: baseURL.appending(path: "api/career/attempts/audio"),
+                                       resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "id", value: id)]
+        var request = URLRequest(url: components.url!)
+        request.setValue("Bearer \(try await user.getIDToken())", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+            let detail = (try? JSONDecoder().decode(APIError.self, from: data).error) ?? "录音读取失败"
+            throw NSError(domain: "CareerNote", code: 4, userInfo: [NSLocalizedDescriptionKey: detail])
+        }
+        return data
+    }
+
     var canManageMaterialFiles: Bool {
         #if DEBUG
         if isDesignPreview { return false }
@@ -163,27 +201,48 @@ final class AppModel {
         return result
     }
 
-    private func persist() {
-        guard let userID else { return }
+    @discardableResult
+    private func persist() -> Bool {
+        guard let userID else { return false }
         do {
             try LocalStore.save(LocalSnapshot(state: state, pending: pending, lastUpdated: lastUpdated,
                                               personalizedResumes: personalizedResumes), uid: userID)
-        } catch { message = "本机保存失败：\(error.localizedDescription)" }
+            return true
+        } catch {
+            message = "本机保存失败：\(error.localizedDescription)"
+            return false
+        }
     }
 
-    func queue(questionSetId: String, questionId: String, answer: String, language: String, duration: Int, requestReview: Bool) {
-        guard userID != nil, !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    @discardableResult
+    func queue(questionSetId: String, questionId: String, answer: String, language: String,
+               duration: Int, requestReview: Bool, recordingURL: URL? = nil) -> Bool {
+        guard let userID, !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         guard answer.count <= 20_000 else {
             message = "回答不能超过 20,000 字。"
-            return
+            return false
+        }
+        let id = UUID().uuidString
+        if let recordingURL {
+            do { try LocalStore.storeRecording(from: recordingURL, uid: userID, attemptID: id) }
+            catch {
+                LocalStore.removeRecording(uid: userID, attemptID: id)
+                message = "录音本机保存失败：\(error.localizedDescription)"
+                return false
+            }
         }
         pending.append(PendingAttempt(
-            id: UUID().uuidString, questionSetId: questionSetId, questionId: questionId,
+            id: id, questionSetId: questionSetId, questionId: questionId,
             answer: answer, language: language, durationSeconds: duration,
-            requestReview: requestReview, createdAt: Date()
+            requestReview: requestReview, createdAt: Date(), hasRecording: recordingURL != nil
         ))
-        persist()
+        guard persist() else {
+            pending.removeLast()
+            if recordingURL != nil { LocalStore.removeRecording(uid: userID, attemptID: id) }
+            return false
+        }
         Task { await sync() }
+        return true
     }
 
     func sync() async {
@@ -199,10 +258,22 @@ final class AppModel {
         do {
             // Keep each answer in the queue until the server confirms it.
             while let first = pending.first {
-                _ = try await request("attempts", body: first)
+                let response = try await request("attempts", body: first)
                 guard userID == syncingUID else { return }
+                if first.hasRecording == true {
+                    let saved = try JSONDecoder().decode(SavedAttempt.self, from: response)
+                    try await uploadRecording(uid: syncingUID, localID: first.id, serverID: saved.id)
+                    guard userID == syncingUID else { return }
+                }
                 pending.removeFirst()
-                persist()
+                guard persist() else {
+                    pending.insert(first, at: 0)
+                    throw NSError(domain: "CareerNote", code: 5,
+                                  userInfo: [NSLocalizedDescriptionKey: "本机回答队列保存失败，请稍后重试。"])
+                }
+                if first.hasRecording == true {
+                    LocalStore.removeRecording(uid: syncingUID, attemptID: first.id)
+                }
             }
             let fresh = try JSONDecoder().decode(CareerState.self, from: await request("state"))
             guard userID == syncingUID else { return }
@@ -229,6 +300,9 @@ final class AppModel {
     }
 
     func discardPending(id: String) {
+        if let userID, pending.first(where: { $0.id == id })?.hasRecording == true {
+            LocalStore.removeRecording(uid: userID, attemptID: id)
+        }
         pending.removeAll { $0.id == id }
         persist()
     }

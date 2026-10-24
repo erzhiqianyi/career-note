@@ -1,4 +1,5 @@
 import AuthenticationServices
+import AVFoundation
 import SwiftUI
 
 struct RootView: View {
@@ -408,119 +409,439 @@ struct QuestionList: View {
 
 struct AnswerView: View {
     @Bindable var model: AppModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let pack: QuestionSet
     let question: CareerQuestion
-    @State private var answer = ""
-    @State private var language = "日语"
-    @State private var requestReview = false
-    @State private var startedAt = Date()
+    @State private var speech = PracticeSpeechRecorder()
+    @State private var referenceSpeech = ReferenceSpeechPlayer()
+    @State private var recognitionLanguage = "ja-JP"
+    @State private var showOutline = true
+    @State private var showSample = false
+    @State private var showMoreHints = false
     @State private var saved = false
+    @State private var historyPlayer: AVAudioPlayer?
+    @State private var historyAudioError: String?
 
     private var history: [SavedAttempt] {
-        model.state.attempts.filter { $0.questionSetId == pack.id && $0.questionId == question.id }
+        model.state.attempts
+            .filter { $0.questionSetId == pack.id && $0.questionId == question.id }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private var pending: [PendingAttempt] {
+        model.pending
+            .filter { $0.questionSetId == pack.id && $0.questionId == question.id }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private var canSave: Bool {
+        speech.phase == .ready && speech.recordingURL != nil &&
+        !speech.transcript.isEmpty && speech.transcript.count <= 20_000
+    }
+
+    private var targetSeconds: String? {
+        guard let seconds = question.targetSeconds, seconds > 0 else { return nil }
+        return "目安 \(seconds) 秒"
+    }
+
+    private var keywordHints: [PracticeKeyword] {
+        PracticeKeywords.build(question: question,
+                               job: model.state.jobs.first { $0.id == pack.jobId },
+                               resume: model.state.resume ?? [])
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 10) {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 12) {
-                            RichContent(text: question.questionJa, markdown: false)
-                            if let meaning = question.meaning, !meaning.isEmpty {
-                                RichContent(text: meaning, markdown: false)
-                            }
-                            if let outline = question.outline, !outline.isEmpty {
-                                Divider()
-                                DisclosureGroup("回答提示") {
-                                    RichContent(text: outline).padding(.top, 4)
-                                }
-                            }
-                            if let sample = question.sampleAnswer, !sample.isEmpty {
-                                DisclosureGroup("参考回答") {
-                                    RichContent(text: sample).padding(.top, 4)
-                                }
-                            }
-                        }
+            VStack(alignment: .leading, spacing: 16) {
+                if horizontalSizeClass == .regular {
+                    HStack(alignment: .top, spacing: 16) {
+                        promptCard.frame(maxWidth: .infinity)
+                        answerCard.frame(maxWidth: .infinity)
                     }
+                } else {
+                    promptCard
+                    answerCard
                 }
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionHeading(title: "我的回答", detail: "离线也能保存")
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Picker("回答语言", selection: $language) {
-                                Text("日语").tag("日语")
-                                Text("中文构思").tag("中文构思")
-                                Text("中日混合").tag("中日混合")
-                            }
-                            .pickerStyle(.segmented)
-                            TextEditor(text: $answer)
-                                .frame(height: 165)
-                                .scrollContentBackground(.hidden)
-                                .accessibilityLabel("回答内容")
-                            HStack {
-                                Text("写下自己的回答")
-                                Spacer()
-                                Text("\(answer.count) / 20000")
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            Divider()
-                            Toggle("同步后请 Codex 点评", isOn: $requestReview)
-                                .font(.subheadline)
-                        }
-                    }
-                }
-                if !history.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionHeading(title: "历史回答", detail: "\(history.count) 次")
-                        PhoneCard {
-                            DisclosureGroup("查看此前的回答") {
-                                VStack(alignment: .leading, spacing: 14) {
-                                    ForEach(history.reversed()) { attempt in
-                                        Divider()
-                                        Text(attempt.createdAt)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        RichContent(text: attempt.answer)
-                                        ForEach(model.state.reviews.filter { $0.attemptId == attempt.id }) { review in
-                                            RichContent(text: review.summary)
-                                        }
-                                    }
-                                }
-                                .padding(.top, 8)
-                            }
-                        }
-                    }
-                }
+                historyCard
             }
-            .frame(maxWidth: 620, alignment: .leading)
+            .frame(maxWidth: horizontalSizeClass == .regular ? 1120 : 620, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 44)
         }
         .background(PhoneStyle.canvas)
         .scrollDismissesKeyboard(.interactively)
+        .onDisappear {
+            speech.discard()
+            referenceSpeech.stop()
+            historyPlayer?.stop()
+        }
         .navigationTitle(CareerRichText.plain(question.title))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ReadingToggleButton()
-            Button("保存") {
-                model.queue(questionSetId: pack.id, questionId: question.id,
-                            answer: answer, language: language,
-                            duration: min(3600, max(0, Int(Date().timeIntervalSince(startedAt)))),
-                            requestReview: requestReview)
-                saved = true
-                answer = ""
-                startedAt = Date()
-            }
-            .disabled(answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || answer.count > 20_000)
-        }
+        .toolbar { ReadingToggleButton() }
         .alert("已保存", isPresented: $saved) {
             Button("好", role: .cancel) {}
         } message: {
             Text("回答已保存在本机；联网时会自动同步。")
         }
+    }
+
+    private var promptCard: some View {
+        PhoneCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    if let category = question.category, !category.isEmpty {
+                        Text(category)
+                            .font(.caption.bold())
+                            .foregroundStyle(PhoneStyle.accent)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(PhoneStyle.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+                    }
+                    Spacer(minLength: 0)
+                    if let targetSeconds {
+                        Label(targetSeconds, systemImage: "clock")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                RichContent(text: question.questionJa, markdown: false, fontSize: 25)
+                    .accessibilityLabel(CareerRichText.plain(question.questionJa))
+                if let meaning = question.meaning, !meaning.isEmpty {
+                    RichContent(text: meaning, markdown: false, fontSize: 15)
+                }
+                if !keywordHints.isEmpty {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)],
+                              alignment: .leading, spacing: 6) {
+                        ForEach(keywordHints) { hint in
+                            Text(hint.word)
+                                .font(.caption.bold())
+                                .foregroundStyle(hint.isGap ? Color.orange : Color.green)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(hint.isGap ? Color.orange.opacity(0.12) : Color.green.opacity(0.12),
+                                            in: Capsule())
+                        }
+                    }
+                }
+                if let outline = question.outline, !outline.isEmpty {
+                    Divider()
+                    DisclosureGroup("回答の組み立て方", isExpanded: $showOutline) {
+                        RichContent(text: outline).padding(.top, 8)
+                    }
+                }
+                if let sample = question.sampleAnswer, !sample.isEmpty {
+                    Divider()
+                    DisclosureGroup("参考回答", isExpanded: $showSample) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            RichContent(text: sample)
+                            HStack {
+                                if referenceSpeech.isLoading {
+                                    ProgressView("正在生成发音…")
+                                } else {
+                                    Button {
+                                        if referenceSpeech.isPlaying {
+                                            referenceSpeech.stop()
+                                        } else {
+                                            Task { await referenceSpeech.play(sample) }
+                                        }
+                                    } label: {
+                                        Label(referenceSpeech.isPlaying ? "停止朗读" : "朗读参考回答",
+                                              systemImage: referenceSpeech.isPlaying ? "stop.fill" : "speaker.wave.2.fill")
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .disabled(speech.phase == .recording || speech.phase == .recognizing)
+                                }
+                            }
+                            if !ReferenceSpeechSettings.hasKey || ReferenceSpeechSettings.region.isEmpty {
+                                NavigationLink("配置 Azure 发音") { SettingsView(model: model) }
+                                    .font(.caption)
+                            }
+                            if let message = referenceSpeech.errorMessage {
+                                Text(message).font(.caption).foregroundStyle(.red)
+                            }
+                            Text("朗读时会把参考回答发送给 Azure Speech。")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        .padding(.top, 8)
+                    }
+                }
+                if question.why?.isEmpty == false || question.followUps?.isEmpty == false {
+                    Button("回答のヒントを詳しく見る") { showMoreHints = true }
+                        .font(.subheadline.bold())
+                }
+            }
+        }
+        .sheet(isPresented: $showMoreHints) {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        RichContent(text: question.questionJa, markdown: false, fontSize: 22)
+                        if let why = question.why, !why.isEmpty {
+                            Text("なぜこの質問を練習するか").font(.headline)
+                            RichContent(text: why)
+                        }
+                        if let followUps = question.followUps, !followUps.isEmpty {
+                            Text("面接官からの追加質問").font(.headline)
+                            RichContent(text: followUps)
+                        }
+                    }
+                    .frame(maxWidth: 620, alignment: .leading)
+                    .padding(20)
+                }
+                .background(PhoneStyle.canvas)
+                .navigationTitle("回答のヒント")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("閉じる") { showMoreHints = false }
+                    }
+                }
+            }
+        }
+    }
+
+    private var answerCard: some View {
+        PhoneCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("あなたの回答").font(.headline)
+                Text("回答言語").font(.caption).foregroundStyle(.secondary)
+                Picker("回答言語", selection: $recognitionLanguage) {
+                    Text("日本語").tag("ja-JP")
+                    Text("中文").tag("zh-CN")
+                }
+                .pickerStyle(.segmented)
+                .disabled(speech.phase != .idle)
+
+                switch speech.phase {
+                case .idle:
+                    Button {
+                        referenceSpeech.stop()
+                        Task { await speech.start(localeID: recognitionLanguage) }
+                    } label: {
+                        Label("回答を録音", systemImage: "mic.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                case .recording:
+                    Button {
+                        Task { await speech.stopAndRecognize() }
+                    } label: {
+                        Label("録音を停止 · \(Self.clock(speech.seconds))", systemImage: "stop.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                case .recognizing:
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("设备上正在识别录音…")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                case .ready:
+                    HStack {
+                        Button { speech.play() } label: {
+                            Label("再听一次", systemImage: "play.fill")
+                        }
+                        Spacer()
+                        Button {
+                            Task { await speech.start(localeID: recognitionLanguage) }
+                        } label: {
+                            Label("重新录音", systemImage: "arrow.counterclockwise")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    Button("删除录音并更换语言", role: .destructive) { speech.discard() }
+                        .font(.caption)
+                }
+
+                Text("录音与语音识别先在本机完成；保存后会按现有同步流程上传回答。")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let error = speech.errorMessage {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("認識した回答").font(.subheadline.bold())
+                        Spacer()
+                        if speech.seconds > 0 {
+                            Text("\(speech.seconds) 秒")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text(speech.transcript.isEmpty ? "录音结束后，本机识别的文字会显示在这里。" : speech.transcript)
+                        .foregroundStyle(speech.transcript.isEmpty ? Color.secondary : Color.primary)
+                        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+                        .textSelection(.enabled)
+                    if speech.phase == .ready && speech.transcript.isEmpty {
+                        Button("重新识别这段录音") {
+                            Task { await speech.retryRecognition() }
+                        }
+                    }
+                }
+                .padding(12)
+                .background(PhoneStyle.canvas, in: RoundedRectangle(cornerRadius: 10))
+                Button { save(requestReview: false) } label: {
+                    Label("今回の回答を保存", systemImage: "square.and.arrow.down")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!canSave)
+                Button { save(requestReview: true) } label: {
+                    Label("保存して AI Agent に講評を依頼", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canSave)
+            }
+        }
+    }
+
+    private var historyCard: some View {
+        PhoneCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("回答履歴・講評").font(.headline)
+                if history.isEmpty && pending.isEmpty {
+                    Text("保存した回答はまだありません。")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                ForEach(pending) { attempt in
+                    Divider()
+                    Label("同期待ち · \(attempt.language)", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption.bold()).foregroundStyle(PhoneStyle.accent)
+                    Text(attempt.answer).font(.subheadline)
+                }
+                ForEach(history) { attempt in
+                    Divider()
+                    DisclosureGroup("\(Self.displayDate(attempt.createdAt)) · \(attempt.language)") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("この回の原回答").font(.caption.bold()).foregroundStyle(.secondary)
+                            RichContent(text: attempt.answer)
+                            if attempt.audio != nil {
+                                Button {
+                                    Task { await playSavedRecording(id: attempt.id) }
+                                } label: {
+                                    Label("保存した録音を再生", systemImage: "play.fill")
+                                }
+                                .disabled(speech.phase == .recording || speech.phase == .recognizing)
+                            }
+                            ForEach(model.state.reviews.filter { $0.attemptId == attempt.id }) { review in
+                                Divider()
+                                Text("講評").font(.caption.bold()).foregroundStyle(PhoneStyle.accent)
+                                RichContent(text: review.summary)
+                                if let revised = review.revisedAnswer, !revised.isEmpty {
+                                    Text("参考表現").font(.caption.bold()).foregroundStyle(.secondary)
+                                    RichContent(text: revised)
+                                }
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
+                }
+                if let historyAudioError {
+                    Text(historyAudioError).font(.caption).foregroundStyle(.red)
+                }
+            }
+        }
+    }
+
+    private func playSavedRecording(id: String) async {
+        do {
+            referenceSpeech.stop()
+            let data = try await model.savedRecording(id: id)
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+            try AVAudioSession.sharedInstance().setActive(true)
+            historyPlayer = try AVAudioPlayer(data: data)
+            historyPlayer?.play()
+            historyAudioError = nil
+        } catch {
+            historyAudioError = "录音播放失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func save(requestReview: Bool) {
+        guard canSave else { return }
+        let queued = model.queue(questionSetId: pack.id, questionId: question.id,
+                                 answer: speech.transcript,
+                                 language: recognitionLanguage == "ja-JP" ? "日语" : "中文构思",
+                                 duration: speech.seconds, requestReview: requestReview,
+                                 recordingURL: speech.recordingURL)
+        guard queued else { return }
+        saved = true
+        speech.discard()
+    }
+
+    private static func clock(_ seconds: Int) -> String {
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    private static func displayDate(_ raw: String) -> String {
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = parser.date(from: raw) ?? ISO8601DateFormatter().date(from: raw),
+              let tokyo = TimeZone(identifier: "Asia/Tokyo") else { return raw }
+        let format = DateFormatter()
+        format.timeZone = tokyo
+        format.dateFormat = "yyyy/MM/dd HH:mm"
+        return format.string(from: date)
+    }
+}
+
+private struct PracticeKeyword: Identifiable {
+    let word: String
+    let isGap: Bool
+    var id: String { word.lowercased() }
+}
+
+/// A compact native counterpart of the website's résumé/job keyword chips.
+/// Only text already present in the saved question, posting, and résumé is shown.
+private enum PracticeKeywords {
+    private static let concepts = [
+        "設計", "運用", "品質", "障害", "性能", "改善", "分散", "金融", "医療", "決済", "要件定義",
+        "監視", "自動化", "移行", "最適化", "基盤", "規制", "可視化", "保守", "調査", "顧客対応",
+        "英語", "日本語", "個人開発", "協業", "顧客", "コスト", "テスト", "レビュー"
+    ]
+    private static let ignored = Set(["the", "and", "for", "with", "web", "api", "app", "データ",
+                                      "システム", "プロジェクト", "チーム", "サービス", "スキル"])
+    private static let pattern = try! NSRegularExpression(
+        pattern: "[A-Za-z][A-Za-z0-9+#./-]*[A-Za-z0-9+#]|[ァ-ヶー]{3,}"
+    )
+
+    private static func terms(_ text: String) -> [String] {
+        let plain = CareerRichText.plain(text)
+        let range = NSRange(plain.startIndex..., in: plain)
+        var found = pattern.matches(in: plain, range: range).compactMap { match -> String? in
+            guard let range = Range(match.range, in: plain) else { return nil }
+            let word = String(plain[range])
+            return ignored.contains(word.lowercased()) ? nil : word
+        }
+        found += concepts.filter { plain.contains($0) }
+        var seen = Set<String>()
+        return found.filter { seen.insert($0.lowercased()).inserted }
+    }
+
+    static func build(question: CareerQuestion, job: CareerJob?,
+                      resume: [CareerResumeEntry]) -> [PracticeKeyword] {
+        let resumeText = resume.filter { $0.archived != true && $0.kind != "document" }
+            .flatMap { $0.data.values }.joined(separator: "\n").lowercased()
+        guard !resumeText.isEmpty else { return [] }
+        let questionText = [question.title, question.questionJa, question.meaning, question.outline,
+                            question.followUps, question.why].compactMap { $0 }.joined(separator: "\n")
+        let questionTerms = terms(questionText)
+        let jobText = [job?.requirements, job?.description, job?.matchNotes]
+            .compactMap { $0 }.joined(separator: "\n")
+        let jobTerms = terms(jobText)
+        var seen = Set<String>()
+        let matched = (questionTerms + jobTerms).filter {
+            seen.insert($0.lowercased()).inserted && resumeText.contains($0.lowercased())
+        }.prefix(12).map { PracticeKeyword(word: $0, isGap: false) }
+        let gaps = jobTerms.filter { !resumeText.contains($0.lowercased()) &&
+            (questionText.localizedCaseInsensitiveContains($0) || (job?.matchNotes ?? "").localizedCaseInsensitiveContains($0))
+        }.prefix(6).map { PracticeKeyword(word: $0, isGap: true) }
+        return matched + gaps
     }
 }
 
@@ -550,6 +871,11 @@ struct SettingsView: View {
     @Bindable var model: AppModel
     @AppStorage("showJapaneseReadings") private var showJapaneseReadings = true
     @State private var discardID: String?
+    @State private var speechRegion = ReferenceSpeechSettings.region
+    @State private var speechVoice = ReferenceSpeechSettings.voice
+    @State private var speechKey = ""
+    @State private var speechHasKey = ReferenceSpeechSettings.hasKey
+    @State private var speechMessage: String?
 
     var body: some View {
         Form {
@@ -566,6 +892,37 @@ struct SettingsView: View {
             Section("阅读") {
                 Toggle("显示日语假名", isOn: $showJapaneseReadings)
                 Text("只在应用内显示资料中已保存的读音；不会猜测人名或修改原文。")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Azure 发音") {
+                TextField("资源区域，例如 japaneast", text: $speechRegion)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField(speechHasKey ? "已保存密钥；留空则不更换" : "输入 Azure Speech 密钥", text: $speechKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Picker("日语语音", selection: $speechVoice) {
+                    Text("Nanami · 女声").tag(ReferenceSpeechSettings.voices[0])
+                    Text("Keita · 男声").tag(ReferenceSpeechSettings.voices[1])
+                }
+                Button("保存发音设置") {
+                    do {
+                        try ReferenceSpeechSettings.save(region: speechRegion, voice: speechVoice, newKey: speechKey)
+                        speechKey = ""
+                        speechHasKey = ReferenceSpeechSettings.hasKey
+                        speechMessage = "已保存在本机。"
+                    } catch { speechMessage = error.localizedDescription }
+                }
+                if speechHasKey {
+                    Button("删除本机 Azure 密钥", role: .destructive) {
+                        ReferenceSpeechSettings.removeKey()
+                        speechHasKey = false
+                        speechKey = ""
+                        speechMessage = "本机密钥已删除。"
+                    }
+                }
+                if let speechMessage { Text(speechMessage).font(.footnote).foregroundStyle(.secondary) }
+                Text("密钥保存在设备 Keychain。点击朗读参考回答时才会向 Azure 发送文字；需要联网，并可能产生 Azure 费用。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             if !model.pending.isEmpty {
