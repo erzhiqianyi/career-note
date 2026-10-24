@@ -876,6 +876,15 @@ export default function ResumeManager({
             <dl className="resume-details resume-basics-details">
               {basics.data.summary && <div className="wide resume-summary-first"><dt className="sr-only">{t('职业摘要')}</dt><dd className="resume-basics-summary">{lines(basics.data.summary).map((p, i) => <p key={i}><Ja text={p} /></p>)}</dd></div>}
               <div><dt>{t('姓名')}</dt><dd><Ja text={basics.data.name} />{basics.data.reading ? <span className="resume-basics-reading">{basics.data.reading}</span> : null}</dd></div>
+              {([
+                ['birthDate', '出生日期'],
+                ['postalCode', '邮政编码'],
+                ['address', '详细地址'],
+                ['phone', '电话'],
+                ['email', '邮箱'],
+              ] as const).map(([key, label]) => <div key={key}><dt>{t(label)}</dt><dd>{basics.data[key] ? key === 'address' ? <Ja text={basics.data[key]} /> : basics.data[key] : <span className="muted">{t('（尚未填写）')}</span>}</dd></div>)}
+              {basics.data.addressReading && <div><dt>{t('地址读音')}</dt><dd>{basics.data.addressReading}</dd></div>}
+              {basics.data.contactAddress && <div><dt>{t('其他联系地址（可选）')}</dt><dd><Ja text={basics.data.contactAddress} /></dd></div>}
               {basics.data.headline && <div><dt>{t('职业定位')}</dt><dd><Ja text={basics.data.headline} /></dd></div>}
               {basics.data.location && <div><dt>{t('所在地')}</dt><dd><Ja text={basics.data.location} /></dd></div>}
               {(basics.data.website || basics.data.github) && <div><dt>{t('链接')}</dt><dd className="resume-basics-links">

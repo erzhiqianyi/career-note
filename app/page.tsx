@@ -25,6 +25,7 @@ import StatusMark from '@/components/status-mark';
 import DailyBrief, { collectBrief, briefSize } from '@/components/daily-brief';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { MaterialPrint } from '@/components/material-print';
+import { prepareMaterialPrint } from '@/lib/material-print-content';
 import { MaterialPublications } from '@/components/material-publications';
 import ResumeManager from '@/components/resume-manager';
 import PersonalizedResumes from '@/components/personalized-resumes';
@@ -67,12 +68,14 @@ import {
   Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
+  Printer,
   Plus,
   RefreshCw,
   Search,
   Settings,
   Shield,
   ScrollText,
+  TriangleAlert,
   Upload,
   UserRound,
   Workflow,
@@ -151,6 +154,9 @@ const researchFields = [
   ['sourceChannel', '发现方式'],
   ['sourceDate', '信息确认日期'],
   ['location', '工作地点'],
+  ['employeeCount', '员工人数'],
+  ['companyType', '公司类型'],
+  ['employmentType', '雇用形式'],
   ['salary', '薪资范围'],
   ['business', '公司业务与特点'],
   ['requirements', '岗位要求'],
@@ -248,13 +254,15 @@ function RecordPage({
   title,
   children,
   onClose,
+  headingAction,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  headingAction?: ReactNode;
 }) {
   const { t: tr } = useLocale();
-  return <section className="panel record-page"><RecordBack onBack={onClose} /><h2>{tr(title)}</h2>{children}</section>;
+  return <section className="panel record-page"><RecordBack onBack={onClose} />{headingAction ? <div className="record-page-heading"><h2>{tr(title)}</h2>{headingAction}</div> : <h2>{tr(title)}</h2>}{children}</section>;
 }
 // Left-hand sheet for the phone layout; the desktop sidebar makes it redundant there (hidden by CSS).
 function Drawer({ children, onClose }: { children: ReactNode; onClose: () => void }) {
@@ -701,6 +709,9 @@ export default function Home() {
   const briefOpen = active === '今日准备' && hash.startsWith('#today/brief');
   // Record views inside the tabs (resume entries, drafts, platform details…) register here; the innermost one owns the back arrow.
   const recordView = subViews.size ? [...subViews.values()][subViews.size - 1] : null;
+  const applicationDoc = doc && 'kind' in doc && ['履歴書', '職務経歴書'].includes(doc.kind) ? doc : null;
+  const printableDoc = applicationDoc?.jobId ? applicationDoc : null;
+  const applicationContent = applicationDoc ? prepareMaterialPrint(applicationDoc.content).printableContent : '';
   const isSubPage = !!(recordView || jobEdit || subPages[active] || prepRoute || briefOpen);
   const due = openJobs.filter(
       (j) => j.nextDate && j.nextDate <= (data?.today || ''),
@@ -745,7 +756,7 @@ export default function Home() {
   }
   if (printMaterial) {
     return <main className="material-print-layout">
-      <MaterialPrint key={printMaterial.id} material={printMaterial} onBack={() => { window.location.hash = '#documents/view/' + encodeURIComponent(printMaterial.id); }} />
+      <MaterialPrint key={printMaterial.id} material={printMaterial} companyName={data?.jobs.find(job => job.id === printMaterial.jobId)?.company || printMaterial.title.split(/[｜|]/)[0].trim()} onBack={() => { window.location.hash = '#documents/view/' + encodeURIComponent(printMaterial.id); }} />
     </main>;
   }
   return (
@@ -932,7 +943,7 @@ export default function Home() {
               aria-label={recordView.action.label}
               onClick={recordView.action.onClick}
             >
-              <MoreHorizontal size={20} /><span>{tr('操作')}</span>
+              <MoreHorizontal size={20} aria-hidden="true" />
             </button>}
           </div>
         </header>
@@ -1565,27 +1576,24 @@ export default function Home() {
         </RecordPage>
       )}
       {doc && (
-        <RecordPage title={doc.title} onClose={() => setDoc(null)}>
+        <RecordPage title={doc.title} onClose={() => setDoc(null)} headingAction={printableDoc && <div className="document-heading-actions">
+          <details className="document-review-alert">
+            <summary><TriangleAlert size={16} aria-hidden="true" />{tr('待核对')}</summary>
+            <div>
+              {data && (printableDoc.profileRevision !== data.profile.revision || printableDoc.jobRevision !== data.jobs.find(j => j.id === printableDoc.jobId)?.revision) && <p>{tr('此文稿生成后，个人履历或职位信息有更新，请核对是否需要重新准备。')}</p>}
+              {doc.sourceNotes && <p className="prewrap"><Ja text={doc.sourceNotes.split('\n').filter(line => /^(?:未記入|要確認|待确认|缺失|不足)/.test(line.trim())).join('\n') || doc.sourceNotes} /></p>}
+            </div>
+          </details>
+          <button type="button" className="icon-button document-print-desktop" title={tr('预览并打印已生成的简历')} aria-label={tr('预览并打印已生成的简历')} onClick={() => setPrintMaterial(printableDoc)}><Printer size={20} aria-hidden="true" /></button>
+        </div>}>
           <div className="document-meta">
             <Badge>{'kind' in doc ? tr(doc.kind) : tr('每日分析')}</Badge>
             <span>
               {day(doc.createdAt)}
-              {tr('· AI 草稿，使用前请核对')}
+              {!printableDoc && tr('· AI 草稿，使用前请核对')}
             </span>
-            <button
-              className="secondary phone-hidden"
-              onClick={() =>
-                download(
-                  doc.title.replaceAll('/', '-') + '.md',
-                  `# ${doc.title}\n\n${doc.content}\n\n## 依据与待确认事项\n${doc.sourceNotes}`,
-                )
-              }
-            >
-              <Download size={16} />
-              {tr('下载 Markdown')}
-            </button>
           </div>
-          {'jobId' in doc &&
+          {!printableDoc && 'jobId' in doc &&
             data &&
             (doc.profileRevision !== data.profile.revision ||
               doc.jobRevision !==
@@ -1596,14 +1604,13 @@ export default function Home() {
                 )}
               </div>
             )}
-          {'kind' in doc && doc.jobId && ['履歴書', '職務経歴書'].includes(doc.kind) && <button className="secondary" onClick={() => setPrintMaterial(doc)}>{tr('预览并打印已生成的简历')}</button>}
           <article className="document-body">
-            {'kind' in doc && ['履歴書', '職務経歴書'].includes(doc.kind) ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{doc.content}</ReactMarkdown> : <DocumentText text={doc.content} />}
+            {applicationDoc ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{applicationContent}</ReactMarkdown> : <DocumentText text={doc.content} />}
           </article>
-          <div className="source-box">
+          {!printableDoc && <div className="source-box">
             <h3>{tr('依据与待确认事项')}</h3>
             <p className="prewrap"><Ja text={doc.sourceNotes} /></p>
-          </div>
+          </div>}
           {'kind' in doc && doc.jobId && ['履歴書', '職務経歴書'].includes(doc.kind) && <MaterialPublications material={doc} />}
         </RecordPage>
       )}

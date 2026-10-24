@@ -17,6 +17,33 @@ void test('local Worker state and profile persistence use D1',async t=>{
  assert.equal((await (await send('state')).json()).profile.summary,'Test profile');
  const preview=await send('import/preview',{schemaVersion:1,jobs:[],materials:[],reports:[],completeTaskIds:[]});assert.equal(preview.status,200);
 });
+void test('saved material PDFs and shared photos survive reload and can be removed',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const content='提出用の本文です。'.repeat(15);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'files-job',company:'Example',role:'Engineer'}],completeTaskIds:[]})).status,200);
+ assert.equal((await send('import',{schemaVersion:1,materials:[
+  {id:'files-resume',jobId:'files-job',kind:'履歴書',title:'Resume',content,sourceNotes:'Test'},
+  {id:'files-career',jobId:'files-job',kind:'職務経歴書',title:'Career',content,sourceNotes:'Test'},
+ ],completeTaskIds:[]})).status,200);
+ const base='http://local/api/career/material-files?id=files-resume';
+ const pdf=new TextEncoder().encode('%PDF-1.4\n1 0 obj\nendobj\n%%EOF');
+ const upload=(kind,bytes,type)=>mf.dispatchFetch(base+'&kind='+kind,{method:'POST',headers:{'Content-Type':type},body:bytes});
+ assert.equal((await upload('pdf',new Uint8Array([1,2,3]),'application/pdf')).status,400);
+ assert.equal((await upload('pdf',pdf,'application/pdf')).status,200);
+ const meta=await (await mf.dispatchFetch(base)).json();
+ assert.equal(meta.pdf.size,pdf.length);assert.equal(meta.photo,null);
+ const response=await mf.dispatchFetch('http://local/api/career/material-files/content?id=files-resume&kind=pdf');
+ assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'application/pdf');
+ assert.deepEqual(new Uint8Array(await response.arrayBuffer()),pdf);
+ const png=new Uint8Array([137,80,78,71,13,10,26,10,1,2,3]);
+ assert.equal((await upload('photo',png,'image/png')).status,200);
+ const shared=await (await mf.dispatchFetch('http://local/api/career/material-files?id=files-career')).json();
+ assert.equal(shared.photo.size,png.length);assert.equal(shared.pdf,null);
+ assert.equal((await mf.dispatchFetch('http://local/api/career/material-files?id=missing')).status,404);
+ assert.equal((await mf.dispatchFetch(base+'&kind=pdf',{method:'DELETE'})).status,200);
+ assert.equal((await mf.dispatchFetch('http://local/api/career/material-files/content?id=files-resume&kind=pdf')).status,404);
+});
 void test('job provenance keeps platform and discovery channel across research updates',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  const job={id:'source-job',company:'Example Company',role:'Engineer',url:'https://example.com/jobs/1',sourcePlatform:'Green',sourceChannel:'AI 搜索'};
@@ -30,6 +57,20 @@ void test('job provenance keeps platform and discovery channel across research u
  const invalid=await send('import',{schemaVersion:1,jobs:[{...job,sourceChannel:'猜测来源'}],completeTaskIds:[]});
  assert.equal(invalid.status,400);
  assert.equal((await (await send('state')).json()).jobs[0].sourceChannel,'主动发现');
+});
+void test('company size, type and employment terms survive older research imports',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const job={id:'company-details',company:'Example Company',role:'Engineer',employeeCount:'29人（2026年説明会）',companyType:'受託開発',employmentType:'正社員'};
+ assert.equal((await send('import',{schemaVersion:1,jobs:[job],completeTaskIds:[]})).status,200);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:job.id,company:job.company,role:'Senior Engineer'}],completeTaskIds:[]})).status,200);
+ let saved=(await (await send('state')).json()).jobs[0];
+ assert.equal(saved.employeeCount,job.employeeCount);assert.equal(saved.companyType,job.companyType);assert.equal(saved.employmentType,job.employmentType);
+ assert.equal((await send('jobs',{...saved,employmentType:'派遣社員'})).status,200);
+ saved=(await (await send('state')).json()).jobs[0];
+ assert.equal(saved.employmentType,'派遣社員');
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:job.id,company:job.company,role:job.role,companyType:''}],completeTaskIds:[]})).status,200);
+ saved=(await (await send('state')).json()).jobs[0];
+ assert.equal(saved.companyType,'');assert.equal(saved.employeeCount,job.employeeCount);assert.equal(saved.employmentType,'派遣社員');
 });
 void test('bulk job deletion checks revisions and removes only selected jobs with their dependent records',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});

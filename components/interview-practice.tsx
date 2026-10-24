@@ -62,7 +62,7 @@ type PrepColumn = PrepSortKey;
 /** Four sections of one company's preparation page. */
 type PrepTab = 'info' | 'materials' | 'practice' | 'summary';
 const PREP_TABS: Array<[PrepTab, string]> = [
-  ['info', '信息'],
+  ['info', '企业'],
   ['materials', '资料'],
   ['practice', '练习'],
   ['summary', '总结'],
@@ -157,6 +157,8 @@ export default function InterviewPractice({
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
   const [deletingJobs, setDeletingJobs] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
   const [tab, setTab] = useState<PrepTab>('practice');
   const [actionOpen, setActionOpen] = useState(false);
   const actionDialog = useRef<HTMLDialogElement>(null);
@@ -189,6 +191,11 @@ export default function InterviewPractice({
     if (actionOpen && dialog && !dialog.open) dialog.showModal();
     if (!actionOpen && dialog?.open) dialog.close();
   }, [actionOpen]);
+  useEffect(() => {
+    const dialog = deleteDialog.current;
+    if (deleteOpen && dialog && !dialog.open) dialog.showModal();
+    if (!deleteOpen && dialog?.open) dialog.close();
+  }, [deleteOpen]);
   function discardRecording() {
     setRecording((current) => { if (current) URL.revokeObjectURL(current.url); return null; });
   }
@@ -307,24 +314,12 @@ export default function InterviewPractice({
   async function deleteSelectedJobs() {
     const selected = data.jobs.filter(job => selectedJobIds.has(job.id));
     if (!selected.length || deletingJobs) return;
-    const ids = new Set(selected.map(job => job.id));
-    const packIds = new Set(data.questionSets.filter(pack => ids.has(pack.jobId)).map(pack => pack.id));
-    const attemptIds = new Set(data.attempts.filter(attempt => ids.has(attempt.jobId) || packIds.has(attempt.questionSetId)).map(attempt => attempt.id));
-    const materialCount = materials.filter(material => ids.has(material.jobId)).length;
-    const questionCount = packIds.size;
-    const answerCount = attemptIds.size;
-    const reviewCount = data.reviews.filter(review => ids.has(review.jobId) || attemptIds.has(review.attemptId)).length;
-    const taskCount = data.tasks.filter(task => ids.has(task.jobId) || (task.attemptId && attemptIds.has(task.attemptId))).length;
-    const prompt = tr('永久删除 {0} 个职位及其关联内容？', [String(selected.length)]) + '\n' +
-      tr('资料 {0} 份、题组 {1} 套、回答 {2} 条、点评 {3} 条、任务 {4} 项也会删除；公开的资料链接会撤下。此操作无法恢复。',
-        [String(materialCount), String(questionCount), String(answerCount), String(reviewCount), String(taskCount)]) + '\n' +
-      tr('每日分析报告和独立保存的个性化简历会保留。');
-    if (!window.confirm(prompt)) return;
     setDeletingJobs(true);
     setDeleteError('');
     try {
       await api('jobs/delete', { jobs: selected.map(job => ({ id: job.id, revision: job.revision })) });
       await reload();
+      setDeleteOpen(false);
       setSelectedJobIds(new Set());
       setManaging(false);
     } catch (e) {
@@ -333,6 +328,17 @@ export default function InterviewPractice({
       setDeletingJobs(false);
     }
   }
+  const selectedJobs = data.jobs.filter(job => selectedJobIds.has(job.id));
+  const selectedIds = new Set(selectedJobs.map(job => job.id));
+  const selectedPackIds = new Set(data.questionSets.filter(pack => selectedIds.has(pack.jobId)).map(pack => pack.id));
+  const selectedAttemptIds = new Set(data.attempts.filter(attempt => selectedIds.has(attempt.jobId) || selectedPackIds.has(attempt.questionSetId)).map(attempt => attempt.id));
+  const deleteCounts = [
+    ['资料', materials.filter(material => selectedIds.has(material.jobId)).length],
+    ['题组', selectedPackIds.size],
+    ['回答', selectedAttemptIds.size],
+    ['点评', data.reviews.filter(review => selectedIds.has(review.jobId) || selectedAttemptIds.has(review.attemptId)).length],
+    ['任务', data.tasks.filter(task => selectedIds.has(task.jobId) || (task.attemptId && selectedAttemptIds.has(task.attemptId))).length],
+  ] as const;
   async function save(requestReview: boolean) {
     if (!pack || !question) return;
     const currentKey = key;
@@ -439,8 +445,8 @@ export default function InterviewPractice({
           {['进行中', '有面试', '全部', ...statuses].map(s => <option key={s} value={s}>{s === '全部' ? tr('全部状态') : tr(s)}</option>)}
         </select>
         <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span>
-        {data.jobs.length > 0 && <button type="button" className="secondary" onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
-          {tr(managing ? '完成管理' : '批量管理')}
+        {data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
+          <ListChecks size={20} aria-hidden="true" />
         </button>}
         <button className="secondary icon-only" onClick={() => setCompany(BANK_JOB_ID)} title={tr('通用题库（模板）') + ' · ' + tr('练习 {0} / {1} 题', [String(bankAnswered), String(bankTotal)])} aria-label={tr('通用题库（模板）')}><BookOpen size={21} /></button>
         {onImport && <button className="secondary phone-hidden" onClick={onImport}><Upload size={16} />{tr('导入')}</button>}
@@ -449,9 +455,29 @@ export default function InterviewPractice({
       {managing && <div className="job-bulk-actions">
         <span>{tr('已选择 {0} 项', [String(selectedJobIds.size)])}</span>
         <button type="button" className="secondary" disabled={!jobs.length} onClick={toggleVisible}>{tr(allVisibleSelected ? '取消选择当前列表' : '选择当前列表')}</button>
-        <button type="button" className="secondary" disabled={!selectedJobIds.size || deletingJobs} onClick={() => void deleteSelectedJobs()}><Trash2 size={16} />{tr(deletingJobs ? '删除中…' : '删除所选')}</button>
+        <button type="button" className="secondary" disabled={!selectedJobIds.size || deletingJobs} onClick={() => { setDeleteError(''); setDeleteOpen(true); }}><Trash2 size={16} />{tr(deletingJobs ? '删除中…' : '删除所选')}</button>
       </div>}
-      {deleteError && <p className="form-error" role="alert">{tr(deleteError)}</p>}
+      {deleteError && !deleteOpen && <p className="form-error" role="alert">{tr(deleteError)}</p>}
+      <dialog ref={deleteDialog} className="job-delete-dialog" aria-labelledby="job-delete-title" aria-describedby="job-delete-description" onClose={() => setDeleteOpen(false)} onCancel={event => { if (deletingJobs) event.preventDefault(); }}>
+        <div className="job-delete-heading">
+          <span className="job-delete-icon" aria-hidden="true"><Trash2 size={22} /></span>
+          <div>
+            <h2 id="job-delete-title">{tr('永久删除 {0} 个职位及其关联内容？', [String(selectedJobs.length)])}</h2>
+            <p id="job-delete-description">{tr('此操作无法恢复。')}</p>
+          </div>
+        </div>
+        <div className="job-delete-impact">
+          <h3>{tr('同时删除的关联内容')}</h3>
+          <ul>{deleteCounts.map(([label, count]) => <li key={label}><span>{tr(label)}</span><strong>{count}</strong></li>)}</ul>
+        </div>
+        <p className="job-delete-links">{tr('公开的资料链接会失效。')}</p>
+        <p className="job-delete-kept"><Check size={17} aria-hidden="true" />{tr('每日分析报告和独立保存的个性化简历会保留。')}</p>
+        {deleteError && <p className="form-error" role="alert">{tr(deleteError)}</p>}
+        <div className="job-delete-actions">
+          <button type="button" className="secondary" disabled={deletingJobs} onClick={() => setDeleteOpen(false)}>{tr('取消')}</button>
+          <button type="button" className="job-delete-confirm" disabled={deletingJobs} onClick={() => void deleteSelectedJobs()}><Trash2 size={16} />{tr(deletingJobs ? '删除中…' : '永久删除')}</button>
+        </div>
+      </dialog>
       <section className="panel dt-panel prep-list">
         {jobs.length ? <DataTable<PrepColumn> label={tr('面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
           ...(managing ? [{ key: 'select' as PrepColumn, label: <input type="checkbox" aria-label={tr('选择当前列表')} checked={allVisibleSelected} onChange={toggleVisible} />, width: '32px' }] : []),
@@ -502,9 +528,12 @@ export default function InterviewPractice({
     const questionOf = (a: Attempt) => a.question || packs.find(p => p.id === a.questionSetId)?.questions.find(q => q.id === a.questionId);
     const openAttempt = (a: Attempt) => { setPicked(p => ({ ...p, [a.questionSetId + ':' + a.questionId]: a.id })); setQuestionId(a.questionId); setPracticeRecord(a.questionSetId + '|' + a.questionId); };
     const mentions = !isBank && currentJob ? (data.reports || []).filter(r => (r.title + '\n' + r.content).includes(currentJob.company)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5) : [];
-    const factList = (items: Array<[string, string, boolean?]>) => <dl className="facts">
-      {items.map(([k, v, own]) => <div key={k}><dt>{tr(k)}</dt><dd>{v ? own ? <Ja text={v} /> : v : <span className="muted">{tr('待确认')}</span>}</dd></div>)}
-    </dl>;
+    const factList = (items: Array<[string, string, boolean?]>) => <div className="prep-facts">
+      {items.map(([k, v, own]) => <details className="prep-fact" key={k}>
+        <summary><span className="prep-fact-label">{tr(k)}</span><span className="prep-fact-preview">{v ? own ? <Ja text={v} /> : v : tr('待确认')}</span></summary>
+        <p>{v ? own ? <Ja text={v} /> : v : <span className="muted">{tr('待确认')}</span>}</p>
+      </details>)}
+    </div>;
     const detailIcons: Record<string, ReactNode> = {
       公司业务与特点: <Building2 size={16} />,
       我的跟进记录: <ListChecks size={16} />,
@@ -520,7 +549,7 @@ export default function InterviewPractice({
       </details>
     ));
     return <div className="practice-workspace practice-company-page">
-      <RecordBack onBack={() => setCompany(null)} title={currentJob?.companyNumber ? `${tr('公司')} #${currentJob.companyNumber}` : tr('面试准备')} action={{ label: tr('操作'), onClick: () => setActionOpen(true) }} />
+      <RecordBack onBack={() => setCompany(null)} title={currentJob ? `${tr('公司')}${currentJob.companyNumber ? ` #${currentJob.companyNumber}` : ''} · ${currentJob.company}` : tr('面试准备')} action={{ label: tr('操作'), onClick: () => setActionOpen(true) }} />
       <div className="prep-tabs" role="tablist" aria-label={tr('面试准备')}>
         {tabs.map(([id, label]) => {
           const count = id === 'materials' ? companyMaterials.length : 0;
@@ -530,10 +559,13 @@ export default function InterviewPractice({
         })}
       </div>
       {activeTab === 'info' && currentJob && <div className="prep-tab-panel prep-info">
-        <section className="panel prep-info-section">
-          <h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><Building2 size={18} /></span>{tr('公司信息')}</h2>
+        <details className="panel prep-info-section" open>
+          <summary className="prep-info-heading"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><Building2 size={18} /></span>{tr('公司信息')}</h2></summary>
           {factList([
             ['工作地点', currentJob.location, true],
+            ['员工人数', currentJob.employeeCount || '', true],
+            ['公司类型', currentJob.companyType || '', true],
+            ['雇用形式', currentJob.employmentType || '', true],
             ['外国人招聘信息', currentJob.foreigner, true],
             ['在留资格支持', currentJob.visa, true],
             ['投递状态', currentJob.status ? tr(currentJob.status) : ''],
@@ -549,9 +581,10 @@ export default function InterviewPractice({
               {currentJob.history.map((h, i) => <div key={i}><span className="timeline-dot" /><b>{tr(h.status)}</b><small>{day(h.at)}</small></div>)}
             </div>
           </details>
-        </section>
-        <section className="panel prep-info-section">
-          <div className="section-head"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><BriefcaseBusiness size={18} /></span>{tr('招聘信息')}</h2>{currentJob.url && <a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a>}</div>
+        </details>
+        <details className="panel prep-info-section" open>
+          <summary className="prep-info-heading"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><BriefcaseBusiness size={18} /></span>{tr('招聘信息')}</h2></summary>
+          {currentJob.url && <div className="prep-posting-link"><a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a></div>}
           <div className="prep-source-row">
             <span className="prep-source-chip"><Globe2 size={15} aria-hidden="true" /><span>{tr('来源平台')}</span><b>{currentJob.sourcePlatform ? tr(currentJob.sourcePlatform) : tr('未记录')}</b></span>
             <span className="prep-source-chip" data-source-channel={currentJob.sourceChannel || ''}>
@@ -572,7 +605,7 @@ export default function InterviewPractice({
             ['匹配点', currentJob.matchNotes],
             ['待确认事项', currentJob.unknowns],
           ], ['岗位要求', '匹配点'])}
-        </section>
+        </details>
       </div>}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
         {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p></div>}

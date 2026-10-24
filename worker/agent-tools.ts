@@ -16,13 +16,40 @@ export const CAREER_CONTRACT: string = protocol.workflow;
 
 export type Invoke = (ctx: ToolContext, path: string, body?: Record<string, unknown>) => Promise<Response>;
 
+const question = z.object({
+  id: z.string(),
+  title: z.string(),
+  questionJa: z.string(),
+  meaning: z.string(),
+  why: z.string(),
+  outline: z.string(),
+  sampleAnswer: z.string().max(30000).optional().describe('Optional Japanese sample answer based only on confirmed facts; never the learner’s submitted answer.'),
+  followUps: z.string(),
+  category: z.string(),
+  targetSeconds: z.number().int().min(30).max(300),
+  simpleQuestionJa: z.string().optional(),
+  vocabulary: z.string().optional(),
+}).passthrough();
+
+const questionSet = z.object({
+  id: z.string(),
+  jobId: z.string(),
+  title: z.string(),
+  scenario: z.string(),
+  plan: z.string(),
+  sourceNotes: z.string(),
+  candidateContext: z.string().optional(),
+  communicationGuide: z.string().optional(),
+  questions: z.array(question).min(1).max(40),
+}).passthrough();
+
 const bundle = z
   .object({
     schemaVersion: z.literal(1),
     jobs: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
     materials: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
     reports: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
-    questionSets: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
+    questionSets: z.array(questionSet).max(200).optional(),
     reviews: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
     completeTaskIds: z.array(z.string()).max(200),
   })

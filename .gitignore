@@ -60,3 +60,8 @@ __pycache__/
 # Deploy-time Wrangler config carries one account's hostname and D1 id; see docs/deployment.md
 wrangler.deploy.toml
 wrangler.local.toml
+
+# iOS account-specific configuration
+/ios/Local.xcconfig
+/ios/CareerNote/GoogleService-Info.plist
+/ios/**/xcuserdata/

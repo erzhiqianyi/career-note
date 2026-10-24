@@ -11,6 +11,6 @@ export async function verifyFirebaseToken(token: string, projectId: string, keys
   if (!payload.sub || payload.sub.length > 128 || typeof payload.iat !== 'number' || payload.iat > now ||
       typeof payload.auth_time !== 'number' || payload.auth_time > now || payload.auth_time < 0) throw new Error('Invalid Firebase claims');
   const firebase = payload.firebase as { sign_in_provider?: string } | undefined;
-  if (firebase?.sign_in_provider !== 'google.com' || payload.email_verified !== true || typeof payload.email !== 'string') throw new Error('Verified Google account required');
+  if (!['google.com', 'apple.com'].includes(firebase?.sign_in_provider || '') || payload.email_verified !== true || typeof payload.email !== 'string') throw new Error('Verified Google or Apple account required');
   return payload;
 }

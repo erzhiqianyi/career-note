@@ -24,7 +24,7 @@ database_id = "00000000-0000-4000-8000-000000000000"
 # 本番の secrets（Firebase、CAREER_WEB_ORIGIN、CAREER_PUBLIC_ORIGIN、CAREER_CORS_ORIGINS など）は
 # `wrangler secret put` で登録する。[vars] に置くとローカルの off モードまで変わってしまう。
 
-# 面试回答的录音。本地 wrangler dev 会在 worker-state 里模拟；部署前 `wrangler r2 bucket create career-note-audio`。
+# 私有二进制附件（录音、原版 PDF、证件照）。本地 wrangler dev 在 worker-state 里模拟。
 [[r2_buckets]]
 binding = "CAREER_AUDIO"
 bucket_name = "career-note-audio"

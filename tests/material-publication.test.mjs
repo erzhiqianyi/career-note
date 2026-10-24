@@ -10,7 +10,7 @@ test('company documents publish exact snapshots and revoke safely', async t => {
   const send = (path, body) => mf.dispatchFetch('http://local/api/career/' + path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
   await send('state');
   const db = await mf.getD1Database('CAREER_DB');
-  const material = { id: 'doc-1', jobId: 'job-1', kind: '職務経歴書', title: 'Private management title', content: '# 職務経歴書\n\n氏名：テスト 太郎\n\n## 職務要約\n\n' + '実務経験。'.repeat(30) + '\n\n<script>alert(1)</script>', sourceNotes: 'SECRET SOURCE NOTE' };
+  const material = { id: 'doc-1', jobId: 'job-1', kind: '職務経歴書', title: 'Private management title', content: '# 職務経歴書\n\n氏名：テスト 太郎\n\n## 職務要約\n\n' + '実務経験。'.repeat(30) + '\n\n<script>alert(1)</script>\n\n## 内部確認\n\n- 写真はWeb版に含まれないため、印刷版PDFを使用する。', sourceNotes: 'SECRET SOURCE NOTE' };
   await db.prepare('INSERT INTO records(kind,id,body) VALUES(?,?,?)').bind('materials', material.id, JSON.stringify(material)).run();
   const published = await send('material-publications', { materialId: material.id, mode: 'unlisted', expiresAt: '' });
   assert.equal(published.status, 200);
@@ -23,6 +23,9 @@ test('company documents publish exact snapshots and revoke safely', async t => {
   assert.match(html, /&lt;script&gt;/);
   assert.doesNotMatch(html, /<script>/);
   assert.doesNotMatch(html, /SECRET SOURCE NOTE|Private management title/);
+  assert.doesNotMatch(html, /内部確認|写真はWeb版|印刷版PDF/);
+  const stored = await db.prepare('SELECT body FROM material_publications WHERE id=?').bind(p.id).first();
+  assert.doesNotMatch(stored.body, /内部確認|写真はWeb版|印刷版PDF/);
   await db.prepare('UPDATE records SET body=? WHERE kind=? AND id=?').bind(JSON.stringify({ ...material, content: 'Changed' }), 'materials', material.id).run();
   assert.match(await (await mf.dispatchFetch('http://local' + p.path)).text(), /実務経験/);
   const list = await (await send('material-publications')).json();

@@ -29,6 +29,11 @@ export type Job = {
   description: string;
   requirements: string;
   business: string;
+  /** Company headcount as stated by a source, including any date or uncertainty. */
+  employeeCount?: string;
+  companyType?: string;
+  /** Contract type for this posting; separate from whether work is at a client site. */
+  employmentType?: string;
   japanese: string;
   foreigner: string;
   visa: string;
@@ -179,17 +184,22 @@ async function failure(response: Response) {
   const value = (await response.json().catch(() => ({}))) as { error?: string };
   return new Error(value.error || '请求失败');
 }
-/** Fetch a binary resource (a recording) with the session's credentials. */
+/** Fetch a private binary resource with the session's credentials. */
 export async function apiBlob(path: string) {
   const response = await fetch(apiUrl(path), { headers: await authHeaders() });
   if (!response.ok) throw await failure(response);
   return response.blob();
 }
-/** Upload raw bytes (a recording) with the session's credentials; the response is JSON. */
+/** Upload private raw bytes with the session's credentials; the response is JSON. */
 export async function apiUpload<T = unknown>(path: string, blob: Blob) {
   const response = await fetch(apiUrl(path), { method: 'POST', headers: await authHeaders({ 'Content-Type': blob.type || 'application/octet-stream' }), body: blob });
   if (!response.ok) throw await failure(response);
   return (await response.json()) as T;
+}
+export async function apiDelete(path: string) {
+  const response = await fetch(apiUrl(path), { method: 'DELETE', headers: await authHeaders() });
+  if (!response.ok) throw await failure(response);
+  return response.json();
 }
 export function download(
   name: string,

@@ -154,6 +154,12 @@ void test('MCP schema is public and scope-annotated without exposing user data',
   assert.equal(history.scope, 'career:read');
   assert.deepEqual(history.inputSchema.required, ['id']);
   assert.equal(history.inputSchema.properties.id.type, 'string');
+  for (const name of ['career_preview_import', 'career_import']) {
+    const input = schema.tools.find((tool) => tool.name === name).inputSchema;
+    const answer = input.properties.bundle.properties.questionSets.items.properties.questions.items.properties.sampleAnswer;
+    assert.equal(answer.type, 'string');
+    assert.equal(answer.maxLength, 30000);
+  }
   assert.ok(typeof schema.contract === 'string' && schema.contract.length > 100);
   assert.ok(!JSON.stringify(schema).includes('mcp_'), 'schema must not carry tokens');
 });

@@ -1,5 +1,6 @@
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
 import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
+import { ensureMaterialFilesSchema, materialFileMeta, materialFileKey, saveMaterialFile, deleteMaterialFile, type MaterialFileKind } from './material-files';
 import { ensureResumeSchema, readResume, writeResume, deleteResumeDocument, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
 import { inspectorResponse } from '@ninomae/mcp-app-server/inspector';
@@ -35,7 +36,7 @@ type Env = {
   CAREER_CORS_ORIGINS?: string;
   /** Serve the dev inspector at /api/career/mcp/inspector in on/strict mode too (off mode always has it; it is local only). */
   CAREER_INSPECTOR?: string;
-  /** Recorded answers (R2). Optional: without it recording is refused with 503 and everything else works. */
+  /** Private binary files in R2: answer recordings, saved PDFs, and resume photos. */
   CAREER_AUDIO?: R2Bucket;
 };
 
@@ -307,6 +308,9 @@ function validateResearch(data: Record<string, unknown>) {
     description: validateString(data.description, 'description', { max: 100000 }),
     requirements: validateString(data.requirements, 'requirements', { max: 100000 }),
     business: validateString(data.business, 'business', { max: 100000 }),
+    employeeCount: validateString(data.employeeCount, 'employeeCount', { max: 1000 }),
+    companyType: validateString(data.companyType, 'companyType', { max: 1000 }),
+    employmentType: validateString(data.employmentType, 'employmentType', { max: 1000 }),
     japanese: validateString(data.japanese, 'japanese', { max: 100000 }),
     foreigner: validateString(data.foreigner, 'foreigner', { max: 100000 }),
     visa: validateString(data.visa, 'visa', { max: 100000 }),
@@ -352,6 +356,9 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
   // Older import clients do not know these fields; their research refresh must not erase provenance.
   if (old && data.sourcePlatform === undefined) base.sourcePlatform = old.sourcePlatform || '';
   if (old && data.sourceChannel === undefined) base.sourceChannel = old.sourceChannel || '';
+  for (const field of ['employeeCount', 'companyType', 'employmentType'] as const) {
+    if (old && data[field] === undefined) base[field] = old[field] || '';
+  }
 
   if (!researchOnly) {
     const status = validateString(data.status, 'status', { required: true, max: 20 }) as JobStatus;
@@ -440,11 +447,12 @@ async function deleteJobs(db: Workspace, env: Env, uid: string, data: Record<str
       .flatMap(([kind, items]) => items.map(item => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(db, kind), item.id))),
     ...links.map(item => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(audioLinks(db.connection), 'audioLinks'), item.id)),
     ...materials.map(item => db.connection.prepare("UPDATE material_publications SET revoked_at=?1 WHERE owner=?2 AND json_extract(body, '$.materialId')=?3 AND revoked_at=''").bind(now(), db.namespace, item.id)),
+    ...materials.map(item => db.connection.prepare("DELETE FROM material_files WHERE owner=? AND material_id=? AND kind='pdf'").bind(db.namespace, item.id)),
   ];
   const results = await db.connection.batch(statements);
   if (results.slice(0, selected.size).some(result => result.meta.changes !== 1))
     throw new AppError(409, '职位已更新，请刷新后重新选择');
-  if (env.CAREER_AUDIO) await Promise.allSettled([...audioKeys].map(key => env.CAREER_AUDIO!.delete(key)));
+  if (env.CAREER_AUDIO) await Promise.allSettled([...audioKeys, ...materials.map(item => materialFileKey(db.namespace, 'pdf', String(item.id)))].map(key => env.CAREER_AUDIO!.delete(key)));
   return { deleted: selected.size };
 }
 
@@ -606,6 +614,18 @@ async function importReview(db: Workspace, data: Record<string, unknown>) {
 }
 
 async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
+  const clientRequestId = validateString(data.clientRequestId, 'clientRequestId', { max: 120 });
+  if (clientRequestId) {
+    const existing = (await records(db, 'attempts')).find(item => item.clientRequestId === clientRequestId);
+    if (existing) {
+      if (existing.questionSetId !== data.questionSetId || existing.questionId !== data.questionId ||
+          existing.answer !== data.answer || existing.language !== data.language ||
+          existing.durationSeconds !== data.durationSeconds) {
+        throw new AppError(409, '请求 ID 已用于另一条回答');
+      }
+      return existing;
+    }
+  }
   const questionSetId = validateString(data.questionSetId, 'questionSetId', { required: true, max: 120 });
   const questionId = validateString(data.questionId, 'questionId', { required: true, max: 120 });
   // Built-in bank packs are not stored in D1; attempts against them carry an empty jobId.
@@ -630,6 +650,7 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
 
   const attempt = {
     id: toId(),
+    ...(clientRequestId ? { clientRequestId } : {}),
     questionSetId,
     questionId,
     question,
@@ -715,7 +736,7 @@ async function getAuthContext(request: Request, env: Env, gateway: McpAppServer)
   if (!env.FIREBASE_PROJECT_ID) throw new AppError(503, '请配置 FIREBASE_PROJECT_ID');
   let payload;
   try { payload = await verifyFirebaseToken(token, env.FIREBASE_PROJECT_ID); }
-  catch { throw new AppError(401, 'Google 登录已失效，请重新登录'); }
+  catch { throw new AppError(401, 'Google 或 Apple 登录已失效，请重新登录'); }
   const result = assertFirebaseClaims(payload, env);
   if (!result || !result.uid) throw new AppError(401, 'Token missing uid');
   return {
@@ -1083,6 +1104,7 @@ let schemaReady: Promise<void> | undefined;
 async function ensureAllSchemas(db: D1Database, gateway: McpAppServer): Promise<void> {
   await ensureSchema(db, gateway);
   await ensureMaterialPublicationSchema(db);
+  await ensureMaterialFilesSchema(db);
   await ensureResumeSchema(db);
   await ensurePersonalizedSchema(db);
 }
@@ -1135,6 +1157,48 @@ const handler = async (
   }
 
   const db: Workspace = { connection: rawDb, namespace: context.mode === 'off' ? '' : JSON.stringify([env.FIREBASE_PROJECT_ID, context.uid]) };
+
+  if (pathname === '/api/career/material-files' || pathname === '/api/career/material-files/content') {
+    const id = validateString(url.searchParams.get('id'), 'id', { required: true, max: 120 });
+    const material = await getRecord(db, 'materials', id) as Material | null;
+    if (!material || !material.jobId || !['履歴書', '職務経歴書'].includes(material.kind)) throw new AppError(404, '申请文稿不存在');
+    const requestedKind = url.searchParams.get('kind');
+    if (pathname.endsWith('/content') || method !== 'GET') {
+      if (requestedKind !== 'pdf' && requestedKind !== 'photo') throw new AppError(400, '文件类型不支持');
+      const kind = requestedKind as MaterialFileKind;
+      if (method === 'GET') {
+        ensureScopes(context, ['career:read']);
+        const meta = await materialFileMeta(rawDb, db.namespace, kind, id);
+        if (!meta) throw new AppError(404, '文件不存在');
+        if (!env.CAREER_AUDIO) throw new AppError(503, '文件存储未配置（CAREER_AUDIO）');
+        const object = await env.CAREER_AUDIO.get(materialFileKey(db.namespace, kind, id));
+        if (!object) throw new AppError(404, '文件不存在');
+        return new Response(object.body, { headers: {
+          'content-type': kind === 'pdf' ? 'application/pdf' : object.httpMetadata?.contentType || 'application/octet-stream',
+          'content-length': String(object.size),
+          'cache-control': 'private, no-store',
+          'x-content-type-options': 'nosniff',
+        } });
+      }
+      if (method === 'POST' || method === 'DELETE') {
+        ensureScopes(context, ['career:write']);
+        if (context.tokenType === 'mcp') throw new AppError(403, '文件只能由本人在应用中管理');
+        if (!env.CAREER_AUDIO) throw new AppError(503, '文件存储未配置（CAREER_AUDIO）');
+        if (method === 'DELETE') {
+          await deleteMaterialFile(rawDb, env.CAREER_AUDIO, db.namespace, kind, id);
+          return jsonResponse({ ok: true });
+        }
+        try { return jsonResponse(await saveMaterialFile(rawDb, env.CAREER_AUDIO, db.namespace, kind, id, request)); }
+        catch (error) { throw new AppError(400, error instanceof Error ? error.message : '文件上传失败'); }
+      }
+      throw new AppError(405, '请求方法不支持');
+    }
+    ensureScopes(context, ['career:read']);
+    return jsonResponse({
+      pdf: await materialFileMeta(rawDb, db.namespace, 'pdf', id),
+      photo: await materialFileMeta(rawDb, db.namespace, 'photo', id),
+    });
+  }
 
   if (pathname === '/api/career/auth/me' && method === 'GET') {
     return jsonResponse(context);
@@ -1369,7 +1433,7 @@ const worker = {
     if (request.method === 'OPTIONS' && request.headers.has('access-control-request-method')) {
       if (!corsOrigin) return new Response(null, { status: 403 });
       return withCors(new Response(null, { status: 204, headers: {
-        'access-control-allow-methods': 'GET, POST, OPTIONS',
+        'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
         'access-control-allow-headers': request.headers.get('access-control-request-headers') || 'authorization, content-type',
         'access-control-max-age': '86400',
       } }), corsOrigin);

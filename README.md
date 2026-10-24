@@ -9,6 +9,8 @@
 
 [ローカル導入](docs/local-setup.md) · [Cloudflare デプロイ](docs/deployment.md) · [図解ガイド](docs/illustrated-guide.md) · [開発工程と文書一覧](docs/README.md) · [既知の制約](docs/limitations.md) · [変更履歴](CHANGELOG.md)
 
+原生 iOS 客户端的工程与配置步骤见 [iOS 说明](ios/README.md)：可离线练习、查看已缓存的数据，并通过 Google 或 Apple 登录自己的 Worker 工作区。
+
 ### 直接使える公开站点
 
 不想自己部署时，可以直接打开 **<https://career.erzhiqian.cc/>** 使用线上版本。线上站点由项目维护者部署；登录、数据保存和线上服务状态以该站点当前配置为准。希望自己管理域名、Cloudflare 账号和数据时，请按 [部署步骤](docs/deployment.md) 自行部署。

@@ -12,6 +12,11 @@ void test('verified Google token identifies a user',async()=>{
  const payload=await verifyFirebaseToken(await sign(),'test-project',keys);
  assert.equal(payload.sub,'user-1');
 });
+void test('verified Apple Firebase token identifies a user',async()=>{
+ const claims={...base,email:'private@privaterelay.appleid.com',firebase:{sign_in_provider:'apple.com'}};
+ const payload=await verifyFirebaseToken(await sign(claims),'test-project',keys);
+ assert.equal(payload.sub,'user-1');
+});
 void test('rejects tampered token, different signing key, wrong project, missing or invalid claims',async()=>{
  const token=await sign();const parts=token.split('.');parts[1]=Buffer.from(JSON.stringify({...base,admin:true})).toString('base64url');
  await assert.rejects(verifyFirebaseToken(parts.join('.'),'test-project',keys));

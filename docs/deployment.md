@@ -36,7 +36,7 @@ OAuth と MCP の公開アドレスは API 側（`CAREER_PUBLIC_ORIGIN`）、同
 
    名前を変えた場合は後述の Variable `CAREER_D1_NAME` に同じ名前を設定します。`database_id` をメモする必要はありません。テーブルは初回リクエスト時に `CREATE TABLE IF NOT EXISTS` で作られるため、マイグレーション作業はありません。
 
-   面接回答の録音は R2 に置きます（`wrangler.toml` の `CAREER_AUDIO`、バケット名 `career-note-audio`）。デプロイ前に一度だけ作成します：
+   面接回答の録音と、応募書類に添付する原本 PDF・証明写真は、非公開の R2 に置きます（既存の `CAREER_AUDIO` バインディング、バケット名 `career-note-audio`）。デプロイ前に一度だけ作成します：
 
    ```sh
    npx wrangler r2 bucket create career-note-audio
@@ -114,6 +114,6 @@ GA4 を手動ビルドで有効にする場合は、API の設定と同じビル
 
 ## 公開後の注意
 
-- 公開環境に載るのは求人・履歴・練習記録などの個人データです。Google ログインは必須（strict）で、ユーザーごとに独立したワークスペースになります。管理者権限は `CAREER_ADMIN_UIDS` にだけ与えてください。
+- 公開環境に載るのは求人・履歴・練習記録などの個人データです。Firebase ログインは必須（strict）で、検証済みの Google または Apple アカウントを利用できます。Firebase UID ごとに独立したワークスペースになります。管理者権限は `CAREER_ADMIN_UIDS` にだけ与えてください。iOS の設定は [iOS クライアント](../ios/README.md) を参照してください。
 - `npm run dev:tunnel` の隧道公開と本番公開は別物です。隧道はローカル Worker を一時的に公開するもので、本番 Worker のデータとは共有されません。
 - ローカルの `wrangler dev` は `database_id` を見ず、`~/.local/share/career-note/worker-state/` のローカル SQLite を使います。本番 D1 のバックアップは `npx wrangler d1 export career-note --remote --output backup.sql` で取れます。
