@@ -3285,6 +3285,10 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 .practice-reference:first-of-type { margin-top: 22px; }
 .practice-reference summary { color: var(--ink-2); font-weight: 600; cursor: pointer; }
 .practice-reference p { margin: 12px 0 0; color: var(--ink-3); line-height: 1.9; overflow-wrap: anywhere; }
+.practice-reference .reverse-sample-list { display: grid; gap: 10px; list-style: none; margin: 14px 0 0; padding: 0; }
+.reverse-sample-list li { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; align-items: start; padding: 13px 15px; border: 1px solid #dce9e0; border-radius: 10px; background: #f8fbf9; }
+.reverse-sample-number { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #e8f2eb; color: #2f6b4f; font-size: 0.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.reverse-sample-text { color: var(--ink-2); font-size: 0.9375rem; line-height: 2; overflow-wrap: anywhere; }
 .practice-prompt-panel .question-help-link { margin: 6px 0 0; }
 .practice-record-layout .answer-editor { padding-top: 0; border-top: 0; }
 .practice-record-layout .answer-editor textarea { min-height: 300px; }
@@ -3294,6 +3298,7 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 }
 @media (max-width: 640px) {
   .practice-prompt-panel { padding: 21px; }
+  .reverse-sample-list li { gap: 10px; padding: 12px; }
 }
 @media (max-width: 700px) { .practice-company-heading { align-items: flex-start; flex-direction: column; gap: 12px; } }
 

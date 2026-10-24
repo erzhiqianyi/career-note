@@ -260,6 +260,11 @@ export default function InterviewPractice({
   const pack = routePack || (isBank ? packs.find((p) => p.id === packId) : undefined) || packs[0];
   const question =
     pack?.questions.find((q) => q.id === ((practiceRecord || help)?.split('|')[1] || questionId)) || pack?.questions[0];
+  const reverseSampleLines = question?.category === '逆質問'
+    ? question.sampleAnswer?.trim().split(/\n\s*\n/).filter(Boolean) || []
+    : [];
+  const hasNumberedReverseSamples = reverseSampleLines.length > 1 &&
+    reverseSampleLines.every((line) => /^[①-⑳]\s*/u.test(line));
   const key = pack && question ? pack.id + ':' + question.id : '';
   // What to say for this question at this company: terms and lines drawn from the posting and the structured résumé.
   const hints: Hints | null = question ? buildHints(question, data.jobs.find((j) => j.id === pack?.jobId), data.resume || []) : null;
@@ -919,7 +924,12 @@ export default function InterviewPractice({
               </details>
               <details className="practice-reference">
                 <summary>{tr('参考回答')}</summary>
-                {question.sampleAnswer ? <p className="prewrap" lang="ja"><Ja text={question.sampleAnswer} mode="ja" /></p> :
+                {hasNumberedReverseSamples ? <ol className="reverse-sample-list" lang="ja">
+                  {reverseSampleLines.map((line, index) => <li key={index}>
+                    <span className="reverse-sample-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="reverse-sample-text"><Ja text={line.replace(/^[①-⑳]\s*/u, '')} mode="ja" /></span>
+                  </li>)}
+                </ol> : question.sampleAnswer ? <p className="prewrap" lang="ja"><Ja text={question.sampleAnswer} mode="ja" /></p> :
                   <p>{tr('这道题尚未提供题目级参考回答。保存并获得点评后，可以查看针对你回答的参考改写。')}</p>}
               </details>
               <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('查看完整回答提示')}</button>
