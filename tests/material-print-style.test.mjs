@@ -12,6 +12,9 @@ void test('application boxes contain every paragraph until the next section', ()
 
 void test('both print styles use A4 and distinct reference layouts', () => {
   assert.match(materialPrintStyle('履歴書'), /@page\{size:A4/);
+  assert.match(materialPrintStyle('履歴書'), /@page\{size:A4;margin:0\}/);
+  assert.match(materialPrintStyle('履歴書'), /box-decoration-break:clone/);
+  assert.match(materialPrintStyle('履歴書'), /td:nth-child\(1\)\{width:16mm[^}]*white-space:nowrap/);
   assert.match(materialPrintStyle('履歴書'), /border:1px solid #333/);
   assert.match(materialPrintStyle('職務経歴書'), /border-left:2\.5px solid #294c79/);
 });

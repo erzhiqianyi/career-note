@@ -9,7 +9,7 @@ export function materialPrintBody(kind: '履歴書' | '職務経歴書', body: s
 
 export function materialPrintStyle(kind: '履歴書' | '職務経歴書') {
   const common = `
-    @page{size:A4;margin:14mm 16mm}
+    @page{size:A4;margin:0}
     *{box-sizing:border-box}
     html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{margin:0;background:#e9edf1;color:#111}
@@ -22,7 +22,7 @@ export function materialPrintStyle(kind: '履歴書' | '職務経歴書') {
     tr,li{break-inside:avoid}
     img{max-width:100%}
     a{color:#204d85;text-decoration:none}
-    @media print{body{background:#fff}main{width:auto;max-width:none;min-height:0;margin:0;padding:0}}
+    @media print{body{background:#fff}main{width:auto;max-width:none;min-height:0;margin:0;padding:14mm 16mm;box-decoration-break:clone;-webkit-box-decoration-break:clone}}
   `;
   const rirekisho = `
     body{font:9pt/1.5 "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif}
@@ -39,8 +39,8 @@ export function materialPrintStyle(kind: '履歴書' | '職務経歴書') {
     main>table:first-of-type thead{display:none}
     main>table:first-of-type td{min-height:5mm}
     main>table:first-of-type tbody tr:first-child td{font-size:16pt;letter-spacing:.1em}
-    main>table:not(:first-of-type) th:nth-child(1),main>table:not(:first-of-type) td:nth-child(1){width:14mm;text-align:center}
-    main>table:not(:first-of-type) th:nth-child(2),main>table:not(:first-of-type) td:nth-child(2){width:9mm;text-align:center}
+    main>table:not(:first-of-type) th:nth-child(1),main>table:not(:first-of-type) td:nth-child(1){width:16mm;text-align:center;white-space:nowrap;overflow-wrap:normal;word-break:normal}
+    main>table:not(:first-of-type) th:nth-child(2),main>table:not(:first-of-type) td:nth-child(2){width:10mm;text-align:center;white-space:nowrap;overflow-wrap:normal;word-break:normal}
     main>table:not(:first-of-type) td:last-child{padding-left:2mm}
     h2:nth-of-type(2){break-before:page;margin-top:0}
     .application-box{margin:4mm 0;break-inside:avoid}
@@ -48,7 +48,7 @@ export function materialPrintStyle(kind: '履歴書' | '職務経歴書') {
     .application-box-content{min-height:24mm;padding:2mm;border:1px solid #333;border-top:0}
     .application-box-content p{margin:0 0 1mm;text-align:left}
     main>p:last-child{text-align:right}
-    @media print{.passport-photo{top:10mm;right:0}}
+    @media print{.passport-photo{top:28mm;right:16mm}}
   `;
   const shokumu = `
     body{font:9pt/1.55 "Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif}

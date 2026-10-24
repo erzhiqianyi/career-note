@@ -1584,7 +1584,7 @@ export default function Home() {
               {doc.sourceNotes && <p className="prewrap"><Ja text={doc.sourceNotes.split('\n').filter(line => /^(?:未記入|要確認|待确认|缺失|不足)/.test(line.trim())).join('\n') || doc.sourceNotes} /></p>}
             </div>
           </details>
-          <button type="button" className="icon-button document-print-desktop" title={tr('预览并打印已生成的简历')} aria-label={tr('预览并打印已生成的简历')} onClick={() => setPrintMaterial(printableDoc)}><Printer size={20} aria-hidden="true" /></button>
+          <button type="button" className="secondary document-print-desktop" title={tr('预览并打印已生成的简历')} onClick={() => setPrintMaterial(printableDoc)}><Printer size={17} aria-hidden="true" />{tr('打印版预览')}</button>
         </div>}>
           <div className="document-meta">
             <Badge>{'kind' in doc ? tr(doc.kind) : tr('每日分析')}</Badge>

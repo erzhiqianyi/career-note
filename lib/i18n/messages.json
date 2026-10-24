@@ -5176,6 +5176,10 @@
     "ja": "作成済みの応募書類をプレビュー・印刷",
     "en": "Preview and print saved resume"
   },
+  "打印版预览": {
+    "ja": "印刷版プレビュー",
+    "en": "Print preview"
+  },
   "打印此份已保存资料的正文，不重新生成，不包含来源备注。请先核对内容和分页。": {
     "ja": "保存済みの本文のみを印刷します。再生成や出典メモの印字は行いません。内容と改ページを確認してください。",
     "en": "Prints the saved body without regenerating or including source notes. Review content and page breaks."

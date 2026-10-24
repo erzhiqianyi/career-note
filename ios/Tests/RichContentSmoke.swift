@@ -17,6 +17,8 @@ import Foundation
     precondition(printable.contains("志望動機"))
     let layout = CareerRichText.applicationHTML(application, kind: "履歴書", photo: Data([0x89, 0x50, 0x4e, 0x47]))
     precondition(layout.contains("@page{size:A4"))
+    precondition(layout.contains("@page{size:A4;margin:0}"))
+    precondition(layout.contains("white-space:nowrap;overflow-wrap:normal"))
     precondition(layout.contains("<table>"))
     precondition(layout.contains("data:image/png;base64,"))
     precondition(!layout.contains("フェアで"))
