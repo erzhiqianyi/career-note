@@ -202,6 +202,39 @@ void test('one company question set is updated in place while answers keep their
  assert.equal(state.attempts.find(a=>a.id===attempt.id).question.title,'Introduction');
  assert.equal(state.attempts.find(a=>a.id===attempt.id).question.sampleAnswer,question.sampleAnswer);
 });
+void test('question set patches change one question and keep the rest of the set',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const patch=(item)=>send('import',{schemaVersion:1,questionSetPatches:[item],completeTaskIds:[]});
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'patch-job',company:'Example Company',role:'Engineer'}],completeTaskIds:[]})).status,200);
+ const base={title:'Question',questionJa:'質問です。',meaning:'Question',why:'Fixture',outline:'Outline',followUps:'Follow up',category:'Opening',targetSeconds:60};
+ const pack={id:'patch-pack',jobId:'patch-job',title:'Practice',scenario:'Mock',plan:'Practice',sourceNotes:'Fixture only',questions:[{...base,id:'q1'},{...base,id:'q2',sampleAnswer:'元の回答です。'},{...base,id:'q3'}]};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[pack],completeTaskIds:[]})).status,200);
+ await send('attempts',{questionSetId:pack.id,questionId:'q1',answer:'My answer',language:'日语',durationSeconds:30});
+ const preview=await send('import/preview',{schemaVersion:1,questionSetPatches:[{id:pack.id,questions:[{id:'q2',sampleAnswer:'プレビュー'}]}],completeTaskIds:[]});
+ assert.equal(preview.status,200);
+ let state=await (await send('state')).json();
+ assert.equal(state.questionSets[0].questions[1].sampleAnswer,'元の回答です。');
+ const saved=await patch({id:pack.id,questions:[{id:'q2',sampleAnswer:'新しい回答です。'}]});
+ assert.equal(saved.status,200);assert.equal((await saved.json()).questionSetPatches,1);
+ state=await (await send('state')).json();
+ assert.deepEqual(state.questionSets[0].questions.map(q=>q.id),['q1','q2','q3']);
+ assert.equal(state.questionSets[0].questions[1].sampleAnswer,'新しい回答です。');
+ assert.equal(state.questionSets[0].questions[1].title,'Question');
+ assert.equal(state.questionSets[0].title,'Practice');
+ // answered question cannot be removed; an unanswered one can, and a new id appends with full fields
+ const answered=await patch({id:pack.id,removeQuestionIds:['q1']});
+ assert.equal(answered.status,400);assert.match((await answered.json()).error,/已有回答的问题 id/);
+ assert.equal((await patch({id:pack.id,questions:[{id:'q4',title:'Only a title'}]})).status,400);
+ assert.equal((await patch({id:pack.id,questions:[{id:'q2',targetSeconds:10}]})).status,400);
+ assert.equal((await patch({id:pack.id,title:'Renamed'})).status,400);
+ assert.equal((await patch({id:'missing-pack',questions:[{id:'q1',title:'x'}]})).status,400);
+ assert.equal((await patch({id:'builtin-basics',questions:[{id:'q1',title:'x'}]})).status,400);
+ assert.equal((await patch({id:pack.id,questions:[{...base,id:'q4'}],removeQuestionIds:['q3']})).status,200);
+ state=await (await send('state')).json();
+ assert.equal(state.questionSets.length,1);
+ assert.deepEqual(state.questionSets[0].questions.map(q=>q.id),['q1','q2','q4']);
+ assert.equal(state.questionSets[0].questions[1].sampleAnswer,'新しい回答です。');
+});
 void test('reference speech accepts only a saved question and needs server Azure settings on an R2 miss',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  await send('import',{schemaVersion:1,jobs:[{id:'speech-job',company:'Example',role:'Engineer'}],completeTaskIds:[]});

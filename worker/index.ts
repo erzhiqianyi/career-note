@@ -597,6 +597,51 @@ async function importQuestionSet(db: Workspace, data: Record<string, unknown>) {
   return result;
 }
 
+// Patches questions of an existing set without resending it: listed questions merge over the saved
+// question with the same id (new ids need every field), removeQuestionIds drops questions, others stay.
+async function patchQuestionSet(db: Workspace, data: Record<string, unknown>, preview: boolean) {
+  if (typeof data !== 'object' || data === null) throw new AppError(400, '每条数据必须是对象');
+  for (const field of Object.keys(data)) {
+    if (!['id', 'questions', 'removeQuestionIds'].includes(field))
+      throw new AppError(400, 'questionSetPatches 只能包含 id、questions、removeQuestionIds；修改题组其他字段请提交完整题组');
+  }
+  const key = validateString(data.id, 'id', { required: true, max: 120 });
+  if (isBuiltinQuestionSet(key)) throw new AppError(400, '内置题库不能修改');
+  const existing = await getRecord(db, 'questionSets', key);
+  if (!existing) throw new AppError(400, '要修改的题组不存在；新题组请用 questionSets 创建');
+  const patches = data.questions ?? [];
+  const removals = data.removeQuestionIds ?? [];
+  if (!Array.isArray(patches) || patches.length > 40) throw new AppError(400, 'questions 必须是最多 40 条的数组');
+  if (!Array.isArray(removals) || removals.length > 40) throw new AppError(400, 'removeQuestionIds 必须是最多 40 条的数组');
+  if (patches.length + removals.length === 0) throw new AppError(400, '题目修改至少需要一条 questions 或 removeQuestionIds');
+  const removeIds = new Set(removals.map((value) => validateString(value, 'removeQuestionIds', { required: true, max: 120 })));
+  const current = (Array.isArray(existing.questions) ? existing.questions : []) as Record<string, unknown>[];
+  for (const id of removeIds)
+    if (!current.some((question) => question.id === id)) throw new AppError(400, '要删除的问题 id 不存在');
+  const patchedIds = new Set<string>();
+  const merged = current.filter((question) => !removeIds.has(String(question.id)));
+  for (const patch of patches) {
+    if (typeof patch !== 'object' || patch === null) throw new AppError(400, '问题必须是对象');
+    const id = validateString((patch as Record<string, unknown>).id, 'id', { required: true, max: 120 });
+    if (patchedIds.has(id)) throw new AppError(400, '题目修改中问题 id 重复');
+    if (removeIds.has(id)) throw new AppError(400, '同一问题不能同时修改和删除');
+    patchedIds.add(id);
+    const index = merged.findIndex((question) => question.id === id);
+    if (index === -1) merged.push(patch as Record<string, unknown>);
+    else merged[index] = { ...merged[index], ...(patch as Record<string, unknown>) };
+  }
+  const questions = parseQuestionSetQuestions(merged);
+  if (removeIds.size) {
+    const answered = (await records(db, 'attempts')).some(
+      (attempt) => attempt.questionSetId === key && removeIds.has(String(attempt.questionId)),
+    );
+    if (answered) throw new AppError(400, '已有回答的问题 id 必须保留；可直接修改题目内容');
+  }
+  const result = { ...existing, questions, updatedAt: now() };
+  if (!preview) await putRecord(db, 'questionSets', result);
+  return result;
+}
+
 async function importReview(db: Workspace, data: Record<string, unknown>) {
   const key = validateString(data.id, 'id', { required: true, max: 120 });
   if (await getRecord(db, 'reviews', key)) throw new AppError(400, '点评 id 已存在，请保留历史并使用新版本');
@@ -882,7 +927,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
   if (Number(data.schemaVersion) !== 1) throw new AppError(400, '需要 schemaVersion: 1 的 JSON 数据包');
 
   for (const key of Object.keys(data)) {
-    if (!['schemaVersion', 'jobs', 'materials', 'archiveMaterials', 'reports', 'questionSets', 'reviews', 'completeTaskIds'].includes(key)) {
+    if (!['schemaVersion', 'jobs', 'materials', 'archiveMaterials', 'reports', 'questionSets', 'questionSetPatches', 'reviews', 'completeTaskIds'].includes(key)) {
       throw new AppError(400, '数据包包含未知字段');
     }
   }
@@ -893,6 +938,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
     archivedMaterials: 0,
     reports: 0,
     questionSets: 0,
+    questionSetPatches: 0,
     reviews: 0,
   };
   const allJobs = await records(db, 'jobs');
@@ -994,6 +1040,13 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
       for (const item of items) {
         if (!preview) await importQuestionSet(db, item as Record<string, unknown>);
         counts.questionSets += 1;
+      }
+    },
+    questionSetPatches: async (items) => {
+      if (items.length > 200) throw new AppError(400, 'questionSetPatches 必须是最多 200 条的数组');
+      for (const item of items) {
+        await patchQuestionSet(db, item as Record<string, unknown>, preview);
+        counts.questionSetPatches += 1;
       }
     },
     reviews: async (items) => {
