@@ -129,6 +129,7 @@ struct CompanyDetailView: View {
     private var info: some View {
         VStack(alignment: .leading, spacing: 18) {
             CompanyInfoSection(title: "公司信息", fields: [
+                ("公司名称", job.company),
                 ("公司标准读音", job.companyReading),
                 ("工作地点", job.location), ("员工人数", job.employeeCount),
                 ("公司类型", job.companyType), ("雇用形式", job.employmentType),
