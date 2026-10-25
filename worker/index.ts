@@ -1,4 +1,4 @@
-import { ensurePersonalizedSchema, listPersonalized, savePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
+import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
 import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
 import { ensureMaterialFilesSchema, materialFileMeta, materialFileKey, saveMaterialFile, deleteMaterialFile, type MaterialFileKind } from './material-files';
 import { ensureResumeSchema, readResume, writeResume, deleteResumeDocument, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
@@ -1401,6 +1401,10 @@ const handler = async (
     case '/api/career/personalized-resumes':
       ensureScopes(context, ['career:write']);
       return savePersonalized(rawDb, db.namespace, payload);
+    case '/api/career/personalized-resumes/delete':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中确认删除个性化简历');
+      return deletePersonalized(rawDb, db.namespace, payload);
     case '/api/career/resume-publications':
     case '/api/career/resume-publications/revoke':
       ensureScopes(context, ['career:write']);

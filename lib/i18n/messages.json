@@ -1286,6 +1286,10 @@
     "ja": "この文書とすべての改訂履歴を完全に削除しますか？元に戻せません。",
     "en": "Permanently delete this document and all its revisions? This cannot be undone."
   },
+  "永久删除此草稿及其全部修订？已撤下或过期的公开链接记录也会一并删除，此操作无法恢复。": {
+    "ja": "この下書きとすべての改訂履歴を完全に削除しますか？停止済み・期限切れの公開リンクの記録も削除されます。元に戻せません。",
+    "en": "Permanently delete this draft and all its revisions? Withdrawn or expired public link records are deleted too. This cannot be undone."
+  },
   "删除失败": {
     "ja": "削除に失敗しました",
     "en": "Delete failed"

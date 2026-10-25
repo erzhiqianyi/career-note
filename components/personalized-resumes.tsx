@@ -3,7 +3,7 @@ import { RecordBack, useRecordPage } from './record-page';
 import { ResumePreview } from './resume-preview';
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil, ChevronRight } from 'lucide-react';
+import { Archive, ArchiveRestore, Ban, Copy, CopyPlus, ExternalLink, Eye, Pencil, ChevronRight, Trash2 } from 'lucide-react';
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from '@/components/data-table';
 import { api } from '@/lib/career';
 import { API_ORIGIN } from '@/lib/api-base';
@@ -287,6 +287,20 @@ export default function PersonalizedResumes({
                         >
                           {d.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                         </button>
+                        {d.archived && <button
+                          className="icon-button"
+                          disabled={busy}
+                          title={t('永久删除')}
+                          aria-label={t('永久删除') + ' ' + d.title}
+                          onClick={() => {
+                            if (!window.confirm(t('永久删除此草稿及其全部修订？已撤下或过期的公开链接记录也会一并删除，此操作无法恢复。'))) return;
+                            void act(async () => {
+                              await api('personalized-resumes/delete', { id: d.id, revision: d.revision });
+                              setSelected(null);
+                              await refresh();
+                            });
+                          }}
+                        ><Trash2 size={16} /></button>}
 
                       </DataActions></div><ResumePreview title={t('简历详情')} html={resumeHTML(d.content, d.language, showReadings)} /></section>; })()}
       {publication && (() => { const p = publications.find(item => item.id === publication.id) || publication; const active = !p.revokedAt && (!p.expiresAt || Date.parse(p.expiresAt) > Date.now()); const publicUrl = pageOrigin ? new URL(API_ORIGIN + p.path, pageOrigin).href : ''; return <section className="panel record-page"><RecordBack onBack={() => setPublication(null)} /><h2>{p.title}</h2><p>v{p.draftRevision} · {p.mode === 'public' ? t('允许收录') : t('仅链接访问')}</p><div className="record-detail-actions">                      <DataActions>
