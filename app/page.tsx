@@ -1593,7 +1593,14 @@ export default function Home() {
               {day(doc.createdAt)}
               {!printableDoc && tr('· AI 草稿，使用前请核对')}
             </span>
-            {'kind' in doc && doc.archivedAt && <Badge>{tr('已归档')}</Badge>}
+            {'kind' in doc && <Badge>{tr(doc.archivedAt ? '已归档' : doc.reviewStatus || '待核对')}</Badge>}
+            {'kind' in doc && !doc.archivedAt && <button type="button" className="text-button" disabled={busy} onClick={() => void action(async () => {
+              const reviewed = doc.reviewStatus !== '已核对';
+              await api('materials/review', { id: doc.id, reviewed });
+              setDoc({ ...doc, reviewStatus: reviewed ? '已核对' : '待核对', reviewedAt: reviewed ? new Date().toISOString() : undefined });
+            }, doc.reviewStatus === '已核对' ? '资料已重新标记为待核对' : '资料已标记为已核对')}>
+              {tr(doc.reviewStatus === '已核对' ? '重新标记为待核对' : '标记为已核对')}
+            </button>}
             {'kind' in doc && <button type="button" className="text-button" disabled={busy} onClick={() => void action(async () => {
               await api('materials/archive', { items: [{ id: doc.id, archived: !doc.archivedAt }] });
               setDoc({ ...doc, archivedAt: doc.archivedAt ? undefined : new Date().toISOString() });

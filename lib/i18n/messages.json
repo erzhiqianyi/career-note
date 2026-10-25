@@ -202,6 +202,22 @@
     "ja": "確認済み",
     "en": "Reviewed"
   },
+  "标记为已核对": {
+    "ja": "確認済みにする",
+    "en": "Mark as reviewed"
+  },
+  "重新标记为待核对": {
+    "ja": "要確認に戻す",
+    "en": "Mark as needing review"
+  },
+  "资料已标记为已核对": {
+    "ja": "資料を確認済みにしました",
+    "en": "Material marked as reviewed"
+  },
+  "资料已重新标记为待核对": {
+    "ja": "資料を要確認に戻しました",
+    "en": "Material marked as needing review"
+  },
   "未通过": {
     "ja": "不採用",
     "en": "Not selected"

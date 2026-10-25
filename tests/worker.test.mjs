@@ -252,3 +252,19 @@ void test('archiving a material version hides it without losing content and can 
  assert.equal((await send('materials/archive',{items:[{id:'prep-v1',archived:false}]})).status,200);
  saved=(await (await send('state')).json()).materials.find(m=>m.id==='prep-v1');assert.equal(saved.archivedAt,undefined);
 });
+void test('the owner can review a material and return it to pending without changing its content',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ await send('import',{schemaVersion:1,jobs:[{id:'review-job',company:'Example',role:'Engineer'}],completeTaskIds:[]});
+ await send('import',{schemaVersion:1,materials:[{id:'review-draft',jobId:'review-job',kind:'面试准备',title:'Draft',content:'Original content',sourceNotes:'Fixture'}],completeTaskIds:[]});
+ const read=async()=>(await (await send('state')).json()).materials.find(m=>m.id==='review-draft');
+ assert.equal((await read()).reviewStatus,'待核对');
+ assert.equal((await send('materials/review',{id:'review-draft',reviewed:true})).status,200);
+ let saved=await read();assert.equal(saved.reviewStatus,'已核对');assert.ok(saved.reviewedAt);assert.equal(saved.content,'Original content');
+ assert.equal((await send('materials/review',{id:'review-draft',reviewed:false})).status,200);
+ saved=await read();assert.equal(saved.reviewStatus,'待核对');assert.equal(saved.reviewedAt,undefined);
+ assert.equal((await send('materials/review',{id:'review-draft',reviewed:'yes'})).status,400);
+ assert.equal((await send('materials/review',{id:'missing',reviewed:true})).status,404);
+ await send('materials/archive',{items:[{id:'review-draft',archived:true}]});
+ assert.equal((await send('materials/review',{id:'review-draft',reviewed:true})).status,409);
+});

@@ -79,6 +79,8 @@ export type Material = {
   kind: string;
   createdAt: string;
   reviewStatus: string;
+  /** Set only when the owner marks this draft as reviewed in the app. */
+  reviewedAt?: string;
   jobRevision: number;
   profileRevision: number;
   /** Set when the user retired this version; it stays readable but leaves default lists. */
