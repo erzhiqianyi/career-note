@@ -878,6 +878,20 @@ async function archiveMaterials(db: Workspace, items: unknown, preview = false) 
   return targets.length;
 }
 
+async function setMaterialReviewStatus(db: Workspace, payload: Record<string, unknown>) {
+  const id = validateString(payload.id, 'id', { required: true, max: 120 });
+  const reviewed = payload.reviewed;
+  if (typeof reviewed !== 'boolean') throw new AppError(400, 'reviewed 必须是 true 或 false');
+  const material = await getRecord(db, 'materials', id);
+  if (!material) throw new AppError(404, '材料不存在');
+  if (material.archivedAt) throw new AppError(409, '已归档的材料不能更新核对状态');
+  material.reviewStatus = reviewed ? '已核对' : '待核对';
+  if (reviewed) material.reviewedAt = now();
+  else delete material.reviewedAt;
+  await putRecord(db, 'materials', material);
+  return { id, reviewStatus: material.reviewStatus, reviewedAt: material.reviewedAt || null };
+}
+
 async function importBundle(db: Workspace, data: Record<string, unknown>, preview = false) {
   if (Number(data.schemaVersion) !== 1) throw new AppError(400, '需要 schemaVersion: 1 的 JSON 数据包');
 
@@ -1459,6 +1473,11 @@ const handler = async (
     case '/api/career/materials/archive':
       ensureScopes(context, ['career:write']);
       result = { archivedMaterials: await archiveMaterials(db, payload.items) };
+      break;
+    case '/api/career/materials/review':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中由本人确认材料');
+      result = await setMaterialReviewStatus(db, payload);
       break;
     case '/api/career/import':
       ensureScopes(context, ['agent:write']);
