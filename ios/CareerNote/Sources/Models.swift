@@ -152,6 +152,7 @@ struct CareerReport: Codable, Identifiable {
     let title: String
     let content: String
     let date: String
+    let sourceNotes: String?
 }
 
 struct QuestionSet: Codable, Identifiable {

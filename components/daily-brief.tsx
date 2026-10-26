@@ -42,7 +42,7 @@ export function collectBrief(data: State, date: string): Brief {
     questionSets: data.questionSets.filter((q) => onDay(q.updatedAt || q.createdAt)),
     attempts: data.attempts.filter((a) => onDay(a.createdAt)),
     reviews: data.reviews.filter((r) => onDay(r.createdAt)),
-    reports: data.reports.filter((r) => r.date === date),
+    reports: data.reports.filter((r) => r.date === date && !r.sourceNotes?.startsWith('career-event-v1:')),
     completedTasks: data.tasks.filter((t) => t.status === '已完成' && onDay((t as { completedAt?: string }).completedAt || t.createdAt)),
     pendingTasks: date === data.today ? data.tasks.filter((t) => t.status === '待处理') : [],
   };

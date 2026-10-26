@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Flag, MessageSquare, X } from 'lucide-react';
 import { useLocale } from '@/components/locale-provider';
 import type { Attempt, Job, Material } from '@/lib/career';
+import { eventIcs, type CareerEvent } from '../lib/calendar-events';
 
 export type CalendarMarkKind = 'due' | 'interview' | 'target';
 /** A dated item on the calendar; `jobs` are the companies involved (empty for the target date). */
@@ -58,11 +59,13 @@ const MARK_LABEL: Record<CalendarMarkKind, string> = { due: '待跟进', intervi
 export default function TodayCalendar({
   today,
   marks,
+  events,
   activity,
   onOpenJob,
 }: {
   today: string;
   marks: Record<string, CalendarMark>;
+  events: CareerEvent[];
   activity: Record<string, DayActivity>;
   onOpenJob?: (jobId: string) => void;
 }) {
@@ -87,12 +90,39 @@ export default function TodayCalendar({
   const interviews = Object.entries(marks)
     .filter(([date, mark]) => date.startsWith(prefix) && mark.kind === 'interview')
     .sort(([a], [b]) => a.localeCompare(b));
+  const monthEvents = events.filter(event => event.date.startsWith(prefix));
+  const exportEvent = async (event: CareerEvent) => {
+    const ics = eventIcs(event);
+    if (!ics) return;
+    const file = new File([ics], `${event.date}-${event.id}.ics`, { type: 'text/calendar' });
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: event.title });
+        return;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+    }
+    const url = URL.createObjectURL(file);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = file.name;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+  const eventRow = (event: CareerEvent) => <li key={event.id} className="calendar-event-row">
+    <Clock size={14} />
+    <b>{shortDay(event.date)} {event.start || t('上午')}</b>
+    <span><strong>{event.title}</strong><small>{event.status === 'provisional' ? `${t('暂约')} · ` : ''}{event.timeStatus === 'unknown' ? t('具体时间待确认') : event.timeStatus === 'end-estimated' ? t('结束约 {0}', [event.end]) : t('结束 {0}', [event.end])}{event.location ? ` · ${event.location}` : ''}</small></span>
+    {event.start && event.end && <button type="button" className="text-button" onClick={() => void exportEvent(event)}>{t('导出日历文件')}</button>}
+  </li>;
   /** Tooltip for a day: its mark plus a short summary of what was done. */
   const tooltip = (date: string) => {
     const mark = marks[date];
     const dayLog = activity[date];
     const lines = [];
     if (mark) lines.push(`${t(MARK_LABEL[mark.kind])}${mark.jobs.length ? ' · ' + mark.jobs.map((j) => j.company).join('、') : ''}`);
+    for (const event of events.filter(item => item.date === date)) lines.push(`${event.start || t('上午')} · ${event.title}`);
     if (dayLog) for (const [key, label] of KINDS) if (dayLog[key].length) lines.push(`${t(label)} ${dayLog[key].length}：${dayLog[key].join('、')}`);
     return lines.length ? lines.join('\n') : undefined;
   };
@@ -117,12 +147,13 @@ export default function TodayCalendar({
           if (!d) return <span key={i} />;
           const date = iso(d);
           const mark = marks[date];
+          const hasEvent = events.some(event => event.date === date);
           const done = !!activity[date];
           return (
             <button
               type="button"
               key={i}
-              className={['calendar-day', date === today && 'is-today', date === selected && 'is-selected', done && 'has-activity', mark && 'has-' + mark.kind].filter(Boolean).join(' ')}
+              className={['calendar-day', date === today && 'is-today', date === selected && 'is-selected', done && 'has-activity', mark && 'has-' + mark.kind, hasEvent && 'has-event'].filter(Boolean).join(' ')}
               aria-label={date}
               aria-pressed={date === selected}
               title={tooltip(date)}
@@ -142,8 +173,10 @@ export default function TodayCalendar({
           {(() => {
             const mark = marks[selected];
             const dayLog = activity[selected];
-            if (!mark && !dayLog) return <p className="muted">{t('这一天没有安排或记录。')}</p>;
+            const dayEvents = events.filter(event => event.date === selected);
+            if (!mark && !dayLog && !dayEvents.length) return <p className="muted">{t('这一天没有安排或记录。')}</p>;
             return <ul className="calendar-interviews">
+              {dayEvents.map(eventRow)}
               {mark && (mark.jobs.length ? mark.jobs : [null]).map((job, index) => (
                 <li key={job ? job.id : 'mark-' + index} className={'is-' + mark.kind}>
                   {mark.kind === 'interview' ? <MessageSquare size={14} /> : mark.kind === 'target' ? <Flag size={14} /> : <Clock size={14} />}
@@ -163,8 +196,9 @@ export default function TodayCalendar({
             </ul>;
           })()}
         </div>
-      ) : interviews.length > 0 && (
+      ) : (interviews.length > 0 || monthEvents.length > 0) && (
         <ul className="calendar-interviews">
+          {monthEvents.map(eventRow)}
           {interviews.map(([date, mark]) => (
             <li key={date} className={date < today ? 'is-past' : undefined}>
               <MessageSquare size={14} />

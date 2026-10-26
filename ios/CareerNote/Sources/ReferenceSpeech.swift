@@ -4,6 +4,20 @@ import Foundation
 import Observation
 import Security
 
+enum AudioPlaybackSettings {
+    static var rate: Float {
+        let saved = UserDefaults.standard.object(forKey: "audioPlaybackRate") as? Double ?? 1
+        return saved.isFinite ? Float(min(2, max(0.5, saved))) : 1
+    }
+
+    @discardableResult
+    static func apply(to player: AVAudioPlayer) -> Float {
+        player.enableRate = true
+        player.rate = rate
+        return player.rate
+    }
+}
+
 enum ReferenceSpeechSettings {
     static let voices = ["ja-JP-NanamiNeural", "ja-JP-KeitaNeural"]
     private static let regionName = "azureSpeechRegion"
@@ -164,6 +178,7 @@ final class ReferenceSpeechPlayer {
             try session.setCategory(.playback)
             try session.setActive(true)
             let audio = try AVAudioPlayer(data: data)
+            let playbackRate = AudioPlaybackSettings.apply(to: audio)
             guard audio.play() else { throw SpeechError.invalidAudio }
             player = audio
             isPlaying = true
@@ -171,7 +186,7 @@ final class ReferenceSpeechPlayer {
             if cached == nil {
                 await ReferenceSpeechCache.shared.save(data, text: text, voice: voice, userID: userID)
             }
-            try? await Task.sleep(nanoseconds: UInt64(audio.duration * 1_000_000_000))
+            try? await Task.sleep(nanoseconds: UInt64(audio.duration / Double(playbackRate) * 1_000_000_000))
             if current == generation { stop() }
         } catch {
             guard current == generation else { return }
