@@ -43,6 +43,14 @@ const questionSet = z.object({
   questions: z.array(question).min(1).max(40),
 }).passthrough();
 
+// Patch questions of an existing set by id; omitted questions and set fields stay as saved.
+const questionSetPatch = z.object({
+  id: z.string().describe('Existing question set id.'),
+  questions: z.array(question.partial().required({ id: true })).max(40).optional()
+    .describe('Fields merge over the saved question with the same id; a new id appends and needs every required field.'),
+  removeQuestionIds: z.array(z.string()).max(40).optional().describe('Questions to drop; answered question ids cannot be removed.'),
+}).strict();
+
 const bundle = z
   .object({
     schemaVersion: z.literal(1),
@@ -55,6 +63,11 @@ const bundle = z
       .describe('Hide (true) or restore (false) existing material versions the user asked to retire; content is kept.'),
     reports: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
     questionSets: z.array(questionSet).max(200).optional(),
+    questionSetPatches: z
+      .array(questionSetPatch)
+      .max(200)
+      .optional()
+      .describe('Update a few questions of an existing set without resubmitting it; questionSets stays a full replace.'),
     reviews: z.array(z.record(z.string(), z.unknown())).max(200).optional(),
     completeTaskIds: z.array(z.string()).max(200),
   })
@@ -210,7 +223,7 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
     {
       name: 'career_import',
       scope: 'agent:write',
-      description: 'Save requested research, versioned materials, questions, reviews or outcome-analysis reports to this user’s workspace. Cannot write original answers or application status. Read back IDs after success or partial failure; never retry blindly.',
+      description: 'Save requested research, versioned materials, questions, reviews or outcome-analysis reports to this user’s workspace. To change a few questions of an existing set, send only those under questionSetPatches instead of the whole set. Cannot write original answers or application status. Read back IDs after success or partial failure; never retry blindly.',
       inputSchema: { bundle },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       handler: ({ bundle }, ctx) => api(ctx, 'import', bundle as Record<string, unknown>),

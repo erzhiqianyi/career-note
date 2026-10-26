@@ -176,7 +176,21 @@ Worker 的预览不写入，但尚不覆盖所有导入验证；当前导入逐�
 }
 ```
 
-questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。修改题组时提交完整内容并复用原题组 id；已有回答的问题 id 必须保留，可以修改题目正文。回答保存时附带不可变的问题快照，点评仍按回答 id 保留历史。材料和点评继续使用新版本 id。导入不接受 `attempts`，原回答只能由用户在网页提交。`POST /api/career/attempts` 接收 questionSetId、questionId、answer、language（日语/中文构思/中日混合）、durationSeconds（0–3600，0 表示未记录）、requestReview（布尔值）。保存回答和排队按顺序写入；失败后先读回状态，避免重复创建。
+questions 的 id 在单个题组内唯一，targetSeconds 为 30–300 秒。`questionSets` 是整组替换：提交完整内容并复用原题组 id，未提交的问题会被删除；已有回答的问题 id 必须保留，可以修改题目正文。只改少数题目（例如一道题的 sampleAnswer）时改用 `questionSetPatches`，不要重发整组：
+
+```json
+{
+  "schemaVersion": 1,
+  "questionSetPatches": [{
+    "id": "company-interview",
+    "questions": [{ "id": "intro", "sampleAnswer": "修订后的日语参考回答" }],
+    "removeQuestionIds": ["unused-question"]
+  }],
+  "completeTaskIds": []
+}
+```
+
+`questionSetPatches` 只修改已存在的题组，每项只能包含 id、questions、removeQuestionIds。questions 里的字段覆盖同 id 的已保存问题，未提交的字段和问题保持不变；新 id 追加到末尾，需要完整字段。合并后仍按同样规则校验（1–40 题、id 唯一、时长 30–300 秒），已有回答的问题不能删除，同一问题不能同时修改和删除。题组标题、场景、sourceNotes 等字段仍需通过 `questionSets` 整组提交修改。修改前先读回题组，确认问题 id。回答保存时附带不可变的问题快照，点评仍按回答 id 保留历史。材料和点评继续使用新版本 id。导入不接受 `attempts`，原回答只能由用户在网页提交。`POST /api/career/attempts` 接收 questionSetId、questionId、answer、language（日语/中文构思/中日混合）、durationSeconds（0–3600，0 表示未记录）、requestReview（布尔值）。保存回答和排队按顺序写入；失败后先读回状态，避免重复创建。
 
 ## 外国求职者：海外经验与日语学习同时考虑
 
