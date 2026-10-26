@@ -22,6 +22,22 @@ private struct SavedNavigation: Codable {
     let resumePath: [AppRoute]
 }
 
+private struct AppFontSize: ViewModifier {
+    let selection: String
+    let systemSize: DynamicTypeSize
+
+    func body(content: Content) -> some View {
+        content.dynamicTypeSize(Self.sizes[selection] ?? systemSize)
+    }
+
+    private static let sizes: [String: DynamicTypeSize] = [
+        "small": .small,
+        "standard": .large,
+        "large": .xxxLarge,
+        "extraLarge": .accessibility1
+    ]
+}
+
 struct RootView: View {
     private static var launchTab: Int {
         if ProcessInfo.processInfo.arguments.contains("-careerDesignData") ||
@@ -33,6 +49,8 @@ struct RootView: View {
     @Bindable var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var systemDynamicTypeSize
+    @AppStorage("appFontSize") private var appFontSize = "system"
     @AppStorage("savedNavigation") private var savedNavigation = Data()
     @State private var selectedTab = RootView.launchTab
     @State private var companyPath: [AppRoute] = []
@@ -81,6 +99,7 @@ struct RootView: View {
                 LoginView(model: model)
             }
         }
+        .modifier(AppFontSize(selection: appFontSize, systemSize: systemDynamicTypeSize))
         .tint(PhoneStyle.accent)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active && model.userID != nil { Task { await model.sync() } }
@@ -104,6 +123,7 @@ struct RootView: View {
                 NavigationSplitView {
                     List {
                         sidebarItem("企业", systemImage: "building.2", tab: 0)
+                        sidebarItem("日程", systemImage: "calendar", tab: 3)
                         sidebarItem("练习", systemImage: "text.book.closed", tab: 1)
                         sidebarItem("简历", systemImage: "doc.text", tab: 2)
                     }
@@ -117,6 +137,9 @@ struct RootView: View {
                     tabContent(0)
                         .tabItem { Label("企业", systemImage: "building.2") }
                         .tag(0)
+                    tabContent(3)
+                        .tabItem { Label("日程", systemImage: "calendar") }
+                        .tag(3)
                     tabContent(1)
                         .tabItem { Label("练习", systemImage: "text.book.closed") }
                         .tag(1)
@@ -162,11 +185,13 @@ struct RootView: View {
                 PracticeList(model: model)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
-        default:
+        case 2:
             NavigationStack(path: pathBinding($resumePath)) {
                 ResumeHomeView(model: model)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
+        default:
+            NavigationStack { ScheduleHomeView(model: model) }
         }
     }
 
@@ -194,7 +219,7 @@ struct RootView: View {
         resumePath = []
         if let state = try? JSONDecoder().decode(SavedNavigation.self, from: savedNavigation),
            state.userID == userID {
-            selectedTab = (0...2).contains(state.selectedTab) ? state.selectedTab : 1
+            selectedTab = (0...3).contains(state.selectedTab) ? state.selectedTab : 1
             companyPath = state.companyPath
             practicePath = state.practicePath
             resumePath = state.resumePath
@@ -362,7 +387,7 @@ private struct PracticeList: View {
     }
 
     private var todayReport: CareerReport? {
-        model.state.reports.filter { $0.date.hasPrefix(today) }
+        model.state.reports.filter { $0.date.hasPrefix(today) && !($0.sourceNotes?.hasPrefix("career-event-v1:") ?? false) }
             .sorted { $0.date > $1.date }.first
     }
 
@@ -976,6 +1001,7 @@ struct AnswerView: View {
             try AVAudioSession.sharedInstance().setCategory(.playback)
             try AVAudioSession.sharedInstance().setActive(true)
             historyPlayer = try AVAudioPlayer(data: data)
+            if let historyPlayer { AudioPlaybackSettings.apply(to: historyPlayer) }
             historyPlayer?.play()
             historyAudioError = nil
         } catch {
@@ -1091,6 +1117,8 @@ struct TextDetailView: View {
 struct SettingsView: View {
     @Bindable var model: AppModel
     @AppStorage("showJapaneseReadings") private var showJapaneseReadings = true
+    @AppStorage("appFontSize") private var appFontSize = "system"
+    @AppStorage("audioPlaybackRate") private var audioPlaybackRate = 1.0
     @State private var discardID: String?
     @State private var speechVoice = ReferenceSpeechSettings.voice
 
@@ -1107,11 +1135,37 @@ struct SettingsView: View {
                 if let message = model.message { Text(message).foregroundStyle(.secondary) }
             }
             Section("阅读") {
+                Picker("字体大小", selection: $appFontSize) {
+                    Text("跟随系统").tag("system")
+                    Text("较小").tag("small")
+                    Text("标准").tag("standard")
+                    Text("较大").tag("large")
+                    Text("特大").tag("extraLarge")
+                }
+                Text("示例：面试问题与阅读资料")
+                    .foregroundStyle(.secondary)
                 Toggle("显示日语假名", isOn: $showJapaneseReadings)
                 Text("只在应用内显示资料中已保存的读音；不会猜测人名或修改原文。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("参考回答の音声") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("播放速度")
+                        Spacer()
+                        Text(audioPlaybackRate.formatted(.number.precision(.fractionLength(2))) + "×")
+                            .monospacedDigit()
+                    }
+                    Slider(value: $audioPlaybackRate, in: 0.5...2.0, step: 0.05) {
+                        Text("播放速度")
+                    } minimumValueLabel: {
+                        Text("0.5×").font(.caption)
+                    } maximumValueLabel: {
+                        Text("2×").font(.caption)
+                    }
+                }
+                Text("适用于参考回答朗读和练习录音回放。")
+                    .font(.footnote).foregroundStyle(.secondary)
                 Picker("日语语音", selection: $speechVoice) {
                     Text("Nanami · 女声").tag(ReferenceSpeechSettings.voices[0])
                     Text("Keita · 男声").tag(ReferenceSpeechSettings.voices[1])

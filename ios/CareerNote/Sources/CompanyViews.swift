@@ -1,4 +1,150 @@
 import SwiftUI
+import EventKit
+
+private struct CareerScheduleEvent: Decodable, Identifiable {
+    let id: String
+    let title: String
+    let description: String
+    let date: String
+    let start: String?
+    let end: String?
+    let timeStatus: String
+    let status: String
+    let location: String?
+    let url: String?
+
+    private struct Metadata: Decodable {
+        let date: String
+        let start: String?
+        let end: String?
+        let timeStatus: String
+        let status: String
+        let location: String?
+        let url: String?
+    }
+
+    init?(report: CareerReport) {
+        guard let firstLine = report.sourceNotes?.components(separatedBy: .newlines).first,
+              firstLine.hasPrefix("career-event-v1:"),
+              let data = firstLine.dropFirst("career-event-v1:".count).data(using: .utf8),
+              let meta = try? JSONDecoder().decode(Metadata.self, from: data),
+              meta.date == report.date,
+              ["exact", "end-estimated", "unknown"].contains(meta.timeStatus),
+              ["confirmed", "provisional"].contains(meta.status) else { return nil }
+        id = report.id
+        title = report.title
+        description = report.content
+        date = meta.date
+        start = meta.start
+        end = meta.end
+        timeStatus = meta.timeStatus
+        status = meta.status
+        location = meta.location
+        url = meta.url
+    }
+}
+
+struct CareerScheduleView: View {
+    let reports: [CareerReport]
+    let userID: String?
+    @State private var selectedDate = Date()
+    @State private var notice: String?
+    private static let store = EKEventStore()
+
+    private var events: [CareerScheduleEvent] {
+        reports.compactMap(CareerScheduleEvent.init(report:)).sorted {
+            ($0.date + ($0.start ?? "")) < ($1.date + ($1.start ?? ""))
+        }
+    }
+    private var day: String {
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(identifier: "Asia/Tokyo")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: selectedDate)
+    }
+    private var visibleEvents: [CareerScheduleEvent] {
+        let selected = events.filter { $0.date == day }
+        return selected.isEmpty ? events.filter { $0.date >= day }.prefix(4).map { $0 } : selected
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeading(title: "日历", detail: "日本时间")
+            DatePicker("查看日期", selection: $selectedDate, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .environment(\.timeZone, TimeZone(identifier: "Asia/Tokyo") ?? .current)
+            if events.isEmpty {
+                Text("同步后，这里会显示已登记的面谈和活动。")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                Text(events.contains { $0.date == day } ? "当天安排" : "接下来的安排")
+                    .font(.subheadline.bold())
+                ForEach(visibleEvents) { event in
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(event.title).font(.subheadline.bold())
+                        Text("\(event.date) · \(event.start ?? "上午，具体时间待确认")\(event.end.map { "–\($0)" } ?? "")")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if event.status == "provisional" { Text("仮予約 · 等待正式确认").font(.caption).foregroundStyle(.orange) }
+                        if event.timeStatus == "end-estimated" { Text("结束时间为估计").font(.caption).foregroundStyle(.secondary) }
+                        if let location = event.location { Text(location).font(.caption).foregroundStyle(.secondary) }
+                        if event.start != nil && event.end != nil {
+                            Button("加入系统日历") { Task { await save(event) } }
+                                .font(.subheadline)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 6)
+                }
+            }
+            if let notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+        }
+    }
+
+    @MainActor private func save(_ item: CareerScheduleEvent) async {
+        guard let start = item.start, let end = item.end,
+              let startDate = ISO8601DateFormatter().date(from: "\(item.date)T\(start):00+09:00"),
+              let endDate = ISO8601DateFormatter().date(from: "\(item.date)T\(end):00+09:00"),
+              endDate > startDate else { notice = "时间尚未确认，暂不能加入日历。"; return }
+        do {
+            guard try await Self.store.requestFullAccessToEvents() else {
+                notice = "请在系统设置中允许访问日历。"; return
+            }
+            let key = "careerCalendar.\(userID ?? "local").\(item.id)"
+            let savedID = UserDefaults.standard.string(forKey: key)
+            let event = savedID.flatMap { Self.store.event(withIdentifier: $0) } ?? EKEvent(eventStore: Self.store)
+            event.calendar = event.calendar ?? Self.store.defaultCalendarForNewEvents
+            guard event.calendar != nil else { notice = "系统没有可写入的日历。"; return }
+            event.title = item.title
+            event.startDate = startDate
+            event.endDate = endDate
+            event.location = item.location
+            event.notes = item.description + (item.status == "provisional" ? "\n仮予約：请等待正式确认。" : "")
+            event.url = item.url.flatMap(URL.init(string:))
+            try Self.store.save(event, span: .thisEvent)
+            if let identifier = event.eventIdentifier { UserDefaults.standard.set(identifier, forKey: key) }
+            notice = "已保存到系统日历。"
+        } catch { notice = "保存失败：\(error.localizedDescription)" }
+    }
+}
+
+struct ScheduleHomeView: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("日程").font(.largeTitle.bold())
+                PhoneCard { CareerScheduleView(reports: model.state.reports, userID: model.userID) }
+            }
+            .frame(maxWidth: 620, alignment: .leading)
+            .padding(16)
+            .padding(.bottom, 24)
+        }
+        .refreshable { await model.sync() }
+        .background(PhoneStyle.canvas)
+        .toolbar(.hidden, for: .navigationBar)
+    }
+}
 
 struct CompanyListView: View {
     @Bindable var model: AppModel
@@ -129,6 +275,7 @@ struct CompanyDetailView: View {
     private var info: some View {
         VStack(alignment: .leading, spacing: 18) {
             CompanyInfoSection(title: "公司信息", fields: [
+                ("公司名称", job.company),
                 ("公司标准读音", job.companyReading),
                 ("工作地点", job.location), ("员工人数", job.employeeCount),
                 ("公司类型", job.companyType), ("雇用形式", job.employmentType),

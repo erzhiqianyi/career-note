@@ -16,6 +16,7 @@ import {
 } from '@/lib/mcp-clients';
 import ScheduledTemplates from '@/components/scheduled-templates';
 import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
+import { eventsFromReports } from '@/lib/calendar-events';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
 import { Ja, JaChildren } from '@/components/japanese-text';
@@ -106,6 +107,7 @@ import {
 import { setAuthToken } from '@/lib/career';
 const nav = [
   { label: '今日准备', icon: LayoutDashboard },
+  { label: '日程', icon: CalendarDays },
   { label: '公司', icon: BriefcaseBusiness },
   { label: '我的履历', icon: UserRound },
   { label: '个性化简历', icon: FileText },
@@ -115,7 +117,7 @@ const nav = [
 ];
 // Phone layout: every page lives behind the brand drawer (no bottom tab bar).
 // Content pages come first; anything that configures the workspace is grouped as "settings".
-const drawerPages = ['今日准备', '公司', '我的履历', '个性化简历'];
+const drawerPages = ['今日准备', '日程', '公司', '我的履历', '个性化简历'];
 const drawerSettings = ['Agent 协作', '求职平台', '系统设置'];
 // `parent` is the nav page that stays highlighted; `back` is where the header arrow goes when it is not the parent.
 const subPages: Record<string, { parent: string; hash: string; back?: string }> = {
@@ -133,6 +135,7 @@ const sidebarKey = 'career-note.sidebar-collapsed';
 const hashes: Record<string, string> = {
   '#settings': '系统设置',
   '#today': '今日准备',
+  '#calendar': '日程',
   '#jobs': '公司',
   '#interview': '公司', // legacy links from before interview prep merged into the company page
   '#platforms': '求职平台',
@@ -690,6 +693,20 @@ export default function Home() {
       data?.jobs.filter(
         (j) => !['未通过', '已撤回', '内定'].includes(j.status),
       ) || [];
+  const calendarEvents = data ? eventsFromReports(data.reports) : [];
+  const calendarMarks: Record<string, CalendarMark> = {};
+  for (const job of openJobs) {
+    if (!job.nextDate) continue;
+    const date = job.nextDate.slice(0, 10);
+    if (calendarEvents.some(event => event.date === date && event.jobId === job.id)) continue;
+    const interview = job.status === '面试中' || /面试|面接|interview/i.test(job.nextAction);
+    const kind = interview ? 'interview' : 'due';
+    const previous = calendarMarks[date];
+    if (previous?.kind === 'interview' && !interview) continue;
+    calendarMarks[date] = { kind, jobs: [...(previous?.kind === kind ? previous.jobs : []), { id: job.id, company: job.company }] };
+  }
+  const targetDate = data?.profile.targetDate;
+  if (targetDate && !calendarMarks[targetDate]) calendarMarks[targetDate] = { kind: 'target', jobs: [] };
   // A drilled-in view (company detail, agent sub-pages): the header shows "back", phones drop the tab bar.
   // Drilled-in interview routes: the header carries their title and back arrow, so the pages themselves show neither.
   const prepRoute = (() => {
@@ -729,7 +746,7 @@ export default function Home() {
     const noNext = openJobs.find((j) => !j.nextAction);
     const practiced = new Set(data.attempts.map((a) => a.questionSetId));
     const unpracticed = data.questionSets.find((q) => !practiced.has(q.id));
-    const todayReport = data.reports.some((r) => r.date === data.today);
+    const todayReport = data.reports.some((r) => r.date === data.today && !r.sourceNotes?.startsWith('career-event-v1:'));
     const steps: [string, string, string, string?][] = [];
     if (!hasBasics || !hasEmployment)
       steps.push(['整理个人履历', '补充基本资料、工作经历和求职条件，后续材料都从这里引用。', '我的履历']);
@@ -1283,23 +1300,15 @@ export default function Home() {
                     </div>
                     <aside className="home-aside">
                   {(() => {
-                    // Calendar marks: follow-ups on their due day, interviews, and the personal target date.
-                    const marks: Record<string, CalendarMark> = {};
-                    for (const j of openJobs) {
-                      if (!j.nextDate) continue;
-                      const date = j.nextDate.slice(0, 10);
-                      const interview = j.status === '面试中' || /面试|面接|interview/i.test(j.nextAction);
-                      const kind = interview ? 'interview' : 'due';
-                      const prev = marks[date];
-                      if (prev && prev.kind === 'interview' && !interview) continue; // an interview outranks a follow-up on the same day
-                      marks[date] = { kind, jobs: [...(prev && prev.kind === kind ? prev.jobs : []), { id: j.id, company: j.company }] };
-                    }
                     const target = data.profile.targetDate;
-                    if (target && !marks[target]) marks[target] = { kind: 'target', jobs: [] };
                     const daysLeft = target ? Math.round((Date.parse(target) - Date.parse(data.today)) / 86400000) : null;
                     return (
                       <section className="today-hero">
-                        <TodayCalendar today={data.today} marks={marks} activity={collectActivity(data.jobs, data.attempts, data.materials)} onOpenJob={openJob} />
+                        <button type="button" className="calendar schedule-entry" onClick={() => go('日程')}>
+                          <CalendarDays size={21} aria-hidden="true" />
+                          <span><b>{tr('日程')}</b><small>{calendarEvents.find(event => event.date >= data.today)?.title || tr('查看面谈与活动')}</small></span>
+                          <ChevronRight size={18} aria-hidden="true" />
+                        </button>
                         <div className="goal">
                           <h2>
                             <Flag size={18} />
@@ -1357,6 +1366,12 @@ export default function Home() {
                     </aside>
                   </div>
                 </>
+              )}
+              {active === '日程' && (
+                <section className="schedule-page">
+                  <div className="section-head"><h2><CalendarDays size={20} />{tr('日程')}</h2></div>
+                  <TodayCalendar today={data.today} marks={calendarMarks} events={calendarEvents} activity={collectActivity(data.jobs, data.attempts, data.materials)} onOpenJob={openJob} />
+                </section>
               )}
               {active === '求职平台' && (
                 <JobPlatforms

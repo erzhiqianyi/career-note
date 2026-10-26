@@ -19,14 +19,16 @@ export function MaterialPrint({ material, companyName, onBack }: { material: Mat
   const [files, setFiles] = useState<{ pdf: SavedFile | null; photo: SavedFile | null }>({ pdf: null, photo: null });
   const [pdfUrl, setPdfUrl] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
-  const [showOriginal, setShowOriginal] = useState(true);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState(true);
   const [error, setError] = useState('');
   useEffect(() => {
     let cancelled = false;
     const urls: string[] = [];
     async function load() {
+      setLoadingFiles(true);
       try {
         const saved = await api<{ pdf: SavedFile | null; photo: SavedFile | null }>('material-files?id=' + encodeURIComponent(material.id));
         if (cancelled) return;
@@ -40,6 +42,8 @@ export function MaterialPrint({ material, companyName, onBack }: { material: Mat
         if (photo) { const url = URL.createObjectURL(photo); urls.push(url); setPhotoUrl(url); } else setPhotoUrl('');
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : t('读取文件失败'));
+      } finally {
+        if (!cancelled) setLoadingFiles(false);
       }
     }
     void load();
@@ -52,7 +56,6 @@ export function MaterialPrint({ material, companyName, onBack }: { material: Mat
       const mime = file.type || (kind === 'pdf' ? 'application/pdf' : /\.png$/i.test(file.name) ? 'image/png' : /\.webp$/i.test(file.name) ? 'image/webp' : 'image/jpeg');
       await apiUpload('material-files?id=' + encodeURIComponent(material.id) + '&kind=' + kind, new Blob([file], { type: mime }));
       setRevision(value => value + 1);
-      if (kind === 'pdf') setShowOriginal(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : t('上传失败')); }
     finally { setBusy(false); }
   }
@@ -79,7 +82,12 @@ export function MaterialPrint({ material, companyName, onBack }: { material: Mat
           <div>{internalNotes.length > 0 && <p>{t('内部备注已从打印正文排除。')}</p>}{hasPlaceholders && <p>{t('打印正文仍有待填写项，请核对。')}</p>}</div>
         </details>}
       </div>
-      <button className="primary" onClick={() => showOriginal && pdfUrl ? window.open(pdfUrl, '_blank', 'noopener') : frame.current?.contentWindow?.print()}><Printer size={16} />{t('打印 / 保存为 PDF')}</button>
+      <button className="primary" disabled={loadingFiles || (title === '履歴書' && !!files.photo && !photoUrl)} onClick={async () => {
+        if (showOriginal && pdfUrl) { window.open(pdfUrl, '_blank', 'noopener'); return; }
+        const image = frame.current?.contentDocument?.querySelector<HTMLImageElement>('.passport-photo');
+        if (image) { try { await image.decode(); } catch { setError(t('读取文件失败')); return; } }
+        frame.current?.contentWindow?.print();
+      }}><Printer size={16} />{t('打印 / 保存为 PDF')}</button>
     </div>
     <div className="material-file-controls">
       <label>{t('上传原版 PDF')}<input type="file" accept="application/pdf,.pdf" disabled={busy} onChange={event => { void upload('pdf', event.target.files?.[0]); event.target.value = ''; }} /></label>
@@ -88,11 +96,12 @@ export function MaterialPrint({ material, companyName, onBack }: { material: Mat
         <span>{t('原版 PDF 已保存')}</span>
         <button className="secondary" onClick={() => setShowOriginal(true)} disabled={showOriginal}>{t('原版 PDF')}</button>
         <button className="secondary" onClick={() => setShowOriginal(false)} disabled={!showOriginal}>{t('排版预览')}</button>
-        {pdfUrl && <a className="secondary" href={pdfUrl} download={`${title}_${companyName}.pdf`}><Download size={15} />{t('下载 PDF')}</a>}
+        {pdfUrl && <a className="secondary" href={pdfUrl} download={`${title}_${companyName}.pdf`}><Download size={15} />{t('下载原版 PDF')}</a>}
         <button className="secondary" onClick={() => void remove('pdf')} disabled={busy}>{t('移除 PDF')}</button>
       </>}
       {title === '履歴書' && files.photo && <><span>{t('证件照已保存，同一账号的履歴書共用')}</span><button className="secondary" onClick={() => void remove('photo')} disabled={busy}>{t('移除照片')}</button></>}
     </div>
+    {showOriginal && title === '履歴書' && files.photo && <p className="resume-print-note">{t('原版 PDF 不会自动加入后来上传的证件照；请选择排版预览打印含照片的版本。')}</p>}
     {error && <p role="alert" className="inline-note">{error}</p>}
     <p className="resume-print-note">{t('A4 · 缩放 100% · 关闭页眉页脚')}</p>
     {showOriginal && files.pdf && pdfUrl ? <iframe title={t('原版 PDF')} src={pdfUrl} className="resume-print-preview" /> : <iframe ref={frame} title={t('投递版预览')} srcDoc={html} className="resume-print-preview" />}

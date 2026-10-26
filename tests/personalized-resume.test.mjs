@@ -132,3 +132,23 @@ test('personalized drafts use CAS; publication snapshots exclude private data an
     2,
   );
 });
+test('archived personalized drafts can be deleted once no public link is live', async (t) => {
+  const mf = new Miniflare({ modules: true, script: b.outputFiles[0].text, compatibilityDate: '2026-05-22', d1Databases: ['CAREER_DB'] });
+  t.after(() => mf.dispose());
+  const send = (p, body) => mf.dispatchFetch('http://local/api/career/' + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const ok = async (p, body) => { const r = await send(p, body); const d = await r.json(); assert.equal(r.status, 200, JSON.stringify(d)); return d; };
+  const draft = { id: 'to-delete', revision: 0, title: 'Draft', targetRole: '', targetCompany: '', language: 'en', content: { name: 'Example', headline: '', summary: '', location: '', links: [], sections: [] }, sourceRefs: [], privateNotes: '' };
+  const first = await ok('personalized-resumes', draft);
+  assert.equal((await send('personalized-resumes/delete', { id: draft.id, revision: 1 })).status, 400);
+  const link = await ok('resume-publications', { draftId: draft.id, draftRevision: 1, mode: 'unlisted', expiresAt: '' });
+  const { updatedAt, ...edit } = first;
+  const archived = await ok('personalized-resumes', { ...edit, archived: true });
+  assert.equal((await send('personalized-resumes/delete', { id: draft.id, revision: 1 })).status, 409);
+  assert.equal((await send('personalized-resumes/delete', { id: draft.id, revision: archived.revision })).status, 409);
+  await ok('resume-publications/revoke', { id: link.id });
+  await ok('personalized-resumes/delete', { id: draft.id, revision: archived.revision });
+  const db = await mf.getD1Database('CAREER_DB');
+  for (const table of ['personalized_resumes', 'personalized_resume_history', 'resume_publications'])
+    assert.equal((await db.prepare(`SELECT count(*) n FROM ${table}`).first()).n, 0, table);
+  assert.equal((await send('personalized-resumes/delete', { id: draft.id, revision: archived.revision })).status, 404);
+});

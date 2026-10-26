@@ -101,6 +101,7 @@ final class PracticeSpeechRecorder {
             try session.setCategory(.playback)
             try session.setActive(true)
             player = try AVAudioPlayer(contentsOf: url)
+            if let player { AudioPlaybackSettings.apply(to: player) }
             player?.play()
         } catch {
             errorMessage = "录音播放失败：\(error.localizedDescription)"

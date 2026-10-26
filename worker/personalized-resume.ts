@@ -89,6 +89,43 @@ export async function savePersonalized(
     ? json(saved)
     : json({ error: '草稿已更改，请重新载入后保存' }, 409);
 }
+export async function deletePersonalized(
+  db: D1Database,
+  owner: string,
+  input: Record<string, unknown>,
+) {
+  const { id, revision } = input;
+  if (typeof id !== 'string' || !id || id.length > 100 || !Number.isSafeInteger(revision) || (revision as number) < 1)
+    return json({ error: '请提供草稿 id 和当前修订号' }, 400);
+  const row = await db
+    .prepare('SELECT revision,body FROM personalized_resumes WHERE owner=? AND id=?')
+    .bind(owner, id)
+    .first<{ revision: number; body: string }>();
+  if (!row) return json({ error: '草稿不存在' }, 404);
+  if (!(JSON.parse(row.body) as PersonalizedResume).archived)
+    return json({ error: '只能永久删除已归档的草稿' }, 400);
+  if (row.revision !== revision) return json({ error: '草稿已更改，请刷新后重试' }, 409);
+  // A live link must be withdrawn deliberately; deleting the draft never takes a public page down silently.
+  const activeLink = `SELECT 1 FROM resume_publications WHERE owner=? AND json_extract(body,'$.draftId')=? AND revoked_at=''
+    AND (coalesce(json_extract(body,'$.expiresAt'),'')='' OR json_extract(body,'$.expiresAt')>?)`;
+  const now = new Date().toISOString();
+  if (await db.prepare(activeLink).bind(owner, id, now).first())
+    return json({ error: '此草稿仍有公开链接，请先撤下' }, 409);
+  const gone = 'NOT EXISTS (SELECT 1 FROM personalized_resumes WHERE owner=? AND id=?)';
+  const results = await db.batch([
+    db.prepare(`DELETE FROM personalized_resumes WHERE owner=? AND id=? AND revision=?
+      AND json_extract(body,'$.archived')=1 AND NOT EXISTS (${activeLink})`)
+      .bind(owner, id, revision, owner, id, now),
+    db.prepare(`DELETE FROM personalized_resume_history WHERE owner=? AND id=? AND ${gone}`)
+      .bind(owner, id, owner, id),
+    // Withdrawn and expired snapshots still hold the content; remove them with the draft.
+    db.prepare(`DELETE FROM resume_publications WHERE owner=? AND json_extract(body,'$.draftId')=? AND ${gone}`)
+      .bind(owner, id, owner, id),
+  ]);
+  return results[0].meta.changes > 0
+    ? json({ ok: true })
+    : json({ error: '草稿已更改，请刷新后重试' }, 409);
+}
 export async function publishResume(
   db: D1Database,
   owner: string,

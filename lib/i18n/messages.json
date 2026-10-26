@@ -1286,6 +1286,10 @@
     "ja": "この文書とすべての改訂履歴を完全に削除しますか？元に戻せません。",
     "en": "Permanently delete this document and all its revisions? This cannot be undone."
   },
+  "永久删除此草稿及其全部修订？已撤下或过期的公开链接记录也会一并删除，此操作无法恢复。": {
+    "ja": "この下書きとすべての改訂履歴を完全に削除しますか？停止済み・期限切れの公開リンクの記録も削除されます。元に戻せません。",
+    "en": "Permanently delete this draft and all its revisions? Withdrawn or expired public link records are deleted too. This cannot be undone."
+  },
   "删除失败": {
     "ja": "削除に失敗しました",
     "en": "Delete failed"
@@ -5503,5 +5507,13 @@
   "归档此旧版本": { "ja": "この旧版をアーカイブ", "en": "Archive this version" },
   "恢复到资料列表": { "ja": "資料一覧に戻す", "en": "Restore to materials" },
   "已恢复到资料列表": { "ja": "資料一覧に戻しました", "en": "Restored to materials" },
-  "已归档，资料列表不再显示此版本": { "ja": "アーカイブしました。資料一覧には表示されません", "en": "Archived; it no longer appears in the materials list" }
+  "已归档，资料列表不再显示此版本": { "ja": "アーカイブしました。資料一覧には表示されません", "en": "Archived; it no longer appears in the materials list" },
+  "上午": { "ja": "午前", "en": "morning" },
+  "暂约": { "ja": "仮予約", "en": "Tentative booking" },
+  "具体时间待确认": { "ja": "時刻は要確認", "en": "Time to be confirmed" },
+  "结束约 {0}": { "ja": "終了予定 {0}", "en": "Estimated end {0}" },
+  "结束 {0}": { "ja": "終了 {0}", "en": "Ends {0}" },
+  "导出日历文件": { "ja": "カレンダーファイルを書き出す", "en": "Export calendar file" },
+  "日程": { "ja": "予定", "en": "Schedule" },
+  "查看面谈与活动": { "ja": "面談やイベントを確認", "en": "View interviews and events" }
 }
