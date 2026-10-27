@@ -60,6 +60,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     getServerSnapshot,
   );
   useEffect(() => {
+    if (window.location.pathname !== '/') return;
     document.documentElement.lang = locale;
     document.title = {
       'zh-CN': '就职手帖 · 日本求职准备',

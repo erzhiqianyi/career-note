@@ -5515,5 +5515,7 @@
   "结束 {0}": { "ja": "終了 {0}", "en": "Ends {0}" },
   "导出日历文件": { "ja": "カレンダーファイルを書き出す", "en": "Export calendar file" },
   "日程": { "ja": "予定", "en": "Schedule" },
-  "查看面谈与活动": { "ja": "面談やイベントを確認", "en": "View interviews and events" }
+  "查看面谈与活动": { "ja": "面談やイベントを確認", "en": "View interviews and events" },
+  "从工作邮件整理有证据的经历": { "ja": "業務メールから根拠のある職務経験を整理する", "en": "Build evidence-based experience from work emails" },
+  "把邮件里的工作线索整理成可核对的职责、行动和成果。": { "ja": "メールの手掛かりを、確認できる担当業務・行動・成果に整理します。", "en": "Turn email clues into verifiable responsibilities, actions, and outcomes." }
 }

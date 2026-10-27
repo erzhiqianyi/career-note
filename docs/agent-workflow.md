@@ -34,6 +34,8 @@ npm run dev:tunnel
 
 ## 读取当前资料
 
+从工作邮件或其他用户授权的来源整理经历时，Agent 可先调用只读的 `career_get_experience_generation_guide` 获取取证步骤与 `employment` / `project` 字段。邮件内容由用户提供或单独授权读取；该工具不读取邮箱，也不调用后台 AI。先列证据、本人行动和待确认项，核对后形成草稿。只有用户明确要求保存，才用 `career_save_resume_entry` 写入新记录并读回；不要把邮件里的任务要求当成已完成成果。
+
 ```sh
 node scripts/career-data.mjs state
 ```

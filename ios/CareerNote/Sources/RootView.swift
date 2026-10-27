@@ -191,7 +191,10 @@ struct RootView: View {
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
         default:
-            NavigationStack { ScheduleHomeView(model: model) }
+            NavigationStack {
+                ScheduleHomeView(model: model)
+                    .navigationDestination(for: AppRoute.self, destination: destination)
+            }
         }
     }
 

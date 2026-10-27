@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AppearanceProvider } from '@/components/appearance-provider';
 import { LocaleProvider } from '@/components/locale-provider';
+import { apiUrl } from '@/lib/api-base';
 export const metadata: Metadata = {
   metadataBase: new URL('https://career.erzhiqian.cc'),
   title: '就职手帖 · 日本求职准备',
@@ -23,6 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
+      <head><link rel="sitemap" type="application/xml" href={apiUrl('articles/sitemap.xml')} /></head>
       <body>
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
           <>

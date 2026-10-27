@@ -5,6 +5,10 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const dir = await mkdtemp(join(tmpdir(), 'career-note-material-print-'));
 const bundled = await build({ entryPoints: ['lib/material-print-content.ts'], bundle: true, write: false, format: 'esm', platform: 'node', target: 'es2022' });
@@ -43,4 +47,15 @@ test('ordinary prose mentioning internal review is retained', () => {
   assert.equal(result.printableContent, source);
   assert.deepEqual(result.internalNotes, []);
   assert.equal(result.hasPlaceholders, false);
+});
+
+test('blank lines inside a saved Markdown table still render as a table', () => {
+  const source = '# 履歴書\n\n| 項目 | 内容 |\n\n|---|---|\n\n| 氏名 | 例 |\n\n| 住所 | 東京 |\n\n## 職歴\n\n| prose with a pipe | stays prose';
+  const { printableContent } = prepareMaterialPrint(source);
+  const html = renderToStaticMarkup(createElement(ReactMarkdown, { remarkPlugins: [remarkGfm], children: printableContent }));
+  assert.match(html, /<table>/);
+  assert.match(html, /<th>項目<\/th>/);
+  assert.match(html, /<td>東京<\/td>/);
+  assert.match(html, /<h2>職歴<\/h2>/);
+  assert.match(printableContent, /\| prose with a pipe \| stays prose/);
 });

@@ -7,6 +7,10 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // lib files import each other without extensions, so bundle them like the app does.
 const dir = await mkdtemp(join(tmpdir(), 'career-note-readings-'));
@@ -16,7 +20,7 @@ const load = async (entry) => {
   await writeFile(file, out.outputFiles[0].text);
   return import(pathToFileURL(file).href);
 };
-const { alignReading, annotate, buildGlossary, rubyHTML, inlineReadings, inlineRubyHTML, plainJapanese } = await load('lib/japanese-readings.ts');
+const { alignReading, annotate, buildGlossary, rubyHTML, inlineReadings, inlineRubyHTML, plainJapanese, markdownJapaneseReadings } = await load('lib/japanese-readings.ts');
 const { resumeHTML } = await load('lib/personalized-resume.ts');
 
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -60,6 +64,12 @@ void test('inline readings follow each occurrence and disappear without losing t
   assert.match(inlineRubyHTML(source, esc, true), /<ruby>生物<rt>せいぶつ<\/rt><\/ruby>と<ruby>生物<rt>なまもの<\/rt><\/ruby>/);
   assert.equal(inlineRubyHTML(source, esc, false), '生物と生物、取り組み');
   assert.equal(inlineRubyHTML('{<script>|かな}', esc, true), '{&lt;script&gt;|かな}');
+});
+
+void test('inline readings do not split Markdown table columns', () => {
+  const markdown = '| 項目 | 内容 |\n|---|---|\n| {氏名|しめい} | 東京 |';
+  const html = renderToStaticMarkup(createElement(ReactMarkdown, { remarkPlugins: [remarkGfm], children: markdownJapaneseReadings(markdown) }));
+  assert.match(html, /<td>\{氏名\|しめい\}<\/td><td>東京<\/td>/);
 });
 
 const bundled = await build({ entryPoints: ['worker/index.ts'], bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022' });

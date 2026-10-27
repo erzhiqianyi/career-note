@@ -299,7 +299,7 @@ test('MCP resume reads request summaries and retrieve only the selected revision
   const paths = [];
   const tools = createCareerTools(async (_ctx, path) => {
     paths.push(path);
-    return Response.json({ entries: [] });
+    return Response.json(path === 'articles/work-email-to-experience' ? { prompt: '根据工作邮件整理经历' } : { entries: [] });
   });
   for (const [name, args] of [
     ['career_get_resume', {}],
@@ -315,6 +315,14 @@ test('MCP resume reads request summaries and retrieve only the selected revision
     'resume?view=summary', 'state?resumeView=summary',
     'resume/history?id=doc%2Fa&view=summary', 'resume/version?id=doc%2Fa&revision=2',
   ]);
+  const guide = tools.find(t => t.name === 'career_get_experience_generation_guide');
+  assert.equal(guide.annotations.readOnlyHint, true);
+  const guidance = (await guide.handler({}, {})).structuredContent;
+  assert.equal(guidance.saveTool, 'career_save_resume_entry');
+  assert.ok(guidance.prompt.includes('工作邮件'));
+  assert.ok(guidance.fields.employment.some(field => field.key === 'responsibilities'));
+  assert.ok(guidance.steps.some(step => step.includes('explicitly asks to save')));
+  assert.equal(paths.at(-1), 'articles/work-email-to-experience');
   const deletion = tools.find(t => t.name === 'career_delete_resume_document');
   assert.equal(deletion.scope, 'career:write');
   assert.equal(deletion.annotations.destructiveHint, true);

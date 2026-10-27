@@ -2,6 +2,7 @@ import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePer
 import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
 import { ensureMaterialFilesSchema, materialFileMeta, materialFileKey, saveMaterialFile, deleteMaterialFile, type MaterialFileKind } from './material-files';
 import { ensureResumeSchema, readResume, writeResume, deleteResumeDocument, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
+import { ensureArticleSchema, listArticles, getArticle, saveArticle, articleHtml, articleSitemap } from './articles';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
 import { inspectorResponse } from '@ninomae/mcp-app-server/inspector';
 import { sqlStore } from '@ninomae/mcp-app-server/sql';
@@ -1212,6 +1213,7 @@ async function ensureAllSchemas(db: D1Database, gateway: McpAppServer): Promise<
   await ensureMaterialFilesSchema(db);
   await ensureResumeSchema(db);
   await ensurePersonalizedSchema(db);
+  await ensureArticleSchema(db);
 }
 
 const handler = async (
@@ -1233,6 +1235,21 @@ const handler = async (
   if (publicMatch && request.method === 'GET') return publicResumeResponse(rawDb, publicMatch[1]);
   const publicMaterialMatch = new URL(request.url).pathname.match(/^\/api\/career\/public-materials\/([a-f0-9-]{36})$/);
   if (publicMaterialMatch && request.method === 'GET') return publicMaterialResponse(rawDb, publicMaterialMatch[1]);
+  const articlePath = new URL(request.url).pathname;
+  if (request.method === 'GET' && articlePath === '/api/career/articles')
+    return jsonResponse({ articles: await listArticles(rawDb) });
+  if (request.method === 'GET' && articlePath === '/api/career/articles/sitemap.xml')
+    return articleSitemap(rawDb, new URL(request.url).origin);
+  const publicArticleMatch = articlePath.match(/^\/api\/career\/articles\/view\/([a-z0-9-]{3,80})$/);
+  if (request.method === 'GET' && publicArticleMatch) {
+    const article = await getArticle(rawDb, publicArticleMatch[1]);
+    return article ? articleHtml(article, request.url, resolveOrigins(request, env).webOrigin) : new Response('Not found', { status: 404 });
+  }
+  const articleJsonMatch = articlePath.match(/^\/api\/career\/articles\/([a-z0-9-]{3,80})$/);
+  if (request.method === 'GET' && articleJsonMatch && articleJsonMatch[1] !== 'manage') {
+    const article = await getArticle(rawDb, articleJsonMatch[1]);
+    return article ? jsonResponse(article) : jsonResponse({ error: '文章不存在' }, { status: 404 });
+  }
   const audioMatch = new URL(request.url).pathname.match(/^\/api\/career\/attempts\/audio\/([a-f0-9]{48})$/);
   if (audioMatch && request.method === 'GET') return audioLinkResponse(rawDb, env, audioMatch[1]);
 
@@ -1307,6 +1324,11 @@ const handler = async (
 
   if (pathname === '/api/career/auth/me' && method === 'GET') {
     return jsonResponse(context);
+  }
+  if (pathname === '/api/career/articles/manage' && method === 'GET') {
+    if (!context.admin && context.mode !== 'off') throw new AppError(403, '仅管理员可管理文章');
+    if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中管理文章');
+    return jsonResponse({ articles: await listArticles(rawDb, true) });
   }
 
   if (pathname === '/api/career/state' && method === 'GET') {
@@ -1451,6 +1473,10 @@ const handler = async (
 
   let result: unknown;
   switch (pathname) {
+    case '/api/career/articles/manage':
+      if (!context.admin && context.mode !== 'off') throw new AppError(403, '仅管理员可管理文章');
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中管理文章');
+      return saveArticle(rawDb, payload);
     case '/api/career/personalized-resumes':
       ensureScopes(context, ['career:write']);
       return savePersonalized(rawDb, db.namespace, payload);

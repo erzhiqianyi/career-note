@@ -2366,7 +2366,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .agent-tips-filters button[aria-pressed=true] {border-color:#456b9c;background:#eaf1fb;color:#254f87;font-weight:700;}
 .agent-tips-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
 .agent-tip-card {display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-width:0;min-height:188px;padding:20px 22px;border:1px solid var(--list-border);border-radius:12px;background:var(--surface);text-align:left;color:var(--ink);cursor:pointer;}
-.agent-tip-card:hover,.agent-tip-card[aria-expanded=true] {border-color:#8daace;box-shadow:0 5px 18px rgba(37,68,105,.08);}
+.agent-tip-card:hover,.agent-tip-card:focus-visible {border-color:#8daace;box-shadow:0 5px 18px rgba(37,68,105,.08);}
 .agent-tip-card-top {display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;}
 .agent-tip-icon {display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#eef3fa;color:#36577b;}
 .agent-tip-topic {color:#58708d;font-size:.75rem;font-weight:600;}
@@ -2375,16 +2375,18 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .agent-tip-meta {display:flex;align-items:center;gap:8px;margin-top:auto;color:var(--ink-3);font-size:.75rem;}
 .agent-tip-meta > svg {margin-left:3px;color:#55769c;}
 .agent-tip-author {display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#315b8e;color:#fff;font-size:.7rem;font-weight:700;}
-.agent-tip-detail {padding:24px 28px;border:1px solid #a9bdd3;border-radius:12px;background:var(--surface);}
-.agent-tip-detail-head {display:flex;justify-content:space-between;align-items:start;gap:16px;}
-.agent-tip-detail-head span {color:#58708d;font-size:.75rem;font-weight:600;}
-.agent-tip-detail-head h3 {margin:6px 0 0;font-size:1.25rem;}
-.agent-tip-detail ol {display:grid;gap:10px;margin:22px 0;padding-left:22px;color:var(--ink-2);font-size:.875rem;line-height:1.7;}
-.agent-tip-prompt {padding:18px 20px;border-radius:9px;background:#f3f7fb;}
-.agent-tip-prompt b {font-size:.8125rem;}
-.agent-tip-prompt p {margin:9px 0 16px;font-size:.875rem;line-height:1.75;white-space:pre-wrap;}
-.agent-tip-prompt button,.agent-tip-detail > .primary {display:inline-flex;align-items:center;gap:7px;}
-.agent-tip-detail > .primary {margin-top:18px;}
+.agent-tip-card {text-decoration:none;}
+.agent-article-manage {display:grid;gap:16px;padding:22px;border:1px solid var(--list-border);border-radius:12px;background:var(--surface);}
+.agent-article-manage .section-head {margin:0;}
+.agent-article-manage-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.agent-article-manage-list button {display:flex;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--list-border);border-radius:8px;background:var(--surface);color:var(--ink);text-align:left;cursor:pointer;}
+.agent-article-manage-list small {color:var(--ink-3);white-space:nowrap;}
+.agent-article-form {display:grid;gap:14px;padding-top:18px;border-top:1px solid var(--list-border);}
+.agent-article-form h3 {margin:0;}
+.agent-article-form label {display:grid;gap:5px;font-size:.85rem;font-weight:600;}
+.agent-article-form input,.agent-article-form textarea,.agent-article-form select {width:100%;padding:10px 12px;border:1px solid var(--list-border);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;}
+.agent-article-form-actions {display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+@media(max-width:650px){.agent-article-manage-list{grid-template-columns:1fr}}
 .agent-endpoint {display:flex;gap:10px;}
 .agent-endpoint input {flex:1;min-width:0;padding:12px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#1f2a3c;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size: 0.875rem;}
 .agent-endpoint button {display:inline-flex;align-items:center;gap:6px;padding:0 18px;border:0;border-radius:8px;background:#2f486b;color:#fff;font-size: 0.875rem;font-weight:600;white-space:nowrap;}
@@ -2492,7 +2494,6 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
  .agent-tips-hero-icon {display:none;}
  .agent-tips-grid {grid-template-columns:1fr;}
  .agent-tip-card {min-height:0;}
- .agent-tip-detail {padding:20px;}
  .agent-endpoint {flex-direction:column;}
  .agent-endpoint button {justify-content:center;padding:12px;}
  .agent-entries {grid-template-columns:1fr;}

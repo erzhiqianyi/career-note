@@ -14,6 +14,7 @@
     "dev:worker": "node scripts/dev.mjs",
     "dev:tunnel": "node scripts/dev.mjs --tunnel",
     "build": "vinext build",
+    "postbuild": "node scripts/add-article-sitemap.mjs",
     "start": "node scripts/dev.mjs",
     "lint": "oxlint",
     "format": "oxfmt",
