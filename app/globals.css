@@ -4104,3 +4104,8 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .application-reason header > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .application-reason .secondary { display: inline-flex; align-items: center; gap: 6px; }
 .application-reason p { margin: 0; line-height: 1.8; }
+.material-formats { display: grid; gap: 4px; }
+.material-formats small { color: var(--ink-3); font-size: .75rem; line-height: 1.4; }
+.motivation-full-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 20px 0 12px; }
+.motivation-full-heading h3 { margin: 0; font-size: 1rem; }
+.motivation-full-heading button { display: inline-flex; align-items: center; gap: 6px; }

@@ -81,6 +81,7 @@ export function summarizeToolResult(path: string, body: Record<string, unknown> 
   }
   if (path === 'tasks') return { kind: body?.kind ?? null, jobId: body?.jobId ?? null };
   if (path === 'attempts/audio-link') return { attemptId: body?.attemptId ?? null }; // the URL itself is never logged
+  if (path === 'jobs/rating' || path === 'jobs/preference') return { id: body?.id ?? null, revision: body?.revision ?? null };
   if (path === 'profile' || path === 'resume' || path === 'personalized-resumes') return { id: body?.id ?? null, revision: body?.revision ?? null };
   return null;
 }

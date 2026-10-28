@@ -1,6 +1,8 @@
 import { apiUrl } from './api-base';
 import { freshAuthToken } from './career-auth';
 import type { CompanyProfile } from './company-profile';
+import type { PreferenceGroup } from './job-preferences';
+export { preferenceGroups } from './job-preferences';
 export const statuses = [
   '关注中',
   '准备投递',
@@ -56,6 +58,8 @@ export type Job = {
   priority: string;
   /** Owner's personal company rating; 0 or absent means unrated. */
   rating?: number;
+  /** Applicant's stated preference; missing or empty means not selected. */
+  preferenceGroup?: PreferenceGroup;
   nextAction: string;
   nextDate: string;
   notes: string;

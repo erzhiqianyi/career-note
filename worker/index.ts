@@ -19,6 +19,7 @@ import { parseEventHeader, withEventHeader, type EventHeader } from '../lib/cale
 import { applicationBodyIssues, type ApplicationKind, type MaterialReviewItem } from '../lib/material-print-content';
 import { normalizeCompanyProfile } from '../lib/company-profile';
 import { plainJapanese } from '../lib/japanese-readings';
+import { preferenceGroups } from '../lib/job-preferences';
 
 type JobStatus = '关注中' | '准备投递' | '已投递' | '书类选考' | '面试中' | '内定' | '未通过' | '已撤回';
 type JobPriority = '高' | '普通' | '低';
@@ -405,6 +406,11 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
     base.status = status;
     base.priority = priority;
     base.rating = rating;
+    const preferenceGroup = data.preferenceGroup === undefined ? (old?.preferenceGroup ?? '') : data.preferenceGroup;
+    if (typeof preferenceGroup !== 'string' || (preferenceGroup !== '' && !preferenceGroups.includes(preferenceGroup as typeof preferenceGroups[number]))) {
+      throw new AppError(400, '无效的志望群');
+    }
+    base.preferenceGroup = preferenceGroup;
     base.nextAction = nextAction;
     base.nextDate = nextDate;
     base.notes = notes;
@@ -445,6 +451,33 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
 
   await putRecord(db, 'jobs', base);
   return base;
+}
+
+async function updateJobPersonalField(db: Workspace, data: Record<string, unknown>, field: 'rating' | 'preferenceGroup') {
+  if (Array.isArray(data) || Object.keys(data).some(key => !['id', 'revision', field].includes(key))) {
+    throw new AppError(400, `更新只接受 id、revision 和 ${field}`);
+  }
+  const id = validateString(data.id, 'id', { required: true, max: 120 });
+  const revision = data.revision;
+  const value = data[field];
+  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
+    throw new AppError(400, 'revision 必须是正整数');
+  }
+  if (field === 'rating' && (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 5)) {
+    throw new AppError(400, '评分必须是 0 到 5 星');
+  }
+  if (field === 'preferenceGroup' && (typeof value !== 'string' || (value !== '' && !preferenceGroups.includes(value as typeof preferenceGroups[number])))) {
+    throw new AppError(400, '志望群必须是第一志望群、第二志望群、第三志望群或空字符串');
+  }
+  // Patch the stored JSON in one conditional statement, preserving concurrent research writes.
+  const saved = await db.connection.prepare(
+    "UPDATE records SET body=json_set(body, ?3, ?4, '$.revision', ?5, '$.updatedAt', ?6) WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?7 RETURNING body",
+  ).bind(workspaceKey(db, 'jobs'), id, '$.' + field, value as string | number, revision + 1, now(), revision).first<{ body: string }>();
+  if (!saved) {
+    if (!(await getRecord(db, 'jobs', id))) throw new AppError(404, '职位不存在');
+    throw new AppError(409, '职位已更新，请读取最新 revision 后重试');
+  }
+  return JSON.parse(saved.body);
 }
 
 async function deleteJobs(db: Workspace, env: Env, uid: string, data: Record<string, unknown>) {
@@ -1047,8 +1080,14 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         const key = validateString(obj.id, 'id', { required: true, max: 120 });
         if (seen.has(key)) throw new AppError(400, '数据包中存在重复 id');
         seen.add(key);
+        if (Object.prototype.hasOwnProperty.call(obj, 'rating')) {
+          throw new AppError(400, '个人星级请使用 career_update_job_rating，不能通过研究导入修改');
+        }
+        if (Object.prototype.hasOwnProperty.call(obj, 'preferenceGroup')) {
+          throw new AppError(400, '志望群请使用 career_update_job_preference，不能通过研究导入修改');
+        }
         if (
-          ['status', 'history', 'notes', 'nextDate', 'nextAction', 'priority', 'rating', 'revision'].some(
+          ['status', 'history', 'notes', 'nextDate', 'nextAction', 'priority', 'revision'].some(
             (field) => Object.prototype.hasOwnProperty.call(obj, field),
           )
         ) {
@@ -1636,6 +1675,14 @@ const handler = async (
     case '/api/career/jobs':
       ensureScopes(context, ['career:write']);
       result = await saveJob(db, payload);
+      break;
+    case '/api/career/jobs/rating':
+      ensureScopes(context, ['career:write']);
+      result = await updateJobPersonalField(db, payload, 'rating');
+      break;
+    case '/api/career/jobs/preference':
+      ensureScopes(context, ['career:write']);
+      result = await updateJobPersonalField(db, payload, 'preferenceGroup');
       break;
     case '/api/career/jobs/delete':
       ensureScopes(context, ['career:write']);

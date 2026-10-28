@@ -1,4 +1,16 @@
 {
+  "志望群": { "ja": "志望群", "en": "Preference group" },
+  "第一志望群": { "ja": "第一志望群", "en": "First-choice group" },
+  "第二志望群": { "ja": "第二志望群", "en": "Second-choice group" },
+  "第三志望群": { "ja": "第三志望群", "en": "Third-choice group" },
+  "未选择": { "ja": "未選択", "en": "Not selected" },
+  "申请意愿排序，与匹配星级分开记录。": { "ja": "応募先の志望度です。マッチ評価の星とは別に記録します。", "en": "Your application preference, recorded separately from the fit rating." },
+  "只在你要求时修改履历摘要、履历记录、公司个人星级或志望群。仅保存研究不需要这项权限。": { "ja": "あなたが求めたときだけプロフィール要約・履歴情報・企業の個人評価・志望群を変更します。調査の保存だけなら不要です。", "en": "Changes the profile summary, resume records, personal company ratings or preference groups only when you ask. Not needed for saving research alone." },
+  "応募理由・100字版": { "ja": "応募理由・100字版", "en": "Application reason · 100 chars" },
+  "応募理由・未准备": { "ja": "応募理由・未作成", "en": "Application reason · not prepared" },
+  "志望動機・完整版": { "ja": "志望動機・全文", "en": "Motivation · full version" },
+  "用于申请表的「ご応募理由（任意）」等 100 字以内输入栏。与下方完整版一起保存和管理。": { "ja": "応募フォームの「ご応募理由（任意）」など100字以内の入力欄に使います。下の全文と一緒に保存・管理します。", "en": "For application form fields such as ご応募理由（任意） with a 100-character limit. Saved and managed together with the full version below." },
+  "这个版本尚未准备申请表短版。请让 Agent 为这份志望動機补充 100 字以内的応募理由。": { "ja": "この版には応募フォーム用の短文がありません。Agent にこの志望動機の100字以内の応募理由を追加してもらってください。", "en": "This version has no short application reason. Ask an agent to add a reason of 100 characters or fewer to this motivation document." },
   "复制失败，请手动复制。": { "ja": "コピーできませんでした。手動でコピーしてください。", "en": "Copy failed. Please copy it manually." },
   "{0} / 100 字": { "ja": "{0} / 100 字", "en": "{0} / 100 chars" },
   "复制应募理由": { "ja": "応募理由をコピー", "en": "Copy reason" },
@@ -2962,6 +2974,14 @@
   "保存研究报告、资料版本、问题集和点评，排队准备任务。": {
     "ja": "調査レポート、資料の版、質問集、講評を保存し、準備タスクを登録します。",
     "en": "Save research reports, material versions, question sets and reviews, and queue preparation tasks."
+  },
+  "更新履历与个人评分": {
+    "ja": "プロフィール・履歴・個人評価を更新する",
+    "en": "Update profile, resume and personal ratings"
+  },
+  "只在你要求时修改履历摘要、履历记录或公司个人星级。仅保存研究不需要这项权限。": {
+    "ja": "あなたが求めたときだけプロフィール要約・履歴情報・企業の個人評価を変更します。調査の保存だけなら不要です。",
+    "en": "Changes the profile summary, resume records or personal company star ratings only when you ask. Not needed for saving research alone."
   },
   "更新履历摘要": {
     "ja": "プロフィール要約を更新する",

@@ -31,6 +31,7 @@ import { prepareMaterialPrint, type ApplicationKind } from '@/lib/material-print
 import { MaterialPublications } from '@/components/material-publications';
 import { ApplicationReason } from '@/components/application-reason';
 import ResumeManager from '@/components/resume-manager';
+import { preferenceGroups } from '@/lib/job-preferences';
 import PersonalizedResumes from '@/components/personalized-resumes';
 import {
   DataActions,
@@ -1072,6 +1073,14 @@ export default function Home() {
                   <option value="0">{tr('未评分')}</option>
                   {[1, 2, 3, 4, 5].map(stars => <option key={stars} value={stars}>{'★'.repeat(stars)}{'☆'.repeat(5 - stars)} ({stars}/5)</option>)}
                 </select>
+              </label>
+              <label className="field">
+                <span>{tr('志望群')}</span>
+                <select name="preferenceGroup" defaultValue={jobEdit.preferenceGroup || ''}>
+                  <option value="">{tr('未选择')}</option>
+                  {preferenceGroups.map(group => <option key={group} value={group}>{tr(group)}</option>)}
+                </select>
+                <small>{tr('申请意愿排序，与匹配星级分开记录。')}</small>
               </label>
               <Field
                 name="nextAction"

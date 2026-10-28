@@ -15,6 +15,8 @@ description: 根据已有履历和求职条件核验日本招聘岗位，比较�
 - jobs 更新使用已有稳定 id 和完整研究字段，保留旧证据。不得传 status、history、revision、notes、nextDate、nextAction、priority。首次导入每类型最多 200 条。
 - 用户要求公司详细介绍、业务分析或企业看板时，按协议写入日语的 `companyProfile`（事业概要、事业内容、强み、沿革、今後の展望、懸念点、出典、确认日）。事实取自官网、IR、有価証券報告書等来源；推测在展望中标「分析：」，信息不足就少写，不补造。
 - 保存研究并读回来源与关联；研究结论“优先准备/待确认”不是投递结果。
+- 用户明确要求更新个人星级时，先读取现有职位 revision，再逐家公司调用 `career_update_job_rating({ id, revision, rating })`（需 `career:write`；0–5 整数，0 为未评分），保存后读回确认。星级表达相对准备优先度，不表示录用概率；不要通过通用 jobs 导入传 rating。工具不可用时说明需升级服务及刷新工具列表。
+- 志望群是本人意愿，与星级分开。只有本人指定或明确授权判断时，才使用 `career_update_job_preference({ id, revision, preferenceGroup })` 保存第一志望群、第二志望群、第三志望群或空字符串（需 `career:write`），随后读回；不能通过研究导入传 preferenceGroup。申请表准备可调用注册的 `career_application_preparation` prompt（company 为职位 id 或公司编号），志望動機及100字短文可用 `career_motivation` prompt；都不会提交申请。
 
 ## 连接与保存
 

@@ -92,6 +92,18 @@ void test('Google users and their agents have isolated workspaces, including leg
   const read=await rpc(issued.token,'tools/call',{name:'career_get_context',arguments:{}});
   assert.equal(JSON.parse(read.result.content[0].text).profile.summary,'Alice only');
   const writer={token:(await authorizeAgent(mf,{name:'Writer',scopes:['career:read','agent:write','career:write'],approveHeaders:{Authorization:'Bearer '+a}})).issued.access_token};
+  const aliceJob = (await ok(a, 'state')).jobs[0];
+  const bobJobBefore = (await ok(b, 'state')).jobs[0];
+  const rated = await rpc(writer.token, 'tools/call', { name: 'career_update_job_rating', arguments: { id: aliceJob.id, revision: aliceJob.revision, rating: 4 } });
+  assert.equal(rated.result.isError, false);
+  assert.equal((await ok(a, 'state')).jobs[0].rating, 4);
+  assert.deepEqual((await ok(b, 'state')).jobs[0], bobJobBefore);
+  const currentAliceJob = (await ok(a, 'state')).jobs[0];
+  const preference = await rpc(writer.token, 'tools/call', { name: 'career_update_job_preference', arguments: { id: currentAliceJob.id, revision: currentAliceJob.revision, preferenceGroup: '第二志望群' } });
+  assert.equal(preference.result.isError, false);
+  assert.equal((await ok(a, 'state')).jobs[0].preferenceGroup, '第二志望群');
+  assert.deepEqual((await ok(b, 'state')).jobs[0], bobJobBefore);
+  assert.equal((await send(issued.token, 'jobs/preference', { id: currentAliceJob.id, revision: currentAliceJob.revision, preferenceGroup: '第一志望群' })).status, 403);
   const draft={id:'private-draft',revision:0,title:'Private management title',targetRole:'Backend',targetCompany:'Private target',language:'en',content:{name:'Public candidate',headline:'Engineer',summary:'Public summary',location:'',links:[],sections:[]},sourceRefs:[],privateNotes:'Secret evidence'};
   const draftWrite=await rpc(writer.token,'tools/call',{name:'career_save_personalized_resume',arguments:draft});
   assert.equal(draftWrite.result.isError,false);

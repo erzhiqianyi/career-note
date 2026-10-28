@@ -28,9 +28,13 @@ npm run dev:tunnel
 
 技能使用已配置的 Career Note MCP，不依赖仓库路径。端点为当前网站的 `/api/career/mcp`，通过标准 MCP OAuth 授权（用户在浏览器里登录并同意）获得令牌；没有手动令牌。读取履历时先调用 `career_get_resume_overview`、`career_list_resume`，再按需调用 `career_get_resume_details`、`career_get_resume_document_chunk`；写入前调用 `career_preview_import`，写入后读回 context。履历收集技能在用户要求更新摘要时可调用 `career_update_profile`，保留现有字段和 revision。其他研究技能不自动修改履历。
 
-MCP prompts（需要 agent:write）：`career_company_board`（参数 company：job id 或公司编号）生成日语企業ボード `companyProfile`；`career_motivation` 生成新的志望動機版本和 100 字以内的 `applicationReason`。两者都会附上该公司当前的研究字段和保存步骤；客户端支持 prompts 时可直接选用，不支持时按本文协议操作。
+MCP prompts（需要 agent:write）：`career_company_board`（参数 company：job id 或公司编号）生成日语企業ボード `companyProfile`；`career_motivation` 生成新的志望動機版本和 100 字以内的 `applicationReason`；`career_application_preparation` 准备申请表的志望群和応募理由短文。三者均以 company 参数读取当前账号的职位，附上当前字段和保存步骤；客户端支持 prompts 时可直接选用，不支持时按本文协议操作。
 
-授权 scope：career:read 用于 context，agent:write 用于预览/导入/排队，career:write 用于用户授权的摘要更新（授权页默认不勾选）。没有更改投递状态、原回答、代发申请或跨用户操作的 MCP 工具。投递复盘读取既有历史，保存 reports；无反馈不算失败，原因缺失标未知。
+授权 scope：career:read 用于 context，agent:write 用于预览/导入/排队，career:write 用于用户授权的履历摘要、履历记录和公司个人星级更新（授权页默认不勾选）。没有更改投递状态、原回答、代发申请或跨用户操作的 MCP 工具。投递复盘读取既有历史，保存 reports；无反馈不算失败，原因缺失标未知。
+
+个人星级评价通过 `career_update_job_rating({ id, revision, rating })` 单独更新，需要 `career:write` 权限，并且仅在用户要求评价或修改星级时调用。先用 `career_get_context` 读取现有职位 id 和 revision；rating 必须是 0–5 的整数（0 表示未评分）。工具只更新 rating、revision 和 updatedAt，保留研究字段、投递状态、历史、跟进安排和笔记。评分须有岗位与本人事实依据，不表示录用概率。多家公司逐一调用；每次成功后读回，发生 409 冲突时重新读取并判断，不盲目重试。研究理由仍通过预览/导入更新 matchNotes；通用 jobs 导入继续禁止 rating。部署新版 Worker 且客户端刷新工具列表后，才可使用该工具。
+
+志望群是职位上的 `preferenceGroup`，可取 `第一志望群`、`第二志望群`、`第三志望群` 或空字符串（未选择）。它表示本人意愿，不按星级、匹配评价、优先级或投递状态自动映射。仅在用户指定或明确授权 Agent 判断后，调用 `career_update_job_preference({ id, revision, preferenceGroup })` 保存（需要 `career:write`），读回确认；409 时重新读取。工具只修改 preferenceGroup、revision 和 updatedAt。通用 jobs 研究导入禁止 preferenceGroup；旧客户端未传此字段时保留原值。公司列表与详情展示，职位编辑页可选择或清空。`career_application_preparation` prompt 会携带现有选择、星级、revision 和岗位证据，并明确保存与不提交申请的边界。
 
 以下 CLI 是维护者的备用路径；独立安装的技能不需要它。
 
@@ -115,6 +119,8 @@ node scripts/career-data.mjs state
 `matchLevel` 只能是 `优先准备`、`先确认条件`、`暂不匹配` 或空（待评估），与 `matchNotes` 中的理由一致。`sourcePlatform` 是最初发现职位的平台名称，可写“公司官网”或实际平台名；`sourceChannel` 只能是 `主动发现`、`AI 搜索`、`Agent 推荐` 或空。主动发现指用户自己找到，AI 搜索指用户请 AI 搜索，Agent 推荐指 Agent 主动提出候选；无法确认时留空。已有职位来源字段缺省时会保留原值。kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。用户明确要求去掉旧版材料时，可在同一数据包中用 `"archiveMaterials": [{"id": "旧材料 id", "archived": true}]` 归档；归档只从默认列表隐藏，正文保留，`archived: false` 可恢复。不要自行归档用户未指定的材料。示例是协议示意，不能作为真实招聘信息导入。
 
 志望動機材料可另加 `applicationReason`：可直接粘贴到应募表单「ご応募理由（任意）」等栏位的简短版本，去掉 `{漢字|かな}` 读音后不超过 100 字（服务端按此计数并拒绝超长），只用于 kind 为志望動機的材料。写成完整的日语段落，不加标题、列表或 Markdown；内容与正文一致，突出对该公司业务的理解和可贡献的经历，不编造动机。网页的复制按钮会去掉读音。
+
+分类仍为「志望動機」：资料列表以「応募理由・100字版」标识包含短文的版本，未包含时显示未准备；详情分为申请表短版与完整版，分别复制。两者共用同一资料版本、核对状态和归档操作，不新建「応募理由」主类型。修订短版时生成新的志望動機资料版本并保留完整正文与来源。
 
 `companyReading`、`employeeCount`、`companyType`、`employmentType` 可选；缺省时保留已有值，明确传空字符串才清除。公司读音须有可核对来源，未知时留空。员工人数可保留“约”“截至日期”等限定词。`employmentType` 记录聘用合同形式，不能仅因岗位在客户现场工作就写成派遣。
 

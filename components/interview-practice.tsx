@@ -38,6 +38,7 @@ import { resumeSections } from '@/lib/resume';
 import { prepRank, prepStage, prepStageTone, type PrepProgress } from '@/lib/prep-stage';
 import { Ja } from '@/components/japanese-text';
 import { CompanyBoard } from '@/components/company-board';
+import { plainJapanese } from '@/lib/japanese-readings';
 const profileLabels: Record<string, string> = {
   summary: '个人概要',
   skills: '技能',
@@ -142,7 +143,7 @@ export default function InterviewPractice({
     { key: 'review', label: tr('状态'), width: '80px' },
   ]}>{rows.map(m => <DataRow key={m.id} onOpen={() => openMaterial(m)}>
     <DataTitle title={m.title} meta={<>{withCompany ? (data.jobs.find(j => j.id === m.jobId)?.company || tr('整个求职工作区')) + ' · ' : ''}{day(m.createdAt)}</>} onClick={() => openMaterial(m)} />
-    <DataCell label={tr('类型')}>{tr(m.kind)}</DataCell>
+    <DataCell label={tr('类型')}><span className="material-formats">{tr(m.kind)}{m.kind === '志望動機' && <small>{tr(plainJapanese(m.applicationReason || '').trim() ? '応募理由・100字版' : '応募理由・未准备')}</small>}</span></DataCell>
     <DataCell label={tr('状态')} corner>{m.archivedAt ? <span className="badge">{tr('已归档')}</span> : <span className="badge amber">{tr(m.reviewStatus || '待核对')}</span>}</DataCell>
   </DataRow>)}</DataTable>;
   const [company, setCompany] = useRecordPage<string>('#jobs', 'company', id => id === BANK_JOB_ID ? id : (data.jobs.find(j => j.companyNumber && String(j.companyNumber) === id) || data.jobs.find(j => j.id === id))?.id || null, id => String(data.jobs.find(j => j.id === id)?.companyNumber || id));
@@ -505,7 +506,7 @@ export default function InterviewPractice({
           const overdue = !!job.nextDate && job.nextDate < data.today;
           return <DataRow key={job.id} className={(closed.includes(job.status) ? 'is-closed ' : '') + (managing ? 'is-managing' : '')} onOpen={managing ? undefined : () => setCompany(job.id)}>
             {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
-            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={job.role} onClick={() => setCompany(job.id)} />
+            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{job.preferenceGroup && <> · {tr(job.preferenceGroup)}</>}</>} onClick={() => setCompany(job.id)} />
             <DataCell label={tr('个人评分')} className="prep-rating"><span aria-label={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')} title={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')}>{job.rating ? <>{'★'.repeat(job.rating)}<span className="rating-empty">{'☆'.repeat(5 - job.rating)}</span></> : <span className="muted">{tr('未评分')}</span>}</span></DataCell>
             <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label /></DataCell>
             <DataCell label={tr('面试 / 跟进')} className="prep-schedule">
@@ -588,6 +589,7 @@ export default function InterviewPractice({
             ['投递状态', currentJob.status ? tr(currentJob.status) : ''],
             ['优先级', currentJob.priority ? tr(currentJob.priority) : ''],
             ['个人评分', currentJob.rating ? `${'★'.repeat(currentJob.rating)}${'☆'.repeat(5 - currentJob.rating)} (${currentJob.rating}/5)` : tr('未评分')],
+            ['志望群', tr(currentJob.preferenceGroup || '未选择')],
             ['下一步', currentJob.nextAction ? currentJob.nextAction + (currentJob.nextDate ? '（' + day(currentJob.nextDate) + '）' : '') : '', true],
           ])}
           {textSections([

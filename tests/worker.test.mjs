@@ -126,6 +126,33 @@ void test('personal company ratings persist and reject invalid or agent-provided
  assert.equal((await send('jobs',{...job,rating:0})).status,200);
  assert.equal((await (await send('state')).json()).jobs[0].rating,0);
 });
+void test('preference groups stay separate from ratings and survive research and old clients',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const source={id:'preference-job',company:'Example',role:'Engineer',matchNotes:'Original evidence'};
+ const bundle={schemaVersion:1,jobs:[source],completeTaskIds:[]};
+ assert.equal((await send('import',bundle)).status,200);
+ const read=async()=>(await (await send('state')).json()).jobs[0];
+ let job=await read();
+ for(const preferenceGroup of ['第一志望群','第二志望群','第三志望群','']){
+  const before=await read();
+  assert.equal((await send('jobs/preference',{id:before.id,revision:before.revision,preferenceGroup})).status,200);
+  job=await read();assert.equal(job.preferenceGroup,preferenceGroup);assert.equal(job.revision,before.revision+1);
+  for(const field of ['rating','status','history','matchNotes','nextAction','priority','notes'])assert.deepEqual(job[field],before[field],field);
+ }
+ assert.equal((await send('jobs/preference',{id:job.id,revision:job.revision,preferenceGroup:'第一志望群'})).status,200);
+ assert.equal((await send('jobs/preference',{id:job.id,revision:job.revision,preferenceGroup:'第二志望群'})).status,409);
+ assert.equal((await send('import',bundle)).status,200);
+ job=await read();assert.equal(job.preferenceGroup,'第一志望群');
+ const {preferenceGroup:omitted,...oldClient}=job;
+ assert.equal((await send('jobs',oldClient)).status,200);job=await read();assert.equal(job.preferenceGroup,'第一志望群');
+ for(const preferenceGroup of ['第四志望群','高',null,1]){
+  assert.equal((await send('jobs/preference',{id:job.id,revision:job.revision,preferenceGroup})).status,400);
+  assert.equal((await send('jobs',{...job,preferenceGroup})).status,400);
+ }
+ assert.equal((await send('jobs/preference',{id:'missing',revision:1,preferenceGroup:''})).status,404);
+ assert.equal((await send('jobs/preference',{id:job.id,revision:job.revision,preferenceGroup:'第二志望群',rating:5})).status,400);
+ assert.equal((await send('import',{...bundle,jobs:[{...source,preferenceGroup:'第一志望群'}]})).status,400);
+});
 void test('志望動機 keeps a short application reason counted without readings',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'reason-job',company:'Example',role:'Engineer'}],completeTaskIds:[]})).status,200);

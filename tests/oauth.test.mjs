@@ -80,6 +80,59 @@ void test('refresh rotates the pair, replaying a rotated refresh token revokes t
   assert.equal((await mf.dispatchFetch(origin + '/api/career/mcp/tokens', { headers: { Authorization: 'Bearer ' + again.issued.access_token } })).status, 401);
 });
 
+void test('MCP personal ratings require career:write and patch only the current job revision', async t => {
+  const mf = await worker(t);
+  const source = { id: 'rating-job', company: 'Example', role: 'Engineer', matchNotes: 'Evidence', unknowns: 'Language' };
+  await json(await post(mf, '/api/career/import', { schemaVersion: 1, jobs: [source], completeTaskIds: [] }));
+  const state = async () => (await json(await mf.dispatchFetch(origin + '/api/career/state'))).jobs[0];
+  const original = await state();
+  const rpc = async (token, method, params = {}) => json(await mf.dispatchFetch(origin + '/api/career/mcp', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+  }));
+  const reader = (await authorizeAgent(mf, { scopes: ['career:read', 'agent:write'] })).issued.access_token;
+  assert.ok(!(await rpc(reader, 'tools/list')).result.tools.some(tool => tool.name === 'career_update_job_rating'));
+  const payload = { id: original.id, revision: original.revision, rating: 5 };
+  const denied = await post(mf, '/api/career/jobs/rating', payload, { Authorization: 'Bearer ' + reader });
+  assert.equal(denied.status, 403);
+  const writer = (await authorizeAgent(mf, { scopes: ['career:read', 'career:write'] })).issued.access_token;
+  const listed = (await rpc(writer, 'tools/list')).result.tools.find(tool => tool.name === 'career_update_job_rating');
+  assert.ok(listed);
+  assert.deepEqual(listed.inputSchema.required.sort(), ['id', 'rating', 'revision']);
+  const call = args => rpc(writer, 'tools/call', { name: 'career_update_job_rating', arguments: args });
+  const saved = (await call(payload)).result;
+  assert.equal(saved.isError, false);
+  assert.equal(saved.structuredContent.rating, 5);
+  const after = await state();
+  assert.equal(after.revision, original.revision + 1);
+  const stable = job => Object.fromEntries(Object.entries(job).filter(([key]) => !['rating', 'revision', 'updatedAt'].includes(key)));
+  assert.deepEqual(stable(after), stable(original));
+  assert.equal((await post(mf, '/api/career/jobs/rating', payload, { Authorization: 'Bearer ' + writer })).status, 409);
+  for (const rating of [-1, 6, 1.5, '3', null, true]) {
+    const result = await call({ ...payload, revision: after.revision, rating });
+    assert.equal(result.result?.isError ?? !!result.error, true);
+    assert.equal((await post(mf, '/api/career/jobs/rating', { ...payload, revision: after.revision, rating })).status, 400);
+  }
+  for (const revision of [0, -1, 1.5, '2', null]) {
+    assert.equal((await post(mf, '/api/career/jobs/rating', { ...payload, revision })).status, 400);
+  }
+  for (const extra of [{ status: '内定' }, { owner_uid: 'other' }, { matchNotes: 'overwrite' }]) {
+    assert.equal((await post(mf, '/api/career/jobs/rating', { ...payload, revision: after.revision, ...extra })).status, 400);
+  }
+  assert.equal((await post(mf, '/api/career/jobs/rating', { id: 'missing', revision: 1, rating: 4 })).status, 404);
+  // Two callers with the same revision cannot both succeed.
+  const concurrent = await Promise.all([2, 4].map(rating => post(mf, '/api/career/jobs/rating', { ...payload, revision: after.revision, rating })));
+  assert.deepEqual(concurrent.map(response => response.status).sort(), [200, 409]);
+  const current = await state();
+  assert.equal((await call({ id: current.id, revision: current.revision, rating: 0 })).result.isError, false);
+  assert.equal((await state()).rating, 0);
+  const events = (await json(await mf.dispatchFetch(origin + '/api/career/mcp/activity'))).activity;
+  const audit = events.find(row => row.event === 'tool:jobs/rating');
+  assert.ok(audit?.ok);
+  assert.deepEqual(Object.keys(audit.detail).sort(), ['id', 'revision']);
+  assert.deepEqual(stable(await state()), stable(original));
+});
+
 void test('registration and grant validation reject unsafe or mismatched inputs', async (t) => {
   const mf = await worker(t);
   for (const uri of ['http://evil.example/callback', 'javascript:alert(1)', 'not a url', 'https://ok.example/cb#frag']) {

@@ -15,7 +15,7 @@ void test('MCP prompts carry the board and 志望動機 instructions with the ca
 
   // Anonymous discovery lists static metadata only.
   const names = (await rpc('prompts/list', {})).result.prompts.map((p) => p.name);
-  assert.deepEqual(names.sort(), ['career_company_board', 'career_motivation']);
+  assert.deepEqual(names.sort(), ['career_application_preparation', 'career_company_board', 'career_motivation']);
 
   const { issued } = await authorizeAgent(mf, { scopes: ['career:read', 'agent:write'], resource: origin + '/api/career/mcp' });
   const board = (await rpc('prompts/get', { name: 'career_company_board', arguments: { company: '#1' } }, issued.access_token)).result;
@@ -26,6 +26,11 @@ void test('MCP prompts carry the board and 志望動機 instructions with the ca
   const motive = (await rpc('prompts/get', { name: 'career_motivation', arguments: { company: 'prompt-job' } }, issued.access_token)).result;
   assert.match(motive.messages[0].content.text, /applicationReason/);
   assert.match(motive.messages[0].content.text, /100 字/);
+  const application = (await rpc('prompts/get', { name: 'career_application_preparation', arguments: { company: '#1' } }, issued.access_token)).result;
+  const applicationText = application.messages[0].content.text;
+  for (const term of ['Example 株式会社', '第一志望群', '第二志望群', '第三志望群', 'career_update_job_preference', 'career_motivation', 'applicationReason', 'career:write', '不提交申请', '不要把星级自动映射']) assert.ok(applicationText.includes(term), term);
+  assert.match(applicationText, /"preferenceGroup": ""/);
+  assert.match(applicationText, /"revision": 1/);
 
   const missing = await rpc('prompts/get', { name: 'career_motivation', arguments: { company: 'nope' } }, issued.access_token);
   assert.ok(missing.error);
@@ -35,4 +40,5 @@ void test('MCP prompts carry the board and 志望動機 instructions with the ca
   const readerList = await rpc('prompts/list', {}, reader.access_token);
   assert.deepEqual(readerList.result?.prompts ?? [], []);
   assert.ok((await rpc('prompts/get', { name: 'career_company_board', arguments: { company: '#1' } }, reader.access_token)).error);
+  assert.ok((await rpc('prompts/get', { name: 'career_application_preparation', arguments: { company: '#1' } }, reader.access_token)).error);
 });
