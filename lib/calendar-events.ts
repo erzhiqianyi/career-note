@@ -3,6 +3,9 @@ import type { Report } from './career';
 export type EventStatus = 'confirmed' | 'provisional' | 'cancelled';
 export type EventKind = 'interview' | 'counseling' | 'fair';
 export type EventTimeStatus = 'exact' | 'end-estimated' | 'unknown';
+/** A reference for the event (job posting, venue map, prep page); `url` stays the one place to join it. */
+export type EventLink = { label: string; url: string };
+export type EventTodo = { text: string; done: boolean };
 
 /** The JSON on the first sourceNotes line of a schedule report, after the `career-event-v1:` prefix. */
 export type EventHeader = {
@@ -15,6 +18,8 @@ export type EventHeader = {
   location?: string;
   url?: string;
   jobId?: string;
+  links?: EventLink[];
+  todos?: EventTodo[];
   /** Older schedule report ids this version replaces; they drop off the calendar. */
   supersedes?: string[];
 };
@@ -45,11 +50,25 @@ export function parseEventHeader(sourceNotes: string | undefined, reportDate: st
   if (!['interview', 'counseling', 'fair'].includes(data.kind as string)) return { error: '日程 kind 不正确' };
   if (data.timeStatus !== 'unknown' && !(TIME.test(String(data.start)) && TIME.test(String(data.end)))) return { error: '日程 start/end 必须是 HH:MM' };
   for (const key of ['location', 'url', 'jobId'] as const) if (data[key] !== undefined && typeof data[key] !== 'string') return { error: `日程 ${key} 必须是字符串` };
+  const links = data.links === undefined ? [] : data.links;
+  if (!Array.isArray(links) || links.length > 20) return { error: '日程 links 必须是最多 20 条的数组' };
+  for (const link of links) {
+    if (typeof link !== 'object' || link === null || typeof link.url !== 'string' || !/^https?:\/\/\S+$/.test(link.url) || link.url.length > 2000) return { error: '日程 links 的 url 必须是 http(s) 链接' };
+    if (link.label !== undefined && (typeof link.label !== 'string' || link.label.length > 100)) return { error: '日程 links 的 label 必须是 100 字以内的字符串' };
+  }
+  const todos = data.todos === undefined ? [] : data.todos;
+  if (!Array.isArray(todos) || todos.length > 50) return { error: '日程 todos 必须是最多 50 条的数组' };
+  for (const todo of todos) {
+    if (typeof todo !== 'object' || todo === null || typeof todo.text !== 'string' || !todo.text.trim() || todo.text.length > 500) return { error: '日程 todos 的 text 必须是 500 字以内的非空字符串' };
+    if (todo.done !== undefined && typeof todo.done !== 'boolean') return { error: '日程 todos 的 done 必须是 true 或 false' };
+  }
   const supersedes = data.supersedes === undefined ? [] : Array.isArray(data.supersedes) ? data.supersedes : [data.supersedes];
   if (!supersedes.every((id) => typeof id === 'string' && id)) return { error: '日程 supersedes 必须是报告 id 或其数组' };
   const header: EventHeader = { date: data.date, timeStatus: data.timeStatus as EventTimeStatus, status: data.status as EventStatus, kind: data.kind as EventKind };
   if (header.timeStatus !== 'unknown') Object.assign(header, { start: data.start, end: data.end });
   for (const key of ['location', 'url', 'jobId'] as const) if (data[key]) header[key] = data[key] as string;
+  if (links.length) header.links = links.map((link: Record<string, unknown>) => ({ label: String(link.label || '').trim(), url: link.url as string }));
+  if (todos.length) header.todos = todos.map((todo: Record<string, unknown>) => ({ text: (todo.text as string).trim(), done: todo.done === true }));
   if (supersedes.length) header.supersedes = supersedes as string[];
   return header;
 }
@@ -79,7 +98,9 @@ const utcIcs = (date: string, time: string) => new Date(`${date}T${time}:00+09:0
 
 export function eventIcs(event: CareerEvent): string | null {
   if (!event.start || !event.end || event.timeStatus === 'unknown') return null;
-  const description = `${event.description}${event.timeStatus === 'end-estimated' ? '\n结束时间为估计。' : ''}${event.url ? `\n${event.url}` : ''}`;
+  const links = (event.links || []).map(link => `\n${link.label ? `${link.label}: ` : ''}${link.url}`).join('');
+  const todos = (event.todos || []).map(todo => `\n${todo.done ? '☑' : '☐'} ${todo.text}`).join('');
+  const description = `${event.description}${event.timeStatus === 'end-estimated' ? '\n结束时间为估计。' : ''}${event.url ? `\n${event.url}` : ''}${links}${todos}`;
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Career Note//Calendar Event//ZH',
     'BEGIN:VEVENT', `UID:${event.id}@career-note`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`,

@@ -972,6 +972,11 @@ async function updateEvent(db: Workspace, payload: Record<string, unknown>) {
     const value = validateString(payload[key], key, { max: key === 'url' ? 2000 : 200 });
     if (value) header[key] = value;
   }
+  // Fields left out of the payload keep their saved value.
+  for (const key of ['links', 'todos'] as const) {
+    const value = payload[key] === undefined ? current[key] : payload[key];
+    if (value !== undefined) header[key] = value;
+  }
   if (current.supersedes) header.supersedes = current.supersedes;
   const sourceNotes = (report.sourceNotes as string) || '';
   const next = withEventHeader(sourceNotes, header as EventHeader);

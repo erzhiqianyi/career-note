@@ -236,8 +236,9 @@ career-event-v1:{"date":"2026-10-29","start":"10:05","end":"11:30","timeStatus":
 
 - `date` 必须与报告 `date` 相同（YYYY-MM-DD）；`timeStatus` 为 `exact`、`end-estimated`（结束时间为估计）或 `unknown`（此时省略 start/end）；start/end 为 HH:MM（Asia/Tokyo）。
 - `status`：`confirmed`（已确定）、`provisional`（暂约，对方只给候补或未最终确认）、`cancelled`（已取消）。`kind`：`interview`、`counseling`、`fair`。location、url、jobId 可省略，只写来源明确的内容。
+- 详情页的三部分：`url` 是参加用的会议链接；`links` 是其他参考链接 `[{"label":"求人票","url":"https://…"}]`（最多 20 条，只接受 http/https）；`todos` 是本人要做的准备 `[{"text":"職務経歴書を印刷","done":false}]`（最多 50 条）；报告 `content` 是说明（Markdown）。待办只写来源中明确要求或本人提出的事项，不要编造；`done` 由本人在网页勾选，Agent 新建时一律写 `false`。
 - 导入时会校验格式，格式错误的日程报告会被拒绝。
-- **修改或取消**：报告不能覆盖，导入一个新 id 的版本，并在 JSON 中加 `"supersedes": ["旧日程报告 id"]`（可多个）。被替换的旧版本不再显示在日历里，原文仍保留。取消用 `"status":"cancelled"` 并 supersedes 原日程；日历上以删除线显示，不导出日历文件。只能替换已存在的日程报告，不能替换自身。
+- **修改或取消**：报告不能覆盖，导入一个新 id 的版本，并在 sourceNotes 第一行的 `career-event-v1:` JSON 里加 `"supersedes": ["旧日程报告 id"]`（可多个），例如 `career-event-v1:{"date":"2026-10-29",…,"supersedes":["旧日程报告 id"]}`。不要把 supersedes 写成报告的顶层字段：顶层字段会被忽略，旧版本仍显示在日历里。被替换的旧版本不再显示在日历里，原文仍保留。取消用 `"status":"cancelled"` 并 supersedes 原日程；日历上以删除线显示，不导出日历文件。只能替换已存在的日程报告，不能替换自身。
 - 本人可在网页日程中直接修改或移除日程；移除只是从日历隐藏，报告保留。Agent 不能调用网页的修改/移除接口，一律用 supersedes 版本。
 - 只给候补日期、需要本人回复选择的邀约不登记为日程，在报告中列为待回复事项。
 

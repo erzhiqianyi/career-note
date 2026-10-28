@@ -15,8 +15,8 @@ import {
   mcpSetupPage,
 } from '@/lib/mcp-clients';
 import ScheduledTemplates from '@/components/scheduled-templates';
-import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
-import { eventsFromReports } from '@/lib/calendar-events';
+import TodayCalendar, { EventDetail, collectActivity, type CalendarMark } from '@/components/today-calendar';
+import { eventsFromReports, type CareerEvent } from '@/lib/calendar-events';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
 import { Ja, JaChildren } from '@/components/japanese-text';
@@ -311,6 +311,8 @@ export default function Home() {
   const [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
     [doc, setDoc] = useRecordPage<Material | Report>('#documents', 'view', id => [...(data?.materials || []), ...(data?.reports || [])].find(item => item.id === id) || null, item => item.id);
   const [printMaterial, setPrintMaterial] = useRecordPage<Material>('#documents', 'print', id => data?.materials.find(m => m.id === id && !!m.jobId && ['履歴書', '職務経歴書'].includes(m.kind)) || null, m => m.id);
+  // Only the id is routed; the event itself is read from the latest data so saved edits show at once.
+  const [eventId, setEventId] = useRecordPage<string>('#calendar', 'event', id => id, id => id);
   const [taskPage, setTaskPage] = useRecordPage<State['tasks'][number]>('#agents', 'task', id => data?.tasks.find(t => t.id === id) || null, t => t.id);
   const [archivedTokens, setArchivedTokens] = useRecordPage<boolean>('#agents', 'archive', () => true, () => 'all');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -695,6 +697,14 @@ export default function Home() {
         (j) => !['未通过', '已撤回', '内定'].includes(j.status),
       ) || [];
   const calendarEvents = data ? eventsFromReports(data.reports) : [];
+  const eventPage = eventId ? calendarEvents.find(event => event.id === eventId) || null : null;
+  const saveEvent = (event: CareerEvent) => action(() => api('events/update', {
+    id: event.id, title: event.title, content: event.description, date: event.date,
+    start: event.start, end: event.end, timeStatus: event.timeStatus, status: event.status,
+    kind: event.kind, location: event.location || '', url: event.url || '', jobId: event.jobId || '',
+    links: (event.links || []).map(link => ({ label: link.label.trim(), url: link.url.trim() })).filter(link => link.url),
+    todos: (event.todos || []).map(todo => ({ text: todo.text.trim(), done: todo.done })).filter(todo => todo.text),
+  }), '日程已更新');
   const calendarMarks: Record<string, CalendarMark> = {};
   for (const job of openJobs) {
     if (!job.nextDate) continue;
@@ -967,7 +977,7 @@ export default function Home() {
           </div>
         </header>
         <div className="page">
-          {!doc && !printMaterial && !profileEdit && !importOpen && !agentTrail && !taskPage && !archivedTokens && <>
+          {!doc && !eventPage && !printMaterial && !profileEdit && !importOpen && !agentTrail && !taskPage && !archivedTokens && <>
           {jobEdit ? (
 <section className="panel job-editor-page" key={jobEdit.id || 'new'} aria-labelledby="page-subtitle">
           {jobEdit.company && <div className="editor-heading"><p>{jobEdit.company}</p></div>}
@@ -1377,13 +1387,7 @@ export default function Home() {
                     events={calendarEvents}
                     activity={collectActivity(data.jobs, data.attempts, data.materials)}
                     onOpenJob={openJob}
-                    busy={busy}
-                    onSaveEvent={(event) => action(() => api('events/update', {
-                      id: event.id, title: event.title, content: event.description, date: event.date,
-                      start: event.start, end: event.end, timeStatus: event.timeStatus, status: event.status,
-                      kind: event.kind, location: event.location || '', url: event.url || '', jobId: event.jobId || '',
-                    }), '日程已更新')}
-                    onRemoveEvent={(event) => action(() => api('events/remove', { id: event.id, removed: true }), '已从日程移除')}
+                    onOpenEvent={(event) => setEventId(event.id)}
                   />
                 </section>
               )}
@@ -1602,6 +1606,22 @@ export default function Home() {
               );
               if (ok) setProfileEdit(false);
             }}
+          />
+        </RecordPage>
+      )}
+      {eventPage && data && (
+        <RecordPage title={eventPage.title} onClose={() => setEventId(null)}>
+          <EventDetail
+            event={eventPage}
+            company={data.jobs.find(job => job.id === eventPage.jobId)?.company}
+            busy={busy}
+            onSave={saveEvent}
+            onRemove={async (event) => {
+              const removed = await action(() => api('events/remove', { id: event.id, removed: true }), '已从日程移除');
+              if (removed) setEventId(null);
+              return removed;
+            }}
+            onOpenJob={openJob}
           />
         </RecordPage>
       )}

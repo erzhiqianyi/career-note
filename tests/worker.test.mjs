@@ -17,6 +17,25 @@ void test('local Worker state and profile persistence use D1',async t=>{
  assert.equal((await (await send('state')).json()).profile.summary,'Test profile');
  const preview=await send('import/preview',{schemaVersion:1,jobs:[],materials:[],reports:[],completeTaskIds:[]});assert.equal(preview.status,200);
 });
+void test('event updates save links and todos, and keep them when left out',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const head={date:'2026-11-02',start:'14:00',end:'15:00',timeStatus:'exact',status:'confirmed',kind:'interview'};
+ assert.equal((await send('import',{schemaVersion:1,reports:[{id:'event-a',date:'2026-11-02',title:'一次面接',content:'持ち物',sourceNotes:'career-event-v1:'+JSON.stringify(head)+'\nmail'}],completeTaskIds:[]})).status,200);
+ const read=async()=>{const r=(await (await send('state')).json()).reports.find(item=>item.id==='event-a');return {report:r,header:JSON.parse(r.sourceNotes.split('\n')[0].slice('career-event-v1:'.length))};};
+ const update=extra=>send('events/update',{id:'event-a',title:'一次面接',content:'持ち物',...head,...extra});
+ assert.equal((await update({links:[{label:'求人票',url:'https://example.com/job'}],todos:[{text:'履歴書を印刷',done:false}]})).status,200);
+ let saved=await read();
+ assert.deepEqual(saved.header.links,[{label:'求人票',url:'https://example.com/job'}]);
+ assert.deepEqual(saved.header.todos,[{text:'履歴書を印刷',done:false}]);
+ assert.match(saved.report.sourceNotes,/\nmail$/);
+ assert.equal((await update({})).status,200);
+ saved=await read();assert.equal(saved.header.todos.length,1);assert.equal(saved.header.links.length,1);
+ assert.equal((await update({todos:[]})).status,200);
+ saved=await read();assert.equal(saved.header.todos,undefined);
+ assert.equal((await update({links:[{url:'ftp://x'}]})).status,400);
+});
+
 void test('application bodies keep only formal content and review items stay structured',async t=>{
  const mf=await worker(t);
  const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});

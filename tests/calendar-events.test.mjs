@@ -59,6 +59,20 @@ test('cancelled events export as cancelled and headers are validated', () => {
   assert.equal(JSON.stringify(parseEventHeader(header({ date: '2026-10-28', timeStatus: 'unknown', status: 'confirmed', kind: 'fair', supersedes: 'a' }), '2026-10-28').supersedes), '["a"]');
 });
 
+test('events carry reference links and a todo list', () => {
+  const base = { date: '2026-10-29', start: '10:00', end: '11:00', timeStatus: 'exact', status: 'confirmed', kind: 'interview' };
+  const parsed = parseEventHeader(header({ ...base, links: [{ label: '求人票', url: 'https://example.com/job' }, { url: 'https://example.com/map' }], todos: [{ text: ' 職務経歴書を印刷 ', done: true }, { text: '会場までの経路を確認' }] }), '2026-10-29');
+  assert.deepEqual(JSON.parse(JSON.stringify(parsed.links)), [{ label: '求人票', url: 'https://example.com/job' }, { label: '', url: 'https://example.com/map' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(parsed.todos)), [{ text: '職務経歴書を印刷', done: true }, { text: '会場までの経路を確認', done: false }]);
+  const [event] = eventsFromReports([{ id: 'e', date: '2026-10-29', title: '面接', content: '', sourceNotes: header({ ...base, links: parsed.links, todos: parsed.todos }) }]);
+  assert.match(eventIcs(event), /求人票: https:\/\/example\.com\/job/);
+  assert.match(eventIcs(event), /☑ 職務経歴書を印刷/);
+  assert.ok(parseEventHeader(header({ ...base, links: [{ url: 'javascript:alert(1)' }] }), '2026-10-29').error);
+  assert.ok(parseEventHeader(header({ ...base, links: 'https://example.com' }), '2026-10-29').error);
+  assert.ok(parseEventHeader(header({ ...base, todos: [{ text: '  ' }] }), '2026-10-29').error);
+  assert.ok(parseEventHeader(header({ ...base, todos: [{ text: 'x', done: 'yes' }] }), '2026-10-29').error);
+});
+
 test('rewriting the header keeps the source notes after it', () => {
   const next = { date: '2026-10-29', start: '10:05', end: '11:00', timeStatus: 'exact', status: 'confirmed', kind: 'counseling' };
   assert.equal(withEventHeader(header({ date: '2026-10-29', timeStatus: 'unknown', status: 'provisional', kind: 'counseling' }), next), `career-event-v1:${JSON.stringify(next)}\n来源`);
