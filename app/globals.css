@@ -3280,6 +3280,10 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 .document-review-alert > div { position: absolute; right: 0; z-index: 5; width: min(420px, calc(100vw - 48px)); max-height: 45vh; overflow: auto; padding: 12px 14px; border: 1px solid #eab4ae; border-radius: 8px; background: white; box-shadow: 0 8px 24px #1d263326; color: var(--ink-2); line-height: 1.6; }
 .document-review-alert p { margin: 0; }
 .document-review-alert p + p { margin-top: 10px; }
+.review-items { margin: 0; padding-left: 18px; }
+.review-items li + li { margin-top: 6px; }
+.review-items strong { margin-right: 8px; font-weight: 600; }
+.review-items + p { margin-top: 10px; }
 .document-print-desktop { display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--accent); white-space: nowrap; }
 @media (max-width: 640px) {
   .record-page-heading { flex-wrap: wrap; }

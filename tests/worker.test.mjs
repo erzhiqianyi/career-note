@@ -17,6 +17,21 @@ void test('local Worker state and profile persistence use D1',async t=>{
  assert.equal((await (await send('state')).json()).profile.summary,'Test profile');
  const preview=await send('import/preview',{schemaVersion:1,jobs:[],materials:[],reports:[],completeTaskIds:[]});assert.equal(preview.status,200);
 });
+void test('application bodies keep only formal content and review items stay structured',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'formal-job',company:'Example',role:'Engineer'}],completeTaskIds:[]})).status,200);
+ const save=(id,content,extra={})=>send('import',{schemaVersion:1,materials:[{id,jobId:'formal-job',kind:'履歴書',title:'Example · 履歴書 v2',content,sourceNotes:'Test',...extra}],completeTaskIds:[]});
+ for(const content of ['# 履歴書草稿（未提出）v2\n\n氏名：例','# 履歴書\n\n応募先：Example\n\n氏名：例','# 履歴書\n\n| 職歴 | 退職【本人確認：理由】 |','# 履歴書\n\n氏名：例\n\n## 記入メモ\n\n希望年収を確認。']){
+  const response=await save('formal-bad',content);assert.equal(response.status,400,content);assert.match((await response.json()).error,/reviewItems/);
+ }
+ assert.equal((await save('formal-bad',' # 履歴書\n\n氏名：例',{reviewItems:[{field:'職歴'}]})).status,400);
+ assert.equal((await save('formal-ok','氏名：例\n\n## 本人希望記入欄\n\n貴社規定に従います。',{reviewItems:[{field:'職歴',note:'退職理由の表現を確認'}]})).status,200);
+ const saved=(await (await send('state')).json()).materials.find(m=>m.id==='formal-ok');
+ assert.deepEqual(saved.reviewItems,[{field:'職歴',note:'退職理由の表現を確認'}]);
+ assert.equal(saved.content,'氏名：例\n\n## 本人希望記入欄\n\n貴社規定に従います。');
+});
+
 void test('saved material PDFs and shared photos survive reload and can be removed',async t=>{
  const mf=await worker(t);
  const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});

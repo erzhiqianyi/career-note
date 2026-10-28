@@ -16,6 +16,7 @@ import { findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-b
 import type { ExportedHandler } from '@cloudflare/workers-types';
 import type { Material } from '../lib/career';
 import { parseEventHeader, withEventHeader, type EventHeader } from '../lib/calendar-events';
+import { applicationBodyIssues, type ApplicationKind, type MaterialReviewItem } from '../lib/material-print-content';
 
 type JobStatus = '关注中' | '准备投递' | '已投递' | '书类选考' | '面试中' | '内定' | '未通过' | '已撤回';
 type JobPriority = '高' | '普通' | '低';
@@ -124,6 +125,20 @@ function validateString(
   if (options?.max !== undefined && text.length > options.max)
     throw new AppError(400, `字段过长：${field}`);
   return text;
+}
+
+/** Items the applicant must fill in, confirm or reword, kept beside the formal body instead of inside it. */
+function validateReviewItems(value: unknown): MaterialReviewItem[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 50) throw new AppError(400, 'reviewItems 必须是最多 50 条的数组');
+  return value.map((item, index) => {
+    if (typeof item !== 'object' || item === null) throw new AppError(400, `reviewItems[${index}] 必须是对象`);
+    const obj = item as Record<string, unknown>;
+    return {
+      field: validateString(obj.field, `reviewItems[${index}].field`, { required: true, max: 60 }),
+      note: validateString(obj.note, `reviewItems[${index}].note`, { required: true, max: 500 }),
+    };
+  });
 }
 
 function validateDate(value: string, field: string) {
@@ -1044,6 +1059,11 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         const jobId = validateString(obj.jobId, 'jobId', { required: true, max: 120 });
         const kind = validateString(obj.kind, 'kind', { required: true, max: 20 });
         if (!MATERIAL_KINDS.includes(kind as MaterialKind)) throw new AppError(400, '材料类型不正确');
+        const reviewItems = validateReviewItems(obj.reviewItems);
+        if (kind === '履歴書' || kind === '職務経歴書') {
+          const issues = applicationBodyIssues(content, kind as ApplicationKind);
+          if (issues.length) throw new AppError(400, `${kind}正文只能包含正式内容，标题固定为「${kind}」。请把以下内容移到 reviewItems（待本人填写/确认/修改）或 sourceNotes（依据与说明）：${issues.slice(0, 5).map(issue => issue.split('\n')[0].slice(0, 60)).join('；')}`);
+        }
 
         const related = allJobs.find((job) => job.id === jobId) as Record<string, unknown> | undefined;
         if (!related) throw new AppError(400, '材料关联的职位不存在');
@@ -1054,6 +1074,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
             title,
             content,
             sourceNotes,
+            reviewItems,
             jobId,
             kind,
             createdAt: now(),

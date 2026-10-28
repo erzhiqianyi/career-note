@@ -53,7 +53,7 @@ function renderBody(source: string) {
 }
 
 export function materialHTML(kind: MaterialPublication['kind'], content: string) {
-  const body = renderBody(prepareMaterialPrint(content).printableContent);
+  const body = renderBody(prepareMaterialPrint(content, kind).printableContent);
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(kind)}</title><style>
 @page{size:A4;margin:16mm}*{box-sizing:border-box}body{margin:0;color:#17202b;background:#eef1f4;font:16px/1.7 "Hiragino Mincho ProN","Yu Mincho",serif}
 main{max-width:840px;min-height:100vh;margin:auto;padding:44px;background:white;overflow-wrap:anywhere}h1{font-size:26px}h2{font-size:20px;border-bottom:1px solid #9aa4ae;padding-bottom:5px}h1,h2,h3{break-after:avoid}
@@ -83,7 +83,7 @@ export async function publishMaterial(db: D1Database, owner: string, input: Reco
     return json({ error: '応募書類不存在' }, 404);
   if (expiresAt && (!Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now()))
     return json({ error: '有效期必须在未来' }, 400);
-  const printableContent = prepareMaterialPrint(material.content).printableContent;
+  const printableContent = prepareMaterialPrint(material.content, material.kind as MaterialPublication['kind']).printableContent;
   if (printableContent.length < 100 || /(^|\n)#{1,6}\s*(出典|來源|来源|提出前|記載内容の確認|応募に向けた補強|待確認)/m.test(printableContent))
     return json({ error: '正文仍是占位稿或包含内部说明，请先保存新的投递版' }, 400);
   const id = crypto.randomUUID();

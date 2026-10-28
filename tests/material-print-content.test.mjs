@@ -41,6 +41,35 @@ test('type fair internal confirmation never enters the application copy', () => 
   assert.doesNotMatch(result.printableContent, /内部確認|フェア用|印刷版PDF|未確認/);
 });
 
+test('drafting title, metadata, inline checks and memo sections are left out of the print copy', () => {
+  const source = [
+    '# 履歴書草稿（type応募用・未提出）v2',
+    '応募先：株式会社例\n応募職種：ITコンサル（type求人 No.1）\n提出期限の目安：2026年11月2日',
+    '| 項目 | 内容 |\n|---|---|\n| メール | a@example.com（typeアカウント。送信前に要確認） |\n| 学歴 | 2026年4月 日本語学校 入学（在学中） |\n| 職歴 | 2026年1月 一身上の都合により退職【本人確認：退職理由の表現】 |',
+    '## 本人希望記入欄（案）',
+    '勤務地は大阪を希望します。',
+    '## 記入メモ（中文）',
+    'v2 变更：希望年收填 600 万円。',
+    '参照：该岗位年収 400～800 万。',
+  ].join('\n\n');
+  const result = prepareMaterialPrint(source);
+  assert.match(result.printableContent, /^# 履歴書\n/);
+  assert.match(result.printableContent, /\| メール \| a@example\.com \|/);
+  assert.match(result.printableContent, /入学（在学中）/);
+  assert.match(result.printableContent, /一身上の都合により退職 \|/);
+  assert.match(result.printableContent, /## 本人希望記入欄\n\n勤務地は大阪/);
+  assert.doesNotMatch(result.printableContent, /草稿|未提出|v2|応募先|応募職種|提出期限|要確認|本人確認|（案）|記入メモ|变更|参照/);
+  assert.ok(result.internalNotes.length >= 7);
+});
+
+test('the printed title always comes from the document kind', () => {
+  assert.equal(prepareMaterialPrint('氏名：例', '履歴書').printableContent, '# 履歴書\n\n氏名：例');
+  const renamed = prepareMaterialPrint('# 応募書類 v3\n\n2026年10月28日現在', '職務経歴書');
+  assert.equal(renamed.printableContent, '# 職務経歴書\n\n2026年10月28日現在');
+  assert.deepEqual(renamed.internalNotes, ['応募書類 v3']);
+  assert.deepEqual(prepareMaterialPrint('# 履歴書\n\n氏名：例', '履歴書').internalNotes, []);
+});
+
 test('ordinary prose mentioning internal review is retained', () => {
   const source = '社内の内部確認フローを改善した。';
   const result = prepareMaterialPrint(source);
