@@ -212,6 +212,22 @@ void test('built-in question bank accepts attempts and review requests without a
  const clash=await send('import',{schemaVersion:1,questionSets:[{id:'builtin-basics',jobId:'none',title:'t',scenario:'s',plan:'p',sourceNotes:'n',questions:[]}]});
  assert.equal(clash.status,400);
 });
+void test('personal general interview pack is stored outside jobs and keeps answer snapshots',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const question={id:'leaving',title:'転職理由',questionJa:'転職理由を教えてください。',meaning:'Why change jobs?',why:'General interview question',outline:'Experience, motivation, next step',sampleAnswer:'最初の参考回答。',followUps:'なぜ日本ですか。',category:'動機',targetSeconds:120};
+ const pack={id:'personal-general-interview',jobId:'builtin:general',title:'我的通用面试题',scenario:'本人通用练习',plan:'先回答，再核对参考答案',sourceNotes:'Disposable test data',questions:[question]};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[pack],completeTaskIds:[]})).status,200);
+ const duplicate=await send('import',{schemaVersion:1,questionSets:[{...pack,id:'other-general-pack'}],completeTaskIds:[]});
+ assert.equal(duplicate.status,400);
+ const attempt=await (await send('attempts',{questionSetId:pack.id,questionId:question.id,answer:'本人回答。',language:'日语',durationSeconds:90})).json();
+ assert.equal(attempt.jobId,'');
+ assert.equal(attempt.question.sampleAnswer,'最初の参考回答。');
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[{...pack,questions:[{...question,sampleAnswer:'新しい参考回答。'}]}],completeTaskIds:[]})).status,200);
+ const state=await (await send('state')).json();
+ assert.equal(state.jobs.length,0);
+ assert.equal(state.questionSets[0].questions[0].sampleAnswer,'新しい参考回答。');
+ assert.equal(state.attempts[0].question.sampleAnswer,'最初の参考回答。');
+});
 void test('one company question set is updated in place while answers keep their question snapshot',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  const job={id:'fixture-job',company:'Example Company',role:'Engineer'};

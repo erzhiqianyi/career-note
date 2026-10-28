@@ -427,7 +427,9 @@ private struct PracticeList: View {
             add(pack, reason: "点评后复练：\(next)", allowRepeat: true,
                 preferredQuestionID: attempt.questionId)
         }
-        for pack in model.state.questionSets { add(pack, reason: "公司题组 · 尚未练习") }
+        for pack in model.state.questionSets {
+            add(pack, reason: pack.jobId == "builtin:general" ? "通用题库 · 尚未练习" : "公司题组 · 尚未练习")
+        }
         for pack in BuiltinBank.packs { add(pack, reason: "通用题库 · 尚未练习") }
         return result
     }
@@ -491,8 +493,8 @@ private struct PracticeList: View {
                 }
                 DisclosureGroup("浏览全部题组", isExpanded: $showAllPacks) {
                     VStack(alignment: .leading, spacing: 18) {
-                        packSection("公司题组", packs: model.state.questionSets)
-                        packSection("通用面试题", packs: BuiltinBank.packs)
+                        packSection("公司题组", packs: model.state.questionSets.filter { $0.jobId != "builtin:general" })
+                        packSection("通用面试题", packs: model.state.questionSets.filter { $0.jobId == "builtin:general" } + BuiltinBank.packs)
                     }
                     .padding(.top, 12)
                 }

@@ -12,7 +12,7 @@ import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } 
 import { verifyFirebaseToken } from './firebase-auth';
 import { deleteReferenceSpeechForPacks, referenceSpeechResponse, ReferenceSpeechError } from './reference-speech';
 import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-platforms';
-import { findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-bank';
+import { BANK_JOB_ID, findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-bank';
 import type { ExportedHandler } from '@cloudflare/workers-types';
 import type { Material } from '../lib/career';
 import { parseEventHeader, withEventHeader, type EventHeader } from '../lib/calendar-events';
@@ -584,7 +584,7 @@ async function importQuestionSet(db: Workspace, data: Record<string, unknown>) {
   const key = validateString(data.id, 'id', { required: true, max: 120 });
   if (isBuiltinQuestionSet(key)) throw new AppError(400, '内置题库不能修改');
   const jobId = validateString(data.jobId, 'jobId', { required: true, max: 120 });
-  if (!(await getRecord(db, 'jobs', jobId))) throw new AppError(400, '题组关联的职位不存在');
+  if (jobId !== BANK_JOB_ID && !(await getRecord(db, 'jobs', jobId))) throw new AppError(400, '题组关联的职位不存在');
   const existing = await getRecord(db, 'questionSets', key);
   if (existing && existing.jobId !== jobId) throw new AppError(400, '题组不能改关联职位');
   if (!existing && (await records(db, 'questionSets')).some((pack) => pack.jobId === jobId))
@@ -726,7 +726,7 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
     questionSetId,
     questionId,
     question,
-    jobId: isBuiltinQuestionSet(questionSetId) ? '' : attemptPack.jobId,
+    jobId: attemptPack.jobId === BANK_JOB_ID ? '' : attemptPack.jobId,
     answer: validateString(data.answer, 'answer', { required: true, max: 20000 }),
     language,
     durationSeconds: duration,
