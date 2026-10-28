@@ -37,6 +37,7 @@ import { buildHints, type Hints } from '@/lib/interview-hints';
 import { resumeSections } from '@/lib/resume';
 import { prepRank, prepStage, prepStageTone, type PrepProgress } from '@/lib/prep-stage';
 import { Ja } from '@/components/japanese-text';
+import { CompanyBoard } from '@/components/company-board';
 const profileLabels: Record<string, string> = {
   summary: '个人概要',
   skills: '技能',
@@ -59,10 +60,11 @@ const emptyDraft: Draft = {
 };
 type PrepSortKey = 'company' | 'rating' | 'status' | 'schedule' | 'prep';
 type PrepColumn = PrepSortKey;
-/** Four sections of one company's preparation page. */
-type PrepTab = 'info' | 'materials' | 'practice' | 'summary';
+/** Sections of one company's preparation page. */
+type PrepTab = 'info' | 'board' | 'materials' | 'practice' | 'summary';
 const PREP_TABS: Array<[PrepTab, string]> = [
   ['info', '企业'],
+  ['board', '企业看板'],
   ['materials', '资料'],
   ['practice', '练习'],
   ['summary', '总结'],
@@ -529,7 +531,7 @@ export default function InterviewPractice({
   const currentJob = data.jobs.find(j => j.id === jobId);
   if (company && !practiceRecord && !guide && !help) {
     // Keep the company and posting together, and show practice feedback with its summary.
-    const tabs = PREP_TABS.filter(([id]) => !isBank || id !== 'info');
+    const tabs = PREP_TABS.filter(([id]) => !isBank || (id !== 'info' && id !== 'board'));
     const activeTab = tabs.some(([id]) => id === tab) ? tab : 'practice';
     const companyMaterials = materialsFor(isBank ? '' : jobId);
     const archivedMaterials = materialsFor(isBank ? '' : jobId, true);
@@ -623,6 +625,7 @@ export default function InterviewPractice({
           ], ['岗位要求', '匹配点'])}
         </details>
       </div>}
+      {activeTab === 'board' && currentJob && <CompanyBoard job={currentJob} />}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
         {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p></div>}
         {archivedMaterials.length > 0 && <>

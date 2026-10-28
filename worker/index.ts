@@ -6,7 +6,7 @@ import { ensureArticleSchema, listArticles, getArticle, saveArticle, articleHtml
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
 import { inspectorResponse } from '@ninomae/mcp-app-server/inspector';
 import { sqlStore } from '@ninomae/mcp-app-server/sql';
-import { createCareerTools, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools';
+import { createCareerTools, createCareerPrompts, CAREER_SCOPES, CAREER_CONTRACT } from './agent-tools';
 import { listReadings, saveReadings, builtinJapanese, ReadingsError } from './readings';
 import { ensureActivitySchema, logActivity, listActivity, summarizeToolResult } from './activity';
 import { verifyFirebaseToken } from './firebase-auth';
@@ -17,6 +17,8 @@ import type { ExportedHandler } from '@cloudflare/workers-types';
 import type { Material } from '../lib/career';
 import { parseEventHeader, withEventHeader, type EventHeader } from '../lib/calendar-events';
 import { applicationBodyIssues, type ApplicationKind, type MaterialReviewItem } from '../lib/material-print-content';
+import { normalizeCompanyProfile } from '../lib/company-profile';
+import { plainJapanese } from '../lib/japanese-readings';
 
 type JobStatus = '关注中' | '准备投递' | '已投递' | '书类选考' | '面试中' | '内定' | '未通过' | '已撤回';
 type JobPriority = '高' | '普通' | '低';
@@ -379,6 +381,12 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
   if (old && data.sourceChannel === undefined) base.sourceChannel = old.sourceChannel || '';
   for (const field of ['companyReading', 'employeeCount', 'companyType', 'employmentType'] as const) {
     if (old && data[field] === undefined) base[field] = old[field] || '';
+  }
+  // The company board is optional: omitted keeps the stored one, null removes it.
+  if (data.companyProfile === undefined) base.companyProfile = old?.companyProfile ?? null;
+  else {
+    try { base.companyProfile = normalizeCompanyProfile(data.companyProfile); }
+    catch (error) { throw new AppError(400, error instanceof Error ? error.message : '企业看板数据无效'); }
   }
 
   if (!researchOnly) {
@@ -1046,6 +1054,10 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         ) {
           throw new AppError(400, 'Agent 导入不能修改投递状态或个人跟进信息，请在网页编辑');
         }
+        if (preview && obj.companyProfile !== undefined) {
+          try { normalizeCompanyProfile(obj.companyProfile); }
+          catch (error) { throw new AppError(400, error instanceof Error ? error.message : '企业看板数据无效'); }
+        }
         if (!preview) await saveJob(db, obj, true);
         counts.jobs += 1;
       }
@@ -1070,6 +1082,10 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         const kind = validateString(obj.kind, 'kind', { required: true, max: 20 });
         if (!MATERIAL_KINDS.includes(kind as MaterialKind)) throw new AppError(400, '材料类型不正确');
         const reviewItems = validateReviewItems(obj.reviewItems);
+        // Short answer for optional 応募理由 form fields; counted without inline readings, as the employer sees it.
+        const applicationReason = validateString(obj.applicationReason, 'applicationReason', { max: 400 }).trim();
+        if (applicationReason && kind !== '志望動機') throw new AppError(400, 'applicationReason 只用于志望動機');
+        if ([...plainJapanese(applicationReason)].length > 100) throw new AppError(400, 'applicationReason 去掉读音后必须在 100 字以内');
         if (kind === '履歴書' || kind === '職務経歴書') {
           const issues = applicationBodyIssues(content, kind as ApplicationKind);
           if (issues.length) throw new AppError(400, `${kind}正文只能包含正式内容，标题固定为「${kind}」。请把以下内容移到 reviewItems（待本人填写/确认/修改）或 sourceNotes（依据与说明）：${issues.slice(0, 5).map(issue => issue.split('\n')[0].slice(0, 60)).join('；')}`);
@@ -1085,6 +1101,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
             content,
             sourceNotes,
             reviewItems,
+            ...(applicationReason ? { applicationReason } : {}),
             jobId,
             kind,
             createdAt: now(),
@@ -1238,6 +1255,7 @@ function createGateway(env: Env, db: D1Database): McpAppServer {
     scopes: CAREER_SCOPES,
     contract: CAREER_CONTRACT,
     tools: createCareerTools(invoke),
+    prompts: createCareerPrompts(invoke),
     // Existing deployments already hold these tables; column layout is unchanged.
     storage: sqlStore(db, { clients: 'oauth_clients', codes: 'oauth_codes', refreshTokens: 'oauth_refresh_tokens', accessTokens: 'mcp_tokens' }),
     origins: (request) => resolveOrigins(request, env),

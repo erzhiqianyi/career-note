@@ -29,6 +29,7 @@ import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { MaterialPrint } from '@/components/material-print';
 import { prepareMaterialPrint, type ApplicationKind } from '@/lib/material-print-content';
 import { MaterialPublications } from '@/components/material-publications';
+import { ApplicationReason } from '@/components/application-reason';
 import ResumeManager from '@/components/resume-manager';
 import PersonalizedResumes from '@/components/personalized-resumes';
 import {
@@ -1677,6 +1678,7 @@ export default function Home() {
                 )}
               </div>
             )}
+          {'kind' in doc && doc.kind === '志望動機' && <ApplicationReason material={doc} />}
           <article className="document-body">
             {applicationDoc ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{markdownJapaneseReadings(applicationContent)}</ReactMarkdown> : <DocumentText text={doc.content} />}
           </article>

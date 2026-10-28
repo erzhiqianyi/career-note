@@ -28,6 +28,8 @@ npm run dev:tunnel
 
 技能使用已配置的 Career Note MCP，不依赖仓库路径。端点为当前网站的 `/api/career/mcp`，通过标准 MCP OAuth 授权（用户在浏览器里登录并同意）获得令牌；没有手动令牌。读取履历时先调用 `career_get_resume_overview`、`career_list_resume`，再按需调用 `career_get_resume_details`、`career_get_resume_document_chunk`；写入前调用 `career_preview_import`，写入后读回 context。履历收集技能在用户要求更新摘要时可调用 `career_update_profile`，保留现有字段和 revision。其他研究技能不自动修改履历。
 
+MCP prompts（需要 agent:write）：`career_company_board`（参数 company：job id 或公司编号）生成日语企業ボード `companyProfile`；`career_motivation` 生成新的志望動機版本和 100 字以内的 `applicationReason`。两者都会附上该公司当前的研究字段和保存步骤；客户端支持 prompts 时可直接选用，不支持时按本文协议操作。
+
 授权 scope：career:read 用于 context，agent:write 用于预览/导入/排队，career:write 用于用户授权的摘要更新（授权页默认不勾选）。没有更改投递状态、原回答、代发申请或跨用户操作的 MCP 工具。投递复盘读取既有历史，保存 reports；无反馈不算失败，原因缺失标未知。
 
 以下 CLI 是维护者的备用路径；独立安装的技能不需要它。
@@ -112,7 +114,28 @@ node scripts/career-data.mjs state
 
 `matchLevel` 只能是 `优先准备`、`先确认条件`、`暂不匹配` 或空（待评估），与 `matchNotes` 中的理由一致。`sourcePlatform` 是最初发现职位的平台名称，可写“公司官网”或实际平台名；`sourceChannel` 只能是 `主动发现`、`AI 搜索`、`Agent 推荐` 或空。主动发现指用户自己找到，AI 搜索指用户请 AI 搜索，Agent 推荐指 Agent 主动提出候选；无法确认时留空。已有职位来源字段缺省时会保留原值。kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。用户明确要求去掉旧版材料时，可在同一数据包中用 `"archiveMaterials": [{"id": "旧材料 id", "archived": true}]` 归档；归档只从默认列表隐藏，正文保留，`archived: false` 可恢复。不要自行归档用户未指定的材料。示例是协议示意，不能作为真实招聘信息导入。
 
+志望動機材料可另加 `applicationReason`：可直接粘贴到应募表单「ご応募理由（任意）」等栏位的简短版本，去掉 `{漢字|かな}` 读音后不超过 100 字（服务端按此计数并拒绝超长），只用于 kind 为志望動機的材料。写成完整的日语段落，不加标题、列表或 Markdown；内容与正文一致，突出对该公司业务的理解和可贡献的经历，不编造动机。网页的复制按钮会去掉读音。
+
 `companyReading`、`employeeCount`、`companyType`、`employmentType` 可选；缺省时保留已有值，明确传空字符串才清除。公司读音须有可核对来源，未知时留空。员工人数可保留“约”“截至日期”等限定词。`employmentType` 记录聘用合同形式，不能仅因岗位在客户现场工作就写成派遣。
+
+`companyProfile` 是可选的企业看板，网页「企业看板」页签把它排成一张日语的公司介绍图（可打印或另存 PDF）。用户要求公司详细介绍、业务分析或看板时填写；所有文字用日语。缺省时保留已有看板，传 `null` 才删除；一旦提供就整体替换，须完整填写。
+
+```json
+"companyProfile": {
+  "tagline": "一文で会社を説明する（160字以内）",
+  "overview": "事業概要。何を・誰に・どう提供して収益を得ているか（必須）",
+  "facts": [{ "label": "設立", "value": "2010年4月" }, { "label": "売上高", "value": "約120億円（2025年3月期）" }],
+  "segments": [{ "name": "事業名", "detail": "内容と主要顧客", "share": "売上の約60%（2025年3月期）" }],
+  "strengths": [{ "title": "強み", "detail": "根拠となる事実" }],
+  "history": [{ "year": "2010年", "event": "出来事" }],
+  "outlook": [{ "title": "中期経営計画の目標", "detail": "会社発表の内容。分析：自分の見立て" }],
+  "concerns": [{ "title": "懸念・未確認点", "detail": "面接で確認したいこと" }],
+  "sources": [{ "label": "会社概要", "url": "https://example.com/about" }],
+  "verifiedAt": "2026-10-29"
+}
+```
+
+`overview`、`verifiedAt`（YYYY-MM-DD）和至少一个 http(s) `sources` 必填；facts 最多 12 条，segments、strengths、outlook、concerns 各最多 8 条，history 最多 30 条，sources 最多 20 条。优先使用公司官网、IR 资料、有価証券報告書、中期経営計画、公开新闻稿。数字保留年度和「約」；没有来源的数字不写。`outlook` 先写公司公开的计划，自己的推断在 detail 中以「分析：」开头，不能写成事实。`concerns` 写风险和面试中要确认的点（如客先常驻比例、业绩波动），不写无根据的负面评价。未上市或信息少的公司可少写条目，不补造沿革或业绩。
 
 职位 `id` 是内部关联键，材料和题组仍用它关联公司。Worker 保存前为每个账号分配并持久化递增的 `companyNumber`，导入包不要指定或修改此字段；公司页面使用 `#jobs/company/<companyNumber>`，旧的 `id` 页面地址仍可打开。
 

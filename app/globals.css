@@ -4025,3 +4025,82 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Company board: one Japanese research sheet that reads like a single infographic and prints on its own. */
+.company-board-wrap { display: grid; gap: 12px; }
+.company-board-toolbar { display: flex; justify-content: flex-end; }
+.company-board-toolbar .secondary { display: inline-flex; align-items: center; gap: 7px; }
+.company-board-empty { display: grid; gap: 6px; }
+.company-board-empty h2 { margin: 0; font-size: 1rem; }
+.company-board-empty p { margin: 0; }
+.company-board { --cb-ink: #1d2733; --cb-navy: #1f3d63; --cb-teal: #2a7a68; --cb-amber: #a5660a; --cb-rose: #a3474a; --cb-line: #dde3ea;
+  display: grid; gap: 14px; padding: 0 0 18px; overflow: hidden; border: 1px solid var(--cb-line); border-radius: 16px; background: #fff; color: var(--cb-ink); box-shadow: 0 6px 24px #1f3d6312;
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif; line-height: 1.65; }
+.company-board p { margin: 0; overflow-wrap: anywhere; }
+.company-board ul, .company-board ol { margin: 0; padding: 0; list-style: none; }
+.company-board .cb-head p { color: #fff; }
+.cb-head { display: grid; gap: 4px; padding: 26px 28px 22px; background: linear-gradient(135deg, #1f3d63, #2a5d84 60%, #2a7a68); color: #fff; }
+.cb-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .18em; opacity: .8; }
+.cb-name { margin: 0; font-size: 1.75rem; line-height: 1.3; letter-spacing: .02em; }
+.cb-reading { font-size: .8rem; opacity: .85; }
+.cb-tagline { margin-top: 8px !important; font-size: 1.05rem; font-weight: 600; }
+.cb-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 14px 0 0; }
+.cb-facts > div { padding: 8px 12px; border: 1px solid #ffffff38; border-radius: 10px; background: #ffffff1a; }
+.cb-facts dt { font-size: .7rem; opacity: .8; }
+.cb-facts dd { margin: 0; font-size: .9rem; font-weight: 700; overflow-wrap: anywhere; }
+.cb-block { margin: 0 22px; padding: 16px 18px; border: 1px solid var(--cb-line); border-radius: 12px; background: #fbfcfd; }
+.cb-block h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 1rem; color: var(--cb-navy); }
+.cb-block h3 > span { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 22px; border-radius: 6px; background: var(--cb-navy); color: #fff; font-size: .72rem; letter-spacing: .05em; }
+.cb-block li b { display: block; font-size: .92rem; }
+.cb-block li p { font-size: .86rem; color: #3b4652; }
+.cb-segments ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.cb-segments li { position: relative; padding: 12px 14px; border-top: 3px solid var(--cb-navy); border-radius: 10px; background: #fff; box-shadow: 0 1px 0 var(--cb-line); }
+.cb-share { display: inline-block; margin: 4px 0 6px; padding: 1px 8px; border-radius: 999px; background: #e7eef7; color: var(--cb-navy); font-size: .75rem; font-weight: 700; }
+.cb-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 0 22px; }
+.cb-columns > .cb-block { margin: 0; }
+.cb-strengths { border-color: #cfe5de; background: #f4faf8; }
+.cb-strengths h3 { color: var(--cb-teal); }
+.cb-strengths h3 > span { background: var(--cb-teal); }
+.cb-strengths ol { display: grid; gap: 10px; counter-reset: cb; }
+.cb-strengths li { position: relative; padding-left: 32px; counter-increment: cb; }
+.cb-strengths li::before { content: counter(cb); position: absolute; left: 0; top: 1px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--cb-teal); color: #fff; font-size: .75rem; font-weight: 700; }
+.cb-outlook { border-color: #f0dfc2; background: #fffaf1; }
+.cb-outlook h3 { color: var(--cb-amber); }
+.cb-outlook h3 > span { background: var(--cb-amber); }
+.cb-outlook ul { display: grid; gap: 10px; }
+.cb-outlook li { padding-left: 14px; border-left: 3px solid #e7c288; }
+.cb-history ol { position: relative; display: grid; gap: 8px; padding-left: 18px; }
+.cb-history ol::before { content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px; background: #c8d3e0; }
+.cb-history li { position: relative; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; font-size: .86rem; }
+.cb-history li::before { content: ''; position: absolute; left: -17px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid var(--cb-navy); }
+.cb-history time { font-weight: 700; color: var(--cb-navy); }
+.cb-concerns { border-color: #efd3d3; background: #fff7f7; }
+.cb-concerns h3 { color: var(--cb-rose); }
+.cb-concerns h3 > span { background: var(--cb-rose); }
+.cb-concerns ul { display: grid; gap: 8px; }
+.cb-foot { display: grid; gap: 6px; margin: 0 22px; font-size: .72rem; color: #5d6874; }
+.cb-foot ul { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.cb-foot a { display: inline-flex; align-items: center; gap: 3px; color: var(--accent); }
+@media (max-width: 640px) {
+  .cb-head { padding: 20px 18px 18px; }
+  .cb-name { font-size: 1.4rem; }
+  .cb-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cb-block { margin: 0 12px; padding: 14px; }
+  .cb-columns, .cb-foot { margin: 0 12px; }
+  .cb-history li { grid-template-columns: 1fr; gap: 0; }
+}
+@media print {
+  html.print-company-board body * { visibility: hidden; }
+  html.print-company-board .company-board, html.print-company-board .company-board * { visibility: visible; }
+  html.print-company-board .company-board { position: absolute; inset: 0 0 auto 0; border: 0; box-shadow: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  html.print-company-board .cb-block, html.print-company-board .cb-segments li { break-inside: avoid; }
+}
+
+/* 志望動機: copy-ready short answer for optional ご応募理由 fields. */
+.application-reason { display: grid; gap: 8px; margin: 0 0 16px; padding: 14px 16px; border: 1px solid #d9e4f1; border-left: 4px solid #416c9b; border-radius: 12px; background: #f8fbff; }
+.application-reason header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.application-reason h3 { margin: 0; font-size: .95rem; }
+.application-reason h3 small { margin-left: 6px; color: var(--ink-3); font-weight: 500; }
+.application-reason header > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.application-reason .secondary { display: inline-flex; align-items: center; gap: 6px; }
+.application-reason p { margin: 0; line-height: 1.8; }

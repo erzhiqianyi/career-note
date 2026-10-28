@@ -126,6 +126,34 @@ void test('personal company ratings persist and reject invalid or agent-provided
  assert.equal((await send('jobs',{...job,rating:0})).status,200);
  assert.equal((await (await send('state')).json()).jobs[0].rating,0);
 });
+void test('志望動機 keeps a short application reason counted without readings',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'reason-job',company:'Example',role:'Engineer'}],completeTaskIds:[]})).status,200);
+ const save=(id,extra)=>send('import',{schemaVersion:1,materials:[{id,jobId:'reason-job',kind:'志望動機',title:'志望動機 v1',content:'# 志望動機\n\n本文',sourceNotes:'Test',...extra}],completeTaskIds:[]});
+ const withReadings='{貴社|きしゃ}'.repeat(50);
+ assert.equal((await save('reason-ok',{applicationReason:withReadings})).status,200);
+ assert.equal((await (await send('state')).json()).materials.find(m=>m.id==='reason-ok').applicationReason,withReadings);
+ assert.equal((await save('reason-long',{applicationReason:'あ'.repeat(101)})).status,400);
+ assert.equal((await send('import',{schemaVersion:1,materials:[{id:'reason-kind',jobId:'reason-job',kind:'公司研究',title:'x',content:'x',sourceNotes:'x',applicationReason:'理由'}],completeTaskIds:[]})).status,400);
+});
+void test('company board is validated, kept across research refreshes and removed only by null',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const source={id:'board-job',company:'Example',role:'Engineer'};
+ const companyProfile={tagline:'データ基盤の受託開発企業',overview:'企業向けにデータ基盤を構築する。',facts:[{label:'設立',value:'2010年'}],segments:[{name:'受託開発',detail:'金融向け',share:'売上の約60%'}],strengths:[{title:'金融ドメイン',detail:'長期取引'}],history:[{year:'2010年',event:'設立'}],outlook:[{title:'クラウド移行',detail:'分析：需要増'}],concerns:[{title:'客先常駐の比率',detail:''}],sources:[{label:'会社概要',url:'https://example.com/about'}],verifiedAt:'2026-10-29'};
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,companyProfile}],completeTaskIds:[]})).status,200);
+ let job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.companyProfile.segments[0].share,'売上の約60%');assert.equal(job.companyProfile.concerns[0].detail,'');
+ assert.equal((await send('import',{schemaVersion:1,jobs:[source],completeTaskIds:[]})).status,200);
+ job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.companyProfile.tagline,companyProfile.tagline);
+ assert.equal((await send('jobs',{...job,status:'准备投递'})).status,200);
+ job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.companyProfile.overview,companyProfile.overview);
+ for(const bad of [{...companyProfile,sources:[]},{...companyProfile,verifiedAt:'2026/10/29'},{...companyProfile,overview:''},{...companyProfile,sources:[{label:'x',url:'javascript:alert(1)'}]},{...companyProfile,strengths:'強い'},[]])
+  assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,companyProfile:bad}],completeTaskIds:[]})).status,400);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,companyProfile:null}],completeTaskIds:[]})).status,200);
+ assert.equal((await (await send('state')).json()).jobs[0].companyProfile,null);
+});
 void test('bulk job deletion checks revisions and removes only selected jobs with their dependent records',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  const jobs=[{id:'delete-a',company:'Company A',role:'Engineer'},{id:'keep-b',company:'Company B',role:'Designer'},{id:'delete-c',company:'Company C',role:'Analyst'}];

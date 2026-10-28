@@ -1,5 +1,6 @@
 import { apiUrl } from './api-base';
 import { freshAuthToken } from './career-auth';
+import type { CompanyProfile } from './company-profile';
 export const statuses = [
   '关注中',
   '准备投递',
@@ -36,6 +37,8 @@ export type Job = {
   companyType?: string;
   /** Contract type for this posting; separate from whether work is at a client site. */
   employmentType?: string;
+  /** Agent-written Japanese company board; null or absent until researched. */
+  companyProfile?: CompanyProfile | null;
   japanese: string;
   foreigner: string;
   visa: string;
@@ -79,6 +82,8 @@ export type Material = {
   sourceNotes: string;
   /** What the applicant still has to fill in, confirm or reword; never part of the printed body. Older versions lack it. */
   reviewItems?: { field: string; note: string }[];
+  /** 志望動機 only: a ≤100-character version for optional ご応募理由 form fields. */
+  applicationReason?: string;
   jobId: string;
   kind: string;
   createdAt: string;

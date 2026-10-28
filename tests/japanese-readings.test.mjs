@@ -20,7 +20,7 @@ const load = async (entry) => {
   await writeFile(file, out.outputFiles[0].text);
   return import(pathToFileURL(file).href);
 };
-const { alignReading, annotate, buildGlossary, rubyHTML, inlineReadings, inlineRubyHTML, plainJapanese, markdownJapaneseReadings } = await load('lib/japanese-readings.ts');
+const { alignReading, annotate, buildGlossary, rubyHTML, inlineReadings, inlineRubyHTML, plainJapanese, plainFormText, markdownJapaneseReadings } = await load('lib/japanese-readings.ts');
 const { resumeHTML } = await load('lib/personalized-resume.ts');
 
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -107,4 +107,8 @@ void test('glossary API: agents suggest, the user confirms, agents never overwri
   const state = await (await send('state')).json();
   assert.deepEqual(state.readings.map((e) => [e.word, e.source, e.confirmed]), [['設計', 'agent', true]]);
   assert.equal((await (await send('state?resumeView=summary')).json()).readings, undefined);
+});
+
+void test('form text drops readings, Markdown marks and the document title', () => {
+  assert.equal(plainFormText('# 志望動機\n\n## {貴社|きしゃ}を選んだ理由\n\n**データ{基盤|きばん}**に関わりたい。\n\n- {金融|きんゆう}\n- 小売'), '貴社を選んだ理由\n\nデータ基盤に関わりたい。\n\n・金融\n・小売');
 });

@@ -1,4 +1,13 @@
 {
+  "复制失败，请手动复制。": { "ja": "コピーできませんでした。手動でコピーしてください。", "en": "Copy failed. Please copy it manually." },
+  "{0} / 100 字": { "ja": "{0} / 100 字", "en": "{0} / 100 chars" },
+  "复制应募理由": { "ja": "応募理由をコピー", "en": "Copy reason" },
+  "复制全文（无假名）": { "ja": "全文をコピー（ふりがななし）", "en": "Copy full text (no readings)" },
+  "这个版本没有 100 字以内的应募理由。请让 Agent 重新准备志望動機，并填写 applicationReason。": { "ja": "この版には 100 字以内の応募理由がありません。Agent に志望動機を作り直してもらい、applicationReason を入れてください。", "en": "This version has no reason of 100 characters or fewer. Ask an agent to prepare the 志望動機 again with applicationReason." },
+  "企业看板": { "ja": "企業ボード", "en": "Company board" },
+  "还没有企业看板": { "ja": "企業ボードはまだありません", "en": "No company board yet" },
+  "让 Agent 按 career-job-research 流程调研这家公司，写入 companyProfile 后会在这里显示业务、优势、沿革和发展预期。": { "ja": "Agent に career-job-research の手順でこの会社を調べてもらい、companyProfile を書き込むと、事業・強み・沿革・今後の展望がここに表示されます。", "en": "Ask an agent to research this company with career-job-research. Once it writes companyProfile, the business, strengths, history and outlook appear here." },
+  "打印 / 保存 PDF": { "ja": "印刷 / PDF 保存", "en": "Print / save PDF" },
   "个人评分": { "ja": "個人評価", "en": "My rating" },
   "评分优先": { "ja": "評価順", "en": "Rating first" },
   "未评分": { "ja": "未評価", "en": "Not rated" },

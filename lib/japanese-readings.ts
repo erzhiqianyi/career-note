@@ -128,3 +128,13 @@ export function inlineRubyHTML(text: string, escape: (s: string) => string, show
       ? `<ruby>${escape(piece.text)}<rt>${escape(piece.reading)}</rt></ruby>` : escape(piece.text)).join('')
     : escape(part.text)).join('');
 }
+/** Text to paste into an employer's form: no study readings, no Markdown marks, no document title. */
+export function plainFormText(markdown: string) {
+  return plainJapanese(markdown)
+    .split('\n')
+    .filter((line) => !/^#\s/.test(line))
+    .map((line) => line.replace(/^#{2,6}\s+/, '').replace(/^\s*[-*+]\s+/, '・').replace(/\*\*|__/g, '').trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
