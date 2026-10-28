@@ -71,6 +71,7 @@ const PREP_TABS: Array<[PrepTab, string]> = [
   ['summary', '总结'],
 ];
 const RECORD_MAX_SECONDS = 600;
+const JOB_PAGE_SIZE = 20;
 const fmtClock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 /** MediaRecorder container the browser can produce; Chrome/Firefox give webm/opus, Safari gives mp4. */
 function recordingMimeType() {
@@ -168,6 +169,9 @@ export default function InterviewPractice({
   const [actionOpen, setActionOpen] = useState(false);
   const actionDialog = useRef<HTMLDialogElement>(null);
   const [sort, setSort] = useState<{ key: PrepSortKey; desc: boolean }>({ key: 'schedule', desc: false });
+  const [listPage, setListPage] = useState(1);
+  // A new search, filter or sort starts from the first page again.
+  useEffect(() => setListPage(1), [search, statusFilter, sort]);
   const [practiceRecord, setPracticeRecord] = useRecordPage<string>('#jobs', 'question', id => {
     const [p, q] = id.split('|');
     return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null;
@@ -436,6 +440,10 @@ export default function InterviewPractice({
         const c = x < y ? -1 : x > y ? 1 : 0;
         return (sort.desc ? -c : c) || a.company.localeCompare(b.company);
       });
+    const pageCount = Math.max(1, Math.ceil(jobs.length / JOB_PAGE_SIZE));
+    const currentPage = Math.min(listPage, pageCount);
+    const pageJobs = jobs.slice((currentPage - 1) * JOB_PAGE_SIZE, currentPage * JOB_PAGE_SIZE);
+    const turnPage = (next: number) => { setListPage(next); window.scrollTo(0, 0); };
     const visibleIds = jobs.map(job => job.id);
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedJobIds.has(id));
     const toggleVisible = () => setSelectedJobIds(current => {
@@ -499,7 +507,7 @@ export default function InterviewPractice({
           { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', sortable: true },
           { key: 'schedule', label: tr('面试 / 跟进'), width: 'minmax(0,1.2fr)', sortable: true },
           { key: 'prep', label: tr('准备阶段'), width: 'minmax(120px,1.2fr)', sortable: true },
-        ]}>{jobs.map(job => {
+        ]}>{pageJobs.map(job => {
           const prep = prepOf(job);
           const stage = prepStage(prep);
           const interview = isInterview(job);
@@ -526,6 +534,11 @@ export default function InterviewPractice({
             </DataCell>
           </DataRow>;
         })}</DataTable> : <div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div>}
+        {pageCount > 1 && <nav className="list-pagination" aria-label={tr('分页')}>
+          <span>{tr('第 {0} / {1} 页', [currentPage, pageCount])}</span>
+          <button type="button" className="secondary" disabled={currentPage === 1} onClick={() => turnPage(currentPage - 1)}>{tr('上一页')}</button>
+          <button type="button" className="secondary" disabled={currentPage === pageCount} onClick={() => turnPage(currentPage + 1)}>{tr('下一页')}</button>
+        </nav>}
       </section>
     </div>;
   }

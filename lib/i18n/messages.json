@@ -5415,126 +5415,6 @@
     "ja": "AI アシスタントを接続",
     "en": "Connect an AI assistant"
   },
-  "第一次用 AI 求职，从这里开始": {
-    "ja": "初めて AI を使うなら、ここから",
-    "en": "New to AI? Start here"
-  },
-  "不用安装工具。先让 AI 问你几个问题，再把模糊的求职想法整理成下一步。": {
-    "ja": "ツールの導入は不要。まず AI に質問してもらい、漠然とした希望を次の行動に整理します。",
-    "en": "No setup needed. Let AI ask a few questions and turn vague plans into a next step."
-  },
-  "只告诉 AI 与求职有关的经历、目标岗位和希望工作的地区；不必先整理成完整简历。": {
-    "ja": "就職に関係する経験、希望職種、勤務地を伝えます。完成した履歴書はまだ不要です。",
-    "en": "Share relevant experience, target roles, and preferred location. A complete résumé is not needed yet."
-  },
-  "让它先提问，补齐职位方向、语言能力、工作条件等关键空白。": {
-    "ja": "職種の方向性、語学力、希望条件について先に質問してもらいます。",
-    "en": "Ask it to clarify your role direction, language level, and work preferences first."
-  },
-  "请它给出本周最值得做的三件事，并指出哪些建议仍需要你核实。": {
-    "ja": "今週取り組む三つの行動と、確認が必要な提案を挙げてもらいます。",
-    "en": "Ask for three useful actions this week and which suggestions still need checking."
-  },
-  "我准备在日本找工作，但还不确定从哪里开始。请先问我最多 5 个关键问题，了解我的经历、目标岗位、日语水平和工作条件。等我回答后，再给出本周可以完成的 3 个具体步骤；不要猜测我没有提供的事实。": {
-    "ja": "日本で仕事を探したいのですが、何から始めるか迷っています。まず経験、希望職種、日本語力、勤務条件について重要な質問を五つ以内でしてください。回答後、今週できる具体的な行動を三つ提案してください。伝えていない事実は推測しないでください。",
-    "en": "I want to find work in Japan but am unsure where to begin. Ask me up to five key questions about my experience, target roles, Japanese level, and work conditions. After I answer, suggest three concrete steps for this week. Do not assume facts I have not provided."
-  },
-  "读懂一条招聘信息": {
-    "ja": "求人票を読み解く",
-    "en": "Understand a job posting"
-  },
-  "让 AI 帮你区分硬性要求、加分条件和没有写清楚的地方。": {
-    "ja": "必須条件、歓迎条件、不明点を AI と整理します。",
-    "en": "Separate required qualifications, nice-to-haves, and unclear terms."
-  },
-  "提供招聘原始链接或正文，并说明你最在意的条件。": {
-    "ja": "求人の原文リンクか本文と、重視する条件を伝えます。",
-    "en": "Give the original posting or text and your most important conditions."
-  },
-  "请 AI 分开列出明示要求、推测和需要向公司确认的问题。": {
-    "ja": "明示された要件、推測、企業に確認する質問を分けてもらいます。",
-    "en": "Have AI separate stated requirements, inferences, and questions for the employer."
-  },
-  "回到招聘原文检查日期、工作地点、薪资、语言与在留资格信息。": {
-    "ja": "原文に戻り、掲載日、勤務地、給与、言語、在留資格の情報を確認します。",
-    "en": "Check the source for date, location, pay, language, and visa information."
-  },
-  "请阅读这条招聘信息：[粘贴链接或正文]。分三栏列出明确写出的要求、可能的加分条件、尚不清楚的问题。对日语、地点、薪资和在留资格不要自行补全；引用对应原文，并告诉我信息的确认日期。": {
-    "ja": "この求人を読んでください：[リンクまたは本文]。明示された要件、歓迎条件と思われる項目、不明点の三つに分けてください。日本語、勤務地、給与、在留資格は補完せず、該当する原文と確認日を示してください。",
-    "en": "Read this job posting: [link or text]. Separate stated requirements, possible nice-to-haves, and open questions. Do not fill in missing facts about Japanese, location, salary, or visa support. Quote the relevant source and give the verification date."
-  },
-  "把经历改写成有依据的履历": {
-    "ja": "経験を根拠ある応募書類に",
-    "en": "Turn experience into an evidence-based résumé"
-  },
-  "让 AI 帮你找出经历与岗位的连接点，同时守住真实事实。": {
-    "ja": "経験と求人の接点を探しながら、事実を守ります。",
-    "en": "Find links between your experience and the role while keeping every fact true."
-  },
-  "提供现有履历和目标职位，先请 AI 标记匹配点与信息缺口。": {
-    "ja": "現在の経歴と求人を渡し、合致点と不足情報を先に示してもらいます。",
-    "en": "Provide your current résumé and target role; identify matches and missing facts first."
-  },
-  "逐条核对公司、项目、职责、成果和数字是否确实属于你。": {
-    "ja": "企業、プロジェクト、担当、成果、数字が本当に自分のものか一つずつ確認します。",
-    "en": "Verify each employer, project, duty, result, and number."
-  },
-  "让 AI 再写一版草稿；把无法确认的内容留作待填写。": {
-    "ja": "その後に下書きを作り、確認できない内容は空欄にします。",
-    "en": "Then draft a version and leave unverified details to fill in later."
-  },
-  "这是我的现有履历：[粘贴相关经历]。这是目标职位：[粘贴职位要求]。请先做事实对照表，再给出一版针对该岗位的履历表述。不得编造业绩数字、学历或职责；不确定的地方请标为“待确认”。": {
-    "ja": "これが現在の経歴です：[関連する経験]。対象求人はこちらです：[要件]。まず事実の対応表を作り、その後で求人向けの表現案を出してください。成果の数字、学歴、担当業務を創作せず、不明点は「要確認」としてください。",
-    "en": "Here is my current experience: [paste relevant details]. Here is the target role: [paste requirements]. First make a fact-matching table, then draft role-specific résumé wording. Do not invent metrics, education, or responsibilities; mark uncertainties for confirmation."
-  },
-  "把面试练习变成有效复盘": {
-    "ja": "面接練習を振り返りにつなげる",
-    "en": "Turn interview practice into useful feedback"
-  },
-  "先自己回答，再请 AI 从内容、结构和日语表达三个角度给建议。": {
-    "ja": "まず自分で答え、内容、構成、日本語表現の三点から助言を受けます。",
-    "en": "Answer first, then get feedback on content, structure, and Japanese expression."
-  },
-  "请 AI 根据岗位生成少量练习题，并标明这些只是模拟题。": {
-    "ja": "求人に沿った少数の練習問題を作り、模擬問題だと明示してもらいます。",
-    "en": "Ask for a few role-based practice questions clearly labeled as simulations."
-  },
-  "先用自己的话回答；保存原回答，不让 AI 代替你回答。": {
-    "ja": "自分の言葉で答え、元の回答を残します。AI に代答させません。",
-    "en": "Answer in your own words and keep the original answer."
-  },
-  "请它指出缺少的事实、回答结构和日语表达问题，然后再练一次。": {
-    "ja": "根拠不足、構成、日本語表現を指摘してもらい、もう一度練習します。",
-    "en": "Ask about missing evidence, structure, and expression, then practice again."
-  },
-  "请根据这个岗位：[粘贴职位信息]，给我 5 道日语模拟面试题。一次只问一题，等我回答后再点评。点评请分为内容依据、结构、日语表达，并给一个可练习的修改方向。不要把模拟题称作公司真题。": {
-    "ja": "この求人に基づき：[求人情報]、日本語の模擬面接質問を五つ作ってください。一問ずつ質問し、私の回答後に根拠、構成、日本語表現の面から講評し、練習できる改善点を一つ示してください。企業の実際の質問とは呼ばないでください。",
-    "en": "Based on this role: [job details], give me five Japanese mock interview questions, one at a time. After each answer, review evidence, structure, and Japanese expression, then give one improvement to practice. Do not call them real company questions."
-  },
-  "让 AI 读取 Career Note 的资料": {
-    "ja": "AI に Career Note の資料を読ませる",
-    "en": "Let AI read your Career Note records"
-  },
-  "如果你已经在手帖保存履历和职位，可以连接 MCP，减少反复复制资料。": {
-    "ja": "手帖に経歴と求人を保存しているなら、MCP 接続で何度もコピーする手間を減らせます。",
-    "en": "If your résumé and roles are saved here, MCP reduces repeated copying."
-  },
-  "先核对手帖里的履历和求职条件，再选择你正在使用的 AI 助手。": {
-    "ja": "まず手帖の経歴と希望条件を確認し、利用する AI アシスタントを選びます。",
-    "en": "Check your saved profile and preferences, then choose your AI assistant."
-  },
-  "按照连接向导添加 MCP 地址，在浏览器里选择权限并完成授权。": {
-    "ja": "接続手順に沿って MCP アドレスを追加し、ブラウザーで権限を選んで許可します。",
-    "en": "Add the MCP address using the guide and authorize the chosen permissions in your browser."
-  },
-  "先让助手读取工作区约定和资料；写入前预览，写入后到手帖核对。": {
-    "ja": "最初に規約と資料を読ませ、書き込み前にプレビューし、保存後に手帖で確認します。",
-    "en": "Have it read the workspace rules and records first; preview before writing and verify afterward."
-  },
-  "请调用 Career Note 的 career_get_contract，先告诉我这个工作区的使用约定。然后读取我的履历概况，列出可用于求职准备的资料和明显缺口；这一步先不要写入任何内容。": {
-    "ja": "Career Note の career_get_contract を呼び出し、まずこのワークスペースの規約を説明してください。次に経歴の概要を読み、準備に使える資料と明らかな不足を挙げてください。この段階では何も書き込まないでください。",
-    "en": "Call Career Note career_get_contract and explain the workspace rules first. Then read my résumé overview and list useful records and obvious gaps. Do not write anything yet."
-  },
   "收起已归档的旧版本": { "ja": "アーカイブ済みの旧版を閉じる", "en": "Hide archived versions" },
   "显示已归档的旧版本（{0}）": { "ja": "アーカイブ済みの旧版を表示（{0}）", "en": "Show archived versions ({0})" },
   "归档此旧版本": { "ja": "この旧版をアーカイブ", "en": "Archive this version" },
@@ -5549,8 +5429,6 @@
   "导出日历文件": { "ja": "カレンダーファイルを書き出す", "en": "Export calendar file" },
   "日程": { "ja": "予定", "en": "Schedule" },
   "查看面谈与活动": { "ja": "面談やイベントを確認", "en": "View interviews and events" },
-  "从工作邮件整理有证据的经历": { "ja": "業務メールから根拠のある職務経験を整理する", "en": "Build evidence-based experience from work emails" },
-  "把邮件里的工作线索整理成可核对的职责、行动和成果。": { "ja": "メールの手掛かりを、確認できる担当業務・行動・成果に整理します。", "en": "Turn email clues into verifiable responsibilities, actions, and outcomes." },
   "面谈・咨询": { "ja": "面談・カウンセリング", "en": "Meeting / counseling" },
   "招聘会・说明会": { "ja": "転職フェア・説明会", "en": "Job fair / info session" },
   "已确定": { "ja": "確定", "en": "Confirmed" },
@@ -5583,5 +5461,14 @@
   "打开会议链接": { "ja": "会議リンクを開く", "en": "Open meeting link" },
   "新的待办": { "ja": "新しいやること", "en": "New to-do" },
   "添加待办，回车保存": { "ja": "やることを入力して Enter で保存", "en": "Add a to-do and press Enter" },
-  "还没有说明。": { "ja": "説明はまだありません。", "en": "No notes yet." }
+  "还没有说明。": { "ja": "説明はまだありません。", "en": "No notes yet." },
+  "可直接尝试的提问与练习方法": { "ja": "すぐ試せる質問と練習の方法", "en": "Prompts and practice you can try right away" },
+  "通过 MCP 让助手读取你的资料": { "ja": "MCP でアシスタントに資料を読ませる", "en": "Let an assistant read your records over MCP" },
+  "可复用的 Agent 工作流程": { "ja": "繰り返し使える Agent のワークフロー", "en": "Reusable agent workflows" },
+  "按计划运行的整理任务": { "ja": "スケジュールで実行する整理タスク", "en": "Organizing tasks that run on a schedule" },
+  "编辑、翻译与发布技巧文章": { "ja": "ヒント記事の編集・翻訳・公開", "en": "Edit, translate and publish tip articles" },
+  "文章管理": { "ja": "記事の管理", "en": "Manage articles" },
+  "仅管理员可管理文章": { "ja": "記事を管理できるのは管理者のみです", "en": "Only administrators can manage articles" },
+  "仅有中文版": { "ja": "中国語版のみ", "en": "Chinese only" },
+  "文章读取失败": { "ja": "記事を読み込めませんでした", "en": "Could not load articles" }
 }

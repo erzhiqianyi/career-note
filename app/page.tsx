@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { RecordBack, SubViewContext, useRecordPage, type SubView } from '@/components/record-page';
 import { LanguageSwitcher, useLocale } from '@/components/locale-provider';
 
-import AgentOverview from '@/components/agent-overview';
+import { AgentTips, ArticleManager } from '@/components/agent-articles';
 import AgentSetup from '@/components/agent-setup';
 import {
   findMcpClient,
@@ -71,6 +71,7 @@ import {
   MoreHorizontal,
   Newspaper,
   PanelLeftClose,
+  PenLine,
   PanelLeftOpen,
   Printer,
   Plus,
@@ -78,6 +79,7 @@ import {
   Search,
   Settings,
   Shield,
+  Sparkles,
   ScrollText,
   TriangleAlert,
   Upload,
@@ -124,6 +126,8 @@ const drawerPages = ['今日准备', '日程', '公司', '我的履历', '个性
 const drawerSettings = ['Agent 协作', '求职平台', '系统设置'];
 // `parent` is the nav page that stays highlighted; `back` is where the header arrow goes when it is not the parent.
 const subPages: Record<string, { parent: string; hash: string; back?: string }> = {
+  'AI 求职技巧': { parent: 'Agent 协作', hash: '#tips' },
+  文章管理: { parent: 'Agent 协作', hash: '#article-admin' },
   技能库: { parent: 'Agent 协作', hash: '#skills' },
   定时任务: { parent: 'Agent 协作', hash: '#schedule' },
   [mcpSetupPage]: { parent: 'Agent 协作', hash: mcpSetupHash },
@@ -749,6 +753,7 @@ export default function Home() {
       (j) => j.nextDate && j.nextDate <= (data?.today || ''),
     ),
     interviews = openJobs.filter((j) => j.status === '面试中');
+  const canManageArticles = Boolean(auth?.admin || auth?.mode === 'off');
   const pending = data?.tasks.filter((t) => t.status === '待处理') || [];
   // 首页「下一步」按实际资料推导：先补履历，再收集职位、定制简历、练习回答，最后看分析。
   const nextSteps = (() => {
@@ -1425,24 +1430,21 @@ export default function Home() {
               {active === '个性化简历' && <PersonalizedResumes entries={data.resume || []} jobs={data.jobs} />}
               {active === 'Agent 协作' && (
                 <>
-                  <AgentOverview canManage={Boolean(auth?.admin || auth?.mode === 'off')} />
+                  {/* The hub only links out: tips, connection, skills and schedules each have their own page. */}
                   <div className="agent-entries">
-                    <button className="agent-entry" onClick={() => go(mcpSetupPage)}>
-                      <Link2 size={22} />
-                      <span><b>{tr('连接 AI 助手')}</b></span>
-                    </button>
-                    <button className="agent-entry" onClick={() => go('技能库')}>
-                      <Blocks size={22} />
-                      <span>
-                        <b>{tr('技能库')}</b>
-                      </span>
-                    </button>
-                    <button className="agent-entry" onClick={() => go('定时任务')}>
-                      <CalendarClock size={22} />
-                      <span>
-                        <b>{tr('定时任务')}</b>
-                      </span>
-                    </button>
+                    {([
+                      ['AI 求职技巧', Sparkles, '可直接尝试的提问与练习方法'],
+                      [mcpSetupPage, Link2, '通过 MCP 让助手读取你的资料', '连接 AI 助手'],
+                      ['技能库', Blocks, '可复用的 Agent 工作流程'],
+                      ['定时任务', CalendarClock, '按计划运行的整理任务'],
+                      ...(canManageArticles ? [['文章管理', PenLine, '编辑、翻译与发布技巧文章'] as const] : []),
+                    ] as const).map(([page, Icon, note, title]) => (
+                      <button key={page} className="agent-entry" onClick={() => go(page)}>
+                        <Icon size={22} aria-hidden="true" />
+                        <span><b>{tr(title ?? page)}</b><small>{tr(note)}</small></span>
+                        <ChevronRight size={18} aria-hidden="true" />
+                      </button>
+                    ))}
                   </div>
                   <section className="panel agent-access">
                     <div className="section-head">
@@ -1585,6 +1587,8 @@ export default function Home() {
                   </section>
                 </>
               )}
+              {active === 'AI 求职技巧' && <AgentTips />}
+              {active === '文章管理' && (canManageArticles ? <ArticleManager /> : <Empty title="仅管理员可管理文章" />)}
               {active === '技能库' && <SkillArchive />}
               {(active === mcpSetupPage || findMcpClient(active)) && (
                 <AgentSetup
