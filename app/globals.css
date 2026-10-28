@@ -2463,7 +2463,7 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .agent-code pre {margin:0;padding:12px 44px 12px 14px;overflow:auto;background:#1f2a3c;color:#e6edf6;border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size: 0.78125rem;line-height:1.7;}
 .agent-code button {position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:0;border-radius:6px;background:rgba(255,255,255,.12);color:#e6edf6;cursor:pointer;}
 .agent-code button:hover {background:rgba(255,255,255,.22);}
-.agent-entries {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0;}
+.agent-entries {display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:0 0 24px;}
 .agent-entry {display:flex;align-items:center;gap:16px;width:100%;padding:20px 22px;background:var(--surface);border:1px solid #d9e0ea;border-radius:10px;text-align:left;cursor:pointer;color:var(--ink);}
 .agent-entry:hover {border-color:#9fb1c9;box-shadow:0 2px 10px rgba(31,42,60,.06);}
 .agent-entry > svg:first-child {flex:none;color:#2f486b;}
@@ -3512,9 +3512,9 @@ main:has(.resume-compact) > header .header-tools > .muted { display: none; }
 .platform-visit:hover { color:var(--accent); background:#eef3f8; border-radius:5px; }
 .platform-view-details { white-space:nowrap; font-size: 0.75rem; padding:8px 4px; color:var(--accent); }
 .platform-directory :is(button,a):focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-.platform-pagination { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:16px 0; font-size: 0.8125rem; color:var(--ink-3); }
-.platform-pagination > span { margin-right:8px; }
-.platform-pagination button { min-height:36px; padding:6px 12px; font-size: 0.8125rem; }
+.platform-pagination, .list-pagination { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:16px 0; font-size: 0.8125rem; color:var(--ink-3); }
+.platform-pagination > span, .list-pagination > span { margin-right:8px; }
+.platform-pagination button, .list-pagination button { min-height:36px; padding:6px 12px; font-size: 0.8125rem; }
 @media(max-width:1100px) {
   .platform-directory-row { grid-template-columns:32px minmax(0,1fr) 130px 64px 112px; gap:10px; padding-inline:14px; }
 }
@@ -4109,3 +4109,14 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .motivation-full-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 20px 0 12px; }
 .motivation-full-heading h3 { margin: 0; font-size: 1rem; }
 .motivation-full-heading button { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Agent tips and article management live on their own sub-pages. */
+.agent-tip-lang {padding:1px 7px;border:1px solid var(--list-border);border-radius:999px;font-size:.6875rem;}
+.agent-article-manage-list button[aria-pressed=true] {border-color:#456b9c;background:#eaf1fb;}
+.agent-article-shared {display:grid;grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr));gap:12px;}
+.agent-article-langs {display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--list-border);}
+.agent-article-langs button {margin-bottom:-1px;padding:8px 14px;border:1px solid transparent;border-radius:8px 8px 0 0;background:none;color:var(--ink-2);font-size:.85rem;cursor:pointer;}
+.agent-article-langs button[aria-selected=true] {border-color:var(--list-border);border-bottom-color:var(--surface);background:var(--surface);color:var(--ink);font-weight:700;}
+.agent-article-text {display:grid;gap:14px;}
+.prep-list .list-pagination {padding-inline:16px;}
+@media(max-width:650px){.agent-article-shared{grid-template-columns:1fr}}

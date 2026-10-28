@@ -47,3 +47,67 @@ test('public articles stay readable while management requires a signed-in admin'
   const write = await mf.dispatchFetch('https://career-api.example.com/api/career/articles/manage', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
   assert.equal(write.status, 401);
 });
+
+test('articles carry Japanese and English versions for the list, the public page and the sitemap', async t => {
+  const mf = new Miniflare({ modules: true, script: bundled.outputFiles[0].text, compatibilityDate: '2026-05-22', d1Databases: ['CAREER_DB'] });
+  t.after(() => mf.dispose());
+  const get = path => mf.dispatchFetch('http://local/api/career/' + path);
+  const post = (path, body) => mf.dispatchFetch('http://local/api/career/' + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const { articles } = await (await get('articles')).json();
+  const seed = articles.find(a => a.slug === 'read-job-posting');
+  assert.equal(seed.translations.ja.title, '求人票を読み解く');
+  assert.equal(seed.translations.en.title, 'Understand a job posting');
+
+  const ja = await get('articles/view/read-job-posting?lang=ja');
+  const jaHtml = await ja.text();
+  assert.equal(ja.headers.get('content-language'), 'ja');
+  assert.match(jaHtml, /<html lang="ja">/);
+  assert.match(jaHtml, /<title>求人票を読み解く · 就職手帖<\/title>/);
+  assert.match(jaHtml, /rel="canonical" href="http:\/\/local\/api\/career\/articles\/view\/read-job-posting\?lang=ja"/);
+  assert.match(jaHtml, /hreflang="en"/);
+  assert.match(jaHtml, /hreflang="x-default"/);
+  const en = await (await get('articles/view/read-job-posting?lang=en')).text();
+  assert.match(en, /<h1>Understand a job posting<\/h1>/);
+  assert.match(en, /Copy prompt/);
+
+  // A language the article lacks falls back to Chinese with a Chinese canonical address.
+  const draft = { slug: 'zh-only-tip', revision: 0, status: 'published', category: 'start', title: '只有中文', summary: '摘要', steps: ['一步'], body: '', prompt: '', translations: {} };
+  assert.equal((await post('articles/manage', draft)).status, 200);
+  const fallback = await (await get('articles/view/zh-only-tip?lang=en')).text();
+  assert.match(fallback, /<html lang="zh-CN">/);
+  assert.match(fallback, /rel="canonical" href="http:\/\/local\/api\/career\/articles\/view\/zh-only-tip"/);
+  assert.ok(!fallback.includes('hreflang="en"'));
+
+  // A partial translation is rejected; a blank one is simply dropped.
+  const partial = await post('articles/manage', { ...draft, slug: 'partial-tip', translations: { ja: { title: 'タイトルだけ', summary: '', steps: [], body: '', prompt: '' } } });
+  assert.equal(partial.status, 400);
+  const blank = await (await post('articles/manage', { ...draft, slug: 'blank-tip', translations: { ja: { title: ' ', summary: '', steps: [''], body: '', prompt: '' } } })).json();
+  assert.deepEqual(blank.translations, {});
+  const translated = await (await post('articles/manage', { ...draft, slug: 'translated-tip', translations: { en: { title: 'English only', summary: 'Summary', steps: ['One step', ' '], body: '', prompt: 'Ask' } } })).json();
+  assert.deepEqual(translated.translations.en.steps, ['One step']);
+
+  const sitemap = await (await get('articles/sitemap.xml')).text();
+  assert.ok(sitemap.includes('<loc>http://local/api/career/articles/view/read-job-posting?lang=ja</loc>'));
+  assert.ok(sitemap.includes('xhtml:link rel="alternate" hreflang="en"'));
+  assert.ok(sitemap.includes('<loc>http://local/api/career/articles/view/translated-tip?lang=en</loc>'));
+  assert.ok(!sitemap.includes('translated-tip?lang=ja'));
+});
+
+test('existing article tables gain translations without overwriting edited seed articles', async t => {
+  const mf = new Miniflare({ modules: true, script: bundled.outputFiles[0].text, compatibilityDate: '2026-05-22', d1Databases: ['CAREER_DB'] });
+  t.after(() => mf.dispose());
+  const db = await mf.getD1Database('CAREER_DB');
+  await db.prepare(`CREATE TABLE agent_articles (
+    slug TEXT PRIMARY KEY, revision INTEGER NOT NULL, status TEXT NOT NULL,
+    category TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+    steps TEXT NOT NULL, body TEXT NOT NULL, prompt TEXT NOT NULL, updated_at TEXT NOT NULL
+  )`).run();
+  const insert = `INSERT INTO agent_articles (slug,revision,status,category,title,summary,steps,body,prompt,updated_at) VALUES (?,?,'published','prepare',?,'摘要','["一步"]','','','2026-10-27T00:00:00.000Z')`;
+  await db.prepare(insert).bind('read-job-posting', 1, '读懂一条招聘信息').run();
+  await db.prepare(insert).bind('evidence-based-resume', 3, '我改过的标题').run();
+  const { articles } = await (await mf.dispatchFetch('http://local/api/career/articles')).json();
+  assert.equal(articles.find(a => a.slug === 'read-job-posting').translations.ja.title, '求人票を読み解く');
+  const edited = articles.find(a => a.slug === 'evidence-based-resume');
+  assert.equal(edited.title, '我改过的标题');
+  assert.deepEqual(edited.translations, {});
+});
