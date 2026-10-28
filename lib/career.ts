@@ -93,6 +93,10 @@ export type Report = {
   sourceNotes: string;
   date: string;
   createdAt: string;
+  /** Set when the user edits a schedule report in the app. */
+  updatedAt?: string;
+  /** Set when the user removes a schedule report from the calendar; the report itself is kept. */
+  archivedAt?: string;
 };
 export type Task = {
   attemptId?: string;

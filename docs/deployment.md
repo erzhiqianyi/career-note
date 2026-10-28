@@ -57,7 +57,7 @@ OAuth と MCP の公開アドレスは API 側（`CAREER_PUBLIC_ORIGIN`）、同
    | --- | --- |
    | `CAREER_AUTH_MODE` | `strict`（公開環境では必須。off はエッジ経由のリクエストを 403 で拒否します） |
    | `FIREBASE_API_KEY` / `FIREBASE_AUTH_DOMAIN` / `FIREBASE_PROJECT_ID` / `FIREBASE_APP_ID` | Firebase Web アプリの設定 |
-   | `CAREER_ADMIN_UIDS` | 管理者の Firebase UID（任意） |
+   | `CAREER_ADMIN_UIDS` | AI 求職記事を編集する管理者の Firebase UID（記事管理を使う場合は設定） |
    | `CAREER_WEB_ORIGIN` | `https://career.example.com`（画面のオリジン。CORS と OAuth 同意画面の行き先） |
    | `CAREER_PUBLIC_ORIGIN` | `https://career-api.example.com`（API 自身のオリジン。OAuth メタデータに載る） |
    | `CAREER_CORS_ORIGINS` | 追加で許可するブラウザーオリジン（カンマ区切り、任意） |

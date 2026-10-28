@@ -12,6 +12,7 @@ private struct CareerScheduleEvent: Decodable, Identifiable {
     let status: String
     let location: String?
     let url: String?
+    let jobId: String?
 
     private struct Metadata: Decodable {
         let date: String
@@ -21,6 +22,7 @@ private struct CareerScheduleEvent: Decodable, Identifiable {
         let status: String
         let location: String?
         let url: String?
+        let jobId: String?
     }
 
     init?(report: CareerReport) {
@@ -41,15 +43,23 @@ private struct CareerScheduleEvent: Decodable, Identifiable {
         status = meta.status
         location = meta.location
         url = meta.url
+        jobId = meta.jobId
     }
 }
 
 struct CareerScheduleView: View {
     let reports: [CareerReport]
+    let jobs: [CareerJob]
     let userID: String?
     @State private var selectedDate = Date()
+    @State private var displayedMonth = Date()
     @State private var notice: String?
     private static let store = EKEventStore()
+    private static let tokyoCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        return calendar
+    }()
 
     private var events: [CareerScheduleEvent] {
         reports.compactMap(CareerScheduleEvent.init(report:)).sorted {
@@ -57,36 +67,114 @@ struct CareerScheduleView: View {
         }
     }
     private var day: String {
-        let formatter = DateFormatter()
-        formatter.timeZone = TimeZone(identifier: "Asia/Tokyo")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: selectedDate)
+        dateKey(selectedDate)
     }
     private var visibleEvents: [CareerScheduleEvent] {
-        let selected = events.filter { $0.date == day }
-        return selected.isEmpty ? events.filter { $0.date >= day }.prefix(4).map { $0 } : selected
+        events.filter { $0.date == day }
+    }
+    private var monthStart: Date {
+        let components = Self.tokyoCalendar.dateComponents([.year, .month], from: displayedMonth)
+        return Self.tokyoCalendar.date(from: components)!
+    }
+    private var monthDays: [Date] {
+        let count = Self.tokyoCalendar.range(of: .day, in: .month, for: monthStart)!.count
+        return (0..<count).compactMap { Self.tokyoCalendar.date(byAdding: .day, value: $0, to: monthStart) }
+    }
+    private var leadingDays: Int {
+        Self.tokyoCalendar.component(.weekday, from: monthStart) - 1
+    }
+
+    private func dateKey(_ date: Date) -> String {
+        let parts = Self.tokyoCalendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
+    }
+
+    private func company(for event: CareerScheduleEvent) -> CareerJob? {
+        if let jobId = event.jobId { return jobs.first { $0.id == jobId } }
+        let matches = jobs.filter { event.title.contains($0.company) }
+        return matches.count == 1 ? matches.first : nil
+    }
+
+    private var calendarGrid: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("\(Self.tokyoCalendar.component(.year, from: monthStart)) 年 \(Self.tokyoCalendar.component(.month, from: monthStart)) 月")
+                    .font(.headline)
+                Spacer()
+                Button { changeMonth(-1) } label: { Image(systemName: "chevron.left") }
+                    .accessibilityLabel("上个月")
+                Button { changeMonth(1) } label: { Image(systemName: "chevron.right") }
+                    .accessibilityLabel("下个月")
+                    .padding(.leading, 16)
+            }
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(Array(["周日", "周一", "周二", "周三", "周四", "周五", "周六"].enumerated()), id: \.offset) { _, weekday in
+                    Text(weekday).font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(0..<leadingDays, id: \.self) { _ in Color.clear.frame(height: 48) }
+                ForEach(monthDays, id: \.self) { date in
+                    let key = dateKey(date)
+                    let hasEvent = events.contains { $0.date == key }
+                    let selected = key == day
+                    Button { selectedDate = date } label: {
+                        VStack(spacing: 2) {
+                            Text("\(Self.tokyoCalendar.component(.day, from: date))")
+                                .font(.body.weight(selected ? .bold : .regular))
+                                .frame(width: 36, height: 36)
+                                .background(selected ? PhoneStyle.accent : Color.clear, in: Circle())
+                                .foregroundStyle(selected ? Color.white : Color.primary)
+                            Circle().fill(hasEvent ? PhoneStyle.accent : Color.clear)
+                                .frame(width: 5, height: 5)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(key)\(hasEvent ? "，有活动" : "")")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    private func changeMonth(_ offset: Int) {
+        guard let date = Self.tokyoCalendar.date(byAdding: .month, value: offset, to: monthStart) else { return }
+        displayedMonth = date
+        selectedDate = date
+    }
+
+    private func eventDetails(_ event: CareerScheduleEvent, linked: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text(event.title).font(.subheadline.bold())
+                if linked { Image(systemName: "chevron.right").font(.caption) }
+            }
+            Text("\(event.date) · \(event.start ?? "上午，具体时间待确认")\(event.end.map { "–\($0)" } ?? "")")
+                .font(.caption).foregroundStyle(.secondary)
+            if event.status == "provisional" { Text("仮予約 · 等待正式确认").font(.caption).foregroundStyle(.orange) }
+            if event.timeStatus == "end-estimated" { Text("结束时间为估计").font(.caption).foregroundStyle(.secondary) }
+            if let location = event.location { Text(location).font(.caption).foregroundStyle(.secondary) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeading(title: "日历", detail: "日本时间")
-            DatePicker("查看日期", selection: $selectedDate, displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .environment(\.timeZone, TimeZone(identifier: "Asia/Tokyo") ?? .current)
-            if events.isEmpty {
-                Text("同步后，这里会显示已登记的面谈和活动。")
-                    .font(.subheadline).foregroundStyle(.secondary)
-            } else {
-                Text(events.contains { $0.date == day } ? "当天安排" : "接下来的安排")
+            calendarGrid
+            if !visibleEvents.isEmpty {
+                Text("当天安排")
                     .font(.subheadline.bold())
                 ForEach(visibleEvents) { event in
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(event.title).font(.subheadline.bold())
-                        Text("\(event.date) · \(event.start ?? "上午，具体时间待确认")\(event.end.map { "–\($0)" } ?? "")")
-                            .font(.caption).foregroundStyle(.secondary)
-                        if event.status == "provisional" { Text("仮予約 · 等待正式确认").font(.caption).foregroundStyle(.orange) }
-                        if event.timeStatus == "end-estimated" { Text("结束时间为估计").font(.caption).foregroundStyle(.secondary) }
-                        if let location = event.location { Text(location).font(.caption).foregroundStyle(.secondary) }
+                        if let job = company(for: event) {
+                            NavigationLink(value: AppRoute.job(job.id)) {
+                                eventDetails(event, linked: true)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            eventDetails(event, linked: false)
+                        }
                         if event.start != nil && event.end != nil {
                             Button("加入系统日历") { Task { await save(event) } }
                                 .font(.subheadline)
@@ -134,7 +222,7 @@ struct ScheduleHomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("日程").font(.largeTitle.bold())
-                PhoneCard { CareerScheduleView(reports: model.state.reports, userID: model.userID) }
+                PhoneCard { CareerScheduleView(reports: model.state.reports, jobs: model.state.jobs, userID: model.userID) }
             }
             .frame(maxWidth: 620, alignment: .leading)
             .padding(16)

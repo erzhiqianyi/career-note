@@ -20,6 +20,7 @@ import { eventsFromReports } from '@/lib/calendar-events';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
 import { Ja, JaChildren } from '@/components/japanese-text';
+import { markdownJapaneseReadings } from '@/lib/japanese-readings';
 import WorkspaceFooter from '@/components/workspace-footer';
 import InterviewPractice from '@/components/interview-practice';
 import StatusMark from '@/components/status-mark';
@@ -1370,7 +1371,20 @@ export default function Home() {
               {active === '日程' && (
                 <section className="schedule-page">
                   <div className="section-head"><h2><CalendarDays size={20} />{tr('日程')}</h2></div>
-                  <TodayCalendar today={data.today} marks={calendarMarks} events={calendarEvents} activity={collectActivity(data.jobs, data.attempts, data.materials)} onOpenJob={openJob} />
+                  <TodayCalendar
+                    today={data.today}
+                    marks={calendarMarks}
+                    events={calendarEvents}
+                    activity={collectActivity(data.jobs, data.attempts, data.materials)}
+                    onOpenJob={openJob}
+                    busy={busy}
+                    onSaveEvent={(event) => action(() => api('events/update', {
+                      id: event.id, title: event.title, content: event.description, date: event.date,
+                      start: event.start, end: event.end, timeStatus: event.timeStatus, status: event.status,
+                      kind: event.kind, location: event.location || '', url: event.url || '', jobId: event.jobId || '',
+                    }), '日程已更新')}
+                    onRemoveEvent={(event) => action(() => api('events/remove', { id: event.id, removed: true }), '已从日程移除')}
+                  />
                 </section>
               )}
               {active === '求职平台' && (
@@ -1389,7 +1403,7 @@ export default function Home() {
               {active === '个性化简历' && <PersonalizedResumes entries={data.resume || []} jobs={data.jobs} />}
               {active === 'Agent 协作' && (
                 <>
-                  <AgentOverview onAdd={() => go(mcpSetupPage)} />
+                  <AgentOverview canManage={Boolean(auth?.admin || auth?.mode === 'off')} />
                   <div className="agent-entries">
                     <button className="agent-entry" onClick={() => go(mcpSetupPage)}>
                       <Link2 size={22} />
@@ -1635,7 +1649,7 @@ export default function Home() {
               </div>
             )}
           <article className="document-body">
-            {applicationDoc ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{applicationContent}</ReactMarkdown> : <DocumentText text={doc.content} />}
+            {applicationDoc ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{markdownJapaneseReadings(applicationContent)}</ReactMarkdown> : <DocumentText text={doc.content} />}
           </article>
           {!printableDoc && <div className="source-box">
             <h3>{tr('依据与待确认事项')}</h3>

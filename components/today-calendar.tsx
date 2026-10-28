@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Flag, MessageSquare, X } from 'lucide-react';
 import { useLocale } from '@/components/locale-provider';
 import type { Attempt, Job, Material } from '@/lib/career';
-import { eventIcs, type CareerEvent } from '../lib/calendar-events';
+import { eventIcs, type CareerEvent, type EventKind, type EventStatus, type EventTimeStatus } from '../lib/calendar-events';
 
 export type CalendarMarkKind = 'due' | 'interview' | 'target';
 /** A dated item on the calendar; `jobs` are the companies involved (empty for the target date). */
@@ -51,6 +51,37 @@ const KINDS: Array<[keyof DayActivity, string]> = [
 ];
 
 const MARK_LABEL: Record<CalendarMarkKind, string> = { due: '待跟进', interview: '面试日', target: '目标日期' };
+const EVENT_KINDS: Array<[EventKind, string]> = [['interview', '面试'], ['counseling', '面谈・咨询'], ['fair', '招聘会・说明会']];
+const EVENT_STATUSES: Array<[EventStatus, string]> = [['confirmed', '已确定'], ['provisional', '暂约'], ['cancelled', '已取消']];
+const TIME_STATUSES: Array<[EventTimeStatus, string]> = [['exact', '时间确定'], ['end-estimated', '结束时间为估计'], ['unknown', '具体时间待确认']];
+
+/** Inline editor for one schedule entry; the job link and source notes stay as they are. */
+function EventEditor({ event, busy, onSave, onCancel }: { event: CareerEvent; busy?: boolean; onSave: (event: CareerEvent) => void; onCancel: () => void }) {
+  const { t } = useLocale();
+  const [draft, setDraft] = useState(event);
+  const set = (patch: Partial<CareerEvent>) => setDraft({ ...draft, ...patch });
+  const timed = draft.timeStatus !== 'unknown';
+  return <form className="calendar-event-editor" onSubmit={(e) => { e.preventDefault(); onSave(draft); }}>
+    <label className="field">{t('标题')}<input required maxLength={200} value={draft.title} onChange={(e) => set({ title: e.target.value })} /></label>
+    <div className="calendar-event-editor-row">
+      <label className="field">{t('日期')}<input type="date" required value={draft.date} onChange={(e) => set({ date: e.target.value })} /></label>
+      <label className="field">{t('类型')}<select value={draft.kind} onChange={(e) => set({ kind: e.target.value as EventKind })}>{EVENT_KINDS.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
+      <label className="field">{t('状态')}<select value={draft.status} onChange={(e) => set({ status: e.target.value as EventStatus })}>{EVENT_STATUSES.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
+    </div>
+    <div className="calendar-event-editor-row">
+      <label className="field">{t('时间')}<select value={draft.timeStatus} onChange={(e) => set({ timeStatus: e.target.value as EventTimeStatus })}>{TIME_STATUSES.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
+      {timed && <label className="field">{t('开始')}<input type="time" required value={draft.start || ''} onChange={(e) => set({ start: e.target.value })} /></label>}
+      {timed && <label className="field">{t('结束')}<input type="time" required value={draft.end || ''} onChange={(e) => set({ end: e.target.value })} /></label>}
+    </div>
+    <label className="field">{t('地点')}<input maxLength={200} value={draft.location || ''} onChange={(e) => set({ location: e.target.value })} /></label>
+    <label className="field">{t('会议链接')}<input type="url" maxLength={2000} value={draft.url || ''} onChange={(e) => set({ url: e.target.value })} /></label>
+    <label className="field">{t('备注')}<textarea rows={4} value={draft.description || ''} onChange={(e) => set({ description: e.target.value })} /></label>
+    <div className="calendar-event-editor-actions">
+      <button type="button" className="secondary" disabled={busy} onClick={onCancel}>{t('取消')}</button>
+      <button type="submit" className="primary" disabled={busy}>{busy ? t('保存中…') : t('保存')}</button>
+    </div>
+  </form>;
+}
 
 /**
  * Month grid with today, follow-up / interview / target marks and the month's interviews listed underneath.
@@ -62,16 +93,24 @@ export default function TodayCalendar({
   events,
   activity,
   onOpenJob,
+  onSaveEvent,
+  onRemoveEvent,
+  busy,
 }: {
   today: string;
   marks: Record<string, CalendarMark>;
   events: CareerEvent[];
   activity: Record<string, DayActivity>;
   onOpenJob?: (jobId: string) => void;
+  /** Resolves true once saved; the editor closes then. */
+  onSaveEvent?: (event: CareerEvent) => Promise<boolean>;
+  onRemoveEvent?: (event: CareerEvent) => Promise<boolean>;
+  busy?: boolean;
 }) {
   const { locale, t } = useLocale();
   const [offset, setOffset] = useState(0); // months from the current one
   const [selected, setSelected] = useState(''); // YYYY-MM-DD, or '' for the month's interview list
+  const [editing, setEditing] = useState(''); // id of the event being edited
   const [ty, tm] = today.split('-').map(Number);
   const first = new Date(Date.UTC(ty, tm - 1 + offset, 1));
   const year = first.getUTCFullYear();
@@ -110,11 +149,17 @@ export default function TodayCalendar({
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
-  const eventRow = (event: CareerEvent) => <li key={event.id} className="calendar-event-row">
+  const eventRow = (event: CareerEvent) => editing === event.id && onSaveEvent ? <li key={event.id} className="calendar-event-row is-editing">
+    <EventEditor event={event} busy={busy} onCancel={() => setEditing('')} onSave={(draft) => void onSaveEvent(draft).then((saved) => { if (saved) setEditing(''); })} />
+  </li> : <li key={event.id} className={'calendar-event-row' + (event.status === 'cancelled' ? ' is-cancelled' : '')}>
     <Clock size={14} />
     <b>{shortDay(event.date)} {event.start || t('上午')}</b>
-    <span><strong>{event.title}</strong><small>{event.status === 'provisional' ? `${t('暂约')} · ` : ''}{event.timeStatus === 'unknown' ? t('具体时间待确认') : event.timeStatus === 'end-estimated' ? t('结束约 {0}', [event.end]) : t('结束 {0}', [event.end])}{event.location ? ` · ${event.location}` : ''}</small></span>
-    {event.start && event.end && <button type="button" className="text-button" onClick={() => void exportEvent(event)}>{t('导出日历文件')}</button>}
+    <span><strong>{event.title}</strong><small>{event.status === 'provisional' ? `${t('暂约')} · ` : event.status === 'cancelled' ? `${t('已取消')} · ` : ''}{event.timeStatus === 'unknown' ? t('具体时间待确认') : event.timeStatus === 'end-estimated' ? t('结束约 {0}', [event.end]) : t('结束 {0}', [event.end])}{event.location ? ` · ${event.location}` : ''}</small></span>
+    <span className="calendar-event-actions">
+      {event.start && event.end && event.status !== 'cancelled' && <button type="button" className="text-button" onClick={() => void exportEvent(event)}>{t('导出日历文件')}</button>}
+      {onSaveEvent && <button type="button" className="text-button" disabled={busy} onClick={() => setEditing(event.id)}>{t('修改')}</button>}
+      {onRemoveEvent && <button type="button" className="text-button" disabled={busy} onClick={() => { if (window.confirm(t('从日程中移除「{0}」？记录会保留，可在报告中查看。', [event.title]))) void onRemoveEvent(event); }}>{t('移除')}</button>}
+    </span>
   </li>;
   /** Tooltip for a day: its mark plus a short summary of what was done. */
   const tooltip = (date: string) => {
@@ -147,7 +192,7 @@ export default function TodayCalendar({
           if (!d) return <span key={i} />;
           const date = iso(d);
           const mark = marks[date];
-          const hasEvent = events.some(event => event.date === date);
+          const hasEvent = events.some(event => event.date === date && event.status !== 'cancelled');
           const done = !!activity[date];
           return (
             <button

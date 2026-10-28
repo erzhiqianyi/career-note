@@ -90,6 +90,29 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       handler: async () => ({ content: [{ type: 'text', text: CAREER_CONTRACT }] }),
     },
     {
+      name: 'career_get_experience_generation_guide',
+      description: 'Get the evidence-first operation for turning work emails and existing resume records into draft employment or project experience. Returns instructions only; it does not read emails, generate with a backend model, or save data.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: async (_args, ctx) => {
+        const articleResult = await api(ctx, 'articles/work-email-to-experience');
+        if (articleResult.isError) return articleResult;
+        const article = articleResult.structuredContent as { prompt?: string } | undefined;
+        const guide = {
+          prompt: article?.prompt || '',
+          steps: [
+            'Use only work emails or other sources the user supplied or authorized. Record source date, subject or message ID, and what each source actually establishes.',
+            'Call career_get_resume_overview and career_list_resume, then career_get_resume_details for relevant records. Read source documents selectively via career_get_resume_document_chunk.',
+            'Separate employer, client, team and individual work. Make an evidence table, list unresolved facts, and draft employment or project wording for human review.',
+            'Only when the user explicitly asks to save, call career_save_resume_entry with a new id, revision 0, kind employment or project, sourceNotes and verification. Read the saved record back. Never change an application status or send email.',
+          ],
+          fields: { employment: resumeSections.employment.fields, project: resumeSections.project.fields },
+          saveTool: 'career_save_resume_entry',
+        };
+        return { content: [{ type: 'text', text: JSON.stringify(guide) }], structuredContent: guide };
+      },
+    },
+    {
       name: 'career_get_context',
       scope: 'career:read',
       description: 'Read only the authenticated user’s profile, structured resume records, jobs, materials, reports, tasks, question sets, original attempts and reviews.',

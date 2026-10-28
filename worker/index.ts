@@ -2,6 +2,7 @@ import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePer
 import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
 import { ensureMaterialFilesSchema, materialFileMeta, materialFileKey, saveMaterialFile, deleteMaterialFile, type MaterialFileKind } from './material-files';
 import { ensureResumeSchema, readResume, writeResume, deleteResumeDocument, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
+import { ensureArticleSchema, listArticles, getArticle, saveArticle, articleHtml, articleSitemap } from './articles';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
 import { inspectorResponse } from '@ninomae/mcp-app-server/inspector';
 import { sqlStore } from '@ninomae/mcp-app-server/sql';
@@ -14,6 +15,7 @@ import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-p
 import { findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-bank';
 import type { ExportedHandler } from '@cloudflare/workers-types';
 import type { Material } from '../lib/career';
+import { parseEventHeader, withEventHeader, type EventHeader } from '../lib/calendar-events';
 
 type JobStatus = '关注中' | '准备投递' | '已投递' | '书类选考' | '面试中' | '内定' | '未通过' | '已撤回';
 type JobPriority = '高' | '普通' | '低';
@@ -937,6 +939,50 @@ async function setMaterialReviewStatus(db: Workspace, payload: Record<string, un
   return { id, reviewStatus: material.reviewStatus, reviewedAt: material.reviewedAt || null };
 }
 
+/** The user corrects a schedule entry in the app: header fields, title and notes are rewritten in place. */
+async function updateEvent(db: Workspace, payload: Record<string, unknown>) {
+  const id = validateString(payload.id, 'id', { required: true, max: 120 });
+  const report = await getRecord(db, 'reports', id);
+  const current = report && parseEventHeader(report.sourceNotes as string, report.date as string);
+  if (!report || !current || 'error' in current) throw new AppError(404, '日程不存在');
+  const date = validateString(payload.date, 'date', { required: true, max: 16 });
+  const header: Record<string, unknown> = {
+    date,
+    timeStatus: payload.timeStatus,
+    status: payload.status,
+    kind: payload.kind,
+    ...(payload.timeStatus !== 'unknown' ? { start: payload.start, end: payload.end } : {}),
+  };
+  for (const key of ['location', 'url', 'jobId'] as const) {
+    const value = validateString(payload[key], key, { max: key === 'url' ? 2000 : 200 });
+    if (value) header[key] = value;
+  }
+  if (current.supersedes) header.supersedes = current.supersedes;
+  const sourceNotes = (report.sourceNotes as string) || '';
+  const next = withEventHeader(sourceNotes, header as EventHeader);
+  const checked = parseEventHeader(next, date);
+  if (!checked || 'error' in checked) throw new AppError(400, checked ? checked.error : '日程格式不正确');
+  report.date = date;
+  report.title = validateString(payload.title, 'title', { required: true, max: 200 });
+  report.content = validateString(payload.content, 'content', { max: 100000 });
+  report.sourceNotes = withEventHeader(sourceNotes, checked);
+  report.updatedAt = now();
+  await putRecord(db, 'reports', report);
+  return { id, date, updatedAt: report.updatedAt };
+}
+
+/** Remove a schedule entry from the calendar (or restore it); the report and its notes are kept. */
+async function removeEvent(db: Workspace, payload: Record<string, unknown>) {
+  const id = validateString(payload.id, 'id', { required: true, max: 120 });
+  if (typeof payload.removed !== 'boolean') throw new AppError(400, 'removed 必须是 true 或 false');
+  const report = await getRecord(db, 'reports', id);
+  if (!report || !parseEventHeader(report.sourceNotes as string, report.date as string)) throw new AppError(404, '日程不存在');
+  if (payload.removed) report.archivedAt = now();
+  else delete report.archivedAt;
+  await putRecord(db, 'reports', report);
+  return { id, archivedAt: report.archivedAt || null };
+}
+
 async function importBundle(db: Workspace, data: Record<string, unknown>, preview = false) {
   if (Number(data.schemaVersion) !== 1) throw new AppError(400, '需要 schemaVersion: 1 的 JSON 数据包');
 
@@ -1035,6 +1081,13 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         const date = validateString(obj.date, 'date', { required: true, max: 16 });
         if (!date) throw new AppError(400, '报告需要日期');
         validateDate(date, 'date');
+        const event = parseEventHeader(sourceNotes, date);
+        if (event && 'error' in event) throw new AppError(400, `${key}：${event.error}`);
+        for (const old of event?.supersedes || []) {
+          if (old === key) throw new AppError(400, '日程不能替换自身');
+          const replaced = await getRecord(db, 'reports', old);
+          if (!replaced || !parseEventHeader(replaced.sourceNotes as string, replaced.date as string)) throw new AppError(400, `supersedes 指向的日程不存在：${old}`);
+        }
 
         if (!preview) {
           await putRecord(db, 'reports', {
@@ -1212,6 +1265,7 @@ async function ensureAllSchemas(db: D1Database, gateway: McpAppServer): Promise<
   await ensureMaterialFilesSchema(db);
   await ensureResumeSchema(db);
   await ensurePersonalizedSchema(db);
+  await ensureArticleSchema(db);
 }
 
 const handler = async (
@@ -1233,6 +1287,21 @@ const handler = async (
   if (publicMatch && request.method === 'GET') return publicResumeResponse(rawDb, publicMatch[1]);
   const publicMaterialMatch = new URL(request.url).pathname.match(/^\/api\/career\/public-materials\/([a-f0-9-]{36})$/);
   if (publicMaterialMatch && request.method === 'GET') return publicMaterialResponse(rawDb, publicMaterialMatch[1]);
+  const articlePath = new URL(request.url).pathname;
+  if (request.method === 'GET' && articlePath === '/api/career/articles')
+    return jsonResponse({ articles: await listArticles(rawDb) });
+  if (request.method === 'GET' && articlePath === '/api/career/articles/sitemap.xml')
+    return articleSitemap(rawDb, new URL(request.url).origin);
+  const publicArticleMatch = articlePath.match(/^\/api\/career\/articles\/view\/([a-z0-9-]{3,80})$/);
+  if (request.method === 'GET' && publicArticleMatch) {
+    const article = await getArticle(rawDb, publicArticleMatch[1]);
+    return article ? articleHtml(article, request.url, resolveOrigins(request, env).webOrigin) : new Response('Not found', { status: 404 });
+  }
+  const articleJsonMatch = articlePath.match(/^\/api\/career\/articles\/([a-z0-9-]{3,80})$/);
+  if (request.method === 'GET' && articleJsonMatch && articleJsonMatch[1] !== 'manage') {
+    const article = await getArticle(rawDb, articleJsonMatch[1]);
+    return article ? jsonResponse(article) : jsonResponse({ error: '文章不存在' }, { status: 404 });
+  }
   const audioMatch = new URL(request.url).pathname.match(/^\/api\/career\/attempts\/audio\/([a-f0-9]{48})$/);
   if (audioMatch && request.method === 'GET') return audioLinkResponse(rawDb, env, audioMatch[1]);
 
@@ -1307,6 +1376,11 @@ const handler = async (
 
   if (pathname === '/api/career/auth/me' && method === 'GET') {
     return jsonResponse(context);
+  }
+  if (pathname === '/api/career/articles/manage' && method === 'GET') {
+    if (!context.admin && context.mode !== 'off') throw new AppError(403, '仅管理员可管理文章');
+    if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中管理文章');
+    return jsonResponse({ articles: await listArticles(rawDb, true) });
   }
 
   if (pathname === '/api/career/state' && method === 'GET') {
@@ -1451,6 +1525,10 @@ const handler = async (
 
   let result: unknown;
   switch (pathname) {
+    case '/api/career/articles/manage':
+      if (!context.admin && context.mode !== 'off') throw new AppError(403, '仅管理员可管理文章');
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中管理文章');
+      return saveArticle(rawDb, payload);
     case '/api/career/personalized-resumes':
       ensureScopes(context, ['career:write']);
       return savePersonalized(rawDb, db.namespace, payload);
@@ -1535,6 +1613,16 @@ const handler = async (
       ensureScopes(context, ['career:write']);
       if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中由本人确认材料');
       result = await setMaterialReviewStatus(db, payload);
+      break;
+    case '/api/career/events/update':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中修改日程；Agent 请导入带 supersedes 的新版本');
+      result = await updateEvent(db, payload);
+      break;
+    case '/api/career/events/remove':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中移除日程；Agent 请导入带 supersedes 的新版本');
+      result = await removeEvent(db, payload);
       break;
     case '/api/career/import':
       ensureScopes(context, ['agent:write']);

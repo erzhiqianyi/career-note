@@ -105,6 +105,10 @@ export function rubyHTML(text: string, glossary: Glossary, escape: (s: string) =
 
 /** Readings travel with the sentence, so the same spelling can have different readings. */
 const INLINE_READING = /\{([^{}|\n]*[㐀-䶿一-鿿豈-﫿々〆ヶ][^{}|\n]*)\|([ぁ-ゖァ-ヺー・]+)\}/g;
+/** Keep the reading marker intact while preventing GFM tables from splitting at its pipe. */
+export function markdownJapaneseReadings(text: string) {
+  return text.replace(INLINE_READING, (_, word: string, reading: string) => `{${word}\\|${reading}}`);
+}
 export function inlineReadings(text: string): Segment[] {
   const result: Segment[] = [];
   let offset = 0;
