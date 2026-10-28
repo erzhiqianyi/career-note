@@ -336,7 +336,8 @@ export default function Home() {
     });
   };
   useEffect(() => {
-    const navigate = () => {
+    // Re-runs whenever polling replaces data; only a real hash change resets the scroll position.
+    const navigate = (event?: HashChangeEvent) => {
       const hash = window.location.hash;
       const editMatch = hash.match(/^#jobs\/([^/]+)\/edit$/);
       const detailMatch = hash.match(/^#jobs\/([^/]+)$/);
@@ -362,7 +363,7 @@ export default function Home() {
         }
       }
       setHash(hash);
-      window.scrollTo(0, 0);
+      if (event) window.scrollTo(0, 0);
     };
     navigate();
     window.addEventListener('hashchange', navigate);
@@ -452,12 +453,12 @@ export default function Home() {
               setPreview(null);
               setProfileEdit(false);
               setJobEdit(null);
+              setLoggedIn(false);
             }
             lastUid.current = user?.uid || null;
             setAuthToken(token);
             setUserName(user?.displayName || '');
             setUserEmail(user?.email || '');
-            setLoggedIn(false);
             if (!user && config.mode !== 'off') {
               setAuth(null);
               setData(null);
