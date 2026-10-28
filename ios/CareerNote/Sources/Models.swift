@@ -136,6 +136,7 @@ struct CareerJob: Codable, Identifiable {
     let matchNotes: String?
     let unknowns: String?
     let priority: String?
+    let rating: Int?
     let notes: String?
     let history: [CareerJobHistory]?
     let updatedAt: String?

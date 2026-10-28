@@ -1064,6 +1064,13 @@ export default function Home() {
                   ))}
                 </select>
               </label>
+              <label className="field">
+                <span>{tr('个人评分')}</span>
+                <select name="rating" defaultValue={jobEdit.rating ?? 0}>
+                  <option value="0">{tr('未评分')}</option>
+                  {[1, 2, 3, 4, 5].map(stars => <option key={stars} value={stars}>{'★'.repeat(stars)}{'☆'.repeat(5 - stars)} ({stars}/5)</option>)}
+                </select>
+              </label>
               <Field
                 name="nextAction"
                 label={tr('下一步行动')}

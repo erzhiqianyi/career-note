@@ -57,7 +57,7 @@ const emptyDraft: Draft = {
   seconds: '',
   dirty: false,
 };
-type PrepSortKey = 'company' | 'status' | 'schedule' | 'prep';
+type PrepSortKey = 'company' | 'rating' | 'status' | 'schedule' | 'prep';
 type PrepColumn = PrepSortKey;
 /** Four sections of one company's preparation page. */
 type PrepTab = 'info' | 'materials' | 'practice' | 'summary';
@@ -419,6 +419,7 @@ export default function InterviewPractice({
     const keyOf = (job: State['jobs'][number]): string | number => {
       switch (sort.key) {
         case 'company': return job.company;
+        case 'rating': return -(job.rating || 0);
         case 'status': return statuses.indexOf(job.status);
         case 'schedule': return job.nextDate || (sort.desc ? '' : '9999');
         case 'prep': return prepRank(prepOf(job));
@@ -430,7 +431,7 @@ export default function InterviewPractice({
       .sort((a, b) => {
         const x = keyOf(a), y = keyOf(b);
         const c = x < y ? -1 : x > y ? 1 : 0;
-        return sort.desc ? -c : c;
+        return (sort.desc ? -c : c) || a.company.localeCompare(b.company);
       });
     const visibleIds = jobs.map(job => job.id);
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedJobIds.has(id));
@@ -452,6 +453,7 @@ export default function InterviewPractice({
         <select aria-label={tr('筛选投递状态')} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           {['进行中', '有面试', '全部', ...statuses].map(s => <option key={s} value={s}>{s === '全部' ? tr('全部状态') : tr(s)}</option>)}
         </select>
+        <button type="button" className={'secondary rating-sort-button' + (sort.key === 'rating' && !sort.desc ? ' is-active' : '')} aria-pressed={sort.key === 'rating' && !sort.desc} onClick={() => setSort(s => s.key === 'rating' && !s.desc ? { key: 'schedule', desc: false } : { key: 'rating', desc: false })}>{tr('评分优先')}</button>
         <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span>
         {data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
           <ListChecks size={20} aria-hidden="true" />
@@ -490,6 +492,7 @@ export default function InterviewPractice({
         {jobs.length ? <DataTable<PrepColumn> label={tr('面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
           ...(managing ? [{ key: 'select' as PrepColumn, label: <input type="checkbox" aria-label={tr('选择当前列表')} checked={allVisibleSelected} onChange={toggleVisible} />, width: '32px' }] : []),
           { key: 'company', label: tr('公司 / 职位'), width: 'minmax(0,2fr)', sortable: true },
+          { key: 'rating', label: tr('个人评分'), width: '100px', sortable: true },
           { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', sortable: true },
           { key: 'schedule', label: tr('面试 / 跟进'), width: 'minmax(0,1.2fr)', sortable: true },
           { key: 'prep', label: tr('准备阶段'), width: 'minmax(120px,1.2fr)', sortable: true },
@@ -501,6 +504,7 @@ export default function InterviewPractice({
           return <DataRow key={job.id} className={(closed.includes(job.status) ? 'is-closed ' : '') + (managing ? 'is-managing' : '')} onOpen={managing ? undefined : () => setCompany(job.id)}>
             {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
             <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={job.role} onClick={() => setCompany(job.id)} />
+            <DataCell label={tr('个人评分')} className="prep-rating"><span aria-label={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')} title={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')}>{job.rating ? <>{'★'.repeat(job.rating)}<span className="rating-empty">{'☆'.repeat(5 - job.rating)}</span></> : <span className="muted">{tr('未评分')}</span>}</span></DataCell>
             <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label /></DataCell>
             <DataCell label={tr('面试 / 跟进')} className="prep-schedule">
               {job.nextDate ? <>
@@ -581,6 +585,7 @@ export default function InterviewPractice({
             ['在留资格支持', currentJob.visa, true],
             ['投递状态', currentJob.status ? tr(currentJob.status) : ''],
             ['优先级', currentJob.priority ? tr(currentJob.priority) : ''],
+            ['个人评分', currentJob.rating ? `${'★'.repeat(currentJob.rating)}${'☆'.repeat(5 - currentJob.rating)} (${currentJob.rating}/5)` : tr('未评分')],
             ['下一步', currentJob.nextAction ? currentJob.nextAction + (currentJob.nextDate ? '（' + day(currentJob.nextDate) + '）' : '') : '', true],
           ])}
           {textSections([

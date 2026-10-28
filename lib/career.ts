@@ -51,6 +51,8 @@ export type Job = {
   unknowns: string;
   status: string;
   priority: string;
+  /** Owner's personal company rating; 0 or absent means unrated. */
+  rating?: number;
   nextAction: string;
   nextDate: string;
   notes: string;

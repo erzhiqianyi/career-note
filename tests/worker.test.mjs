@@ -109,6 +109,23 @@ void test('company reading and details survive older research imports',async t=>
  saved=(await (await send('state')).json()).jobs[0];
  assert.equal(saved.companyReading,'');
 });
+void test('personal company ratings persist and reject invalid or agent-provided values',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const source={id:'rated-job',company:'Example',role:'Engineer'};
+ assert.equal((await send('import',{schemaVersion:1,jobs:[source],completeTaskIds:[]})).status,200);
+ let job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.rating,0);
+ assert.equal((await send('jobs',{...job,rating:5})).status,200);
+ job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.rating,5);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[source],completeTaskIds:[]})).status,200);
+ job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.rating,5);
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,rating:1}],completeTaskIds:[]})).status,400);
+ for(const rating of [-1,1.5,6,'bad']) assert.equal((await send('jobs',{...job,rating})).status,400);
+ assert.equal((await send('jobs',{...job,rating:0})).status,200);
+ assert.equal((await (await send('state')).json()).jobs[0].rating,0);
+});
 void test('bulk job deletion checks revisions and removes only selected jobs with their dependent records',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  const jobs=[{id:'delete-a',company:'Company A',role:'Engineer'},{id:'keep-b',company:'Company B',role:'Designer'},{id:'delete-c',company:'Company C',role:'Analyst'}];

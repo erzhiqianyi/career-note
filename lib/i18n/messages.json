@@ -1,4 +1,8 @@
 {
+  "个人评分": { "ja": "個人評価", "en": "My rating" },
+  "评分优先": { "ja": "評価順", "en": "Rating first" },
+  "未评分": { "ja": "未評価", "en": "Not rated" },
+  "{0} 星": { "ja": "{0} つ星", "en": "{0} stars" },
   "批量管理": { "ja": "一括管理", "en": "Manage multiple" },
   "完成管理": { "ja": "管理を終了", "en": "Done managing" },
   "已选择 {0} 项": { "ja": "{0} 件選択中", "en": "{0} selected" },

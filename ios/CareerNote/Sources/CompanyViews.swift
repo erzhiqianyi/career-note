@@ -264,13 +264,19 @@ struct CompanyListView: View {
     @Bindable var model: AppModel
     @State private var search = ""
     @State private var showClosed = false
+    @State private var sortByRating = false
 
     private var jobs: [CareerJob] {
         model.state.jobs
             .filter { showClosed || !["未通过", "已撤回"].contains($0.status) }
             .filter { search.isEmpty || ($0.company + " " + $0.role + " " + String($0.companyNumber ?? 0))
                 .localizedCaseInsensitiveContains(search) }
-            .sorted { sortDate($0) < sortDate($1) }
+            .sorted {
+                if sortByRating, ($0.rating ?? 0) != ($1.rating ?? 0) {
+                    return ($0.rating ?? 0) > ($1.rating ?? 0)
+                }
+                return sortDate($0) < sortDate($1)
+            }
     }
 
     private func sortDate(_ job: CareerJob) -> String {
@@ -283,6 +289,8 @@ struct CompanyListView: View {
             VStack(alignment: .leading, spacing: 20) {
                 Text("企业").font(.largeTitle.bold())
                 Toggle("显示已结束的职位", isOn: $showClosed)
+                    .font(.subheadline)
+                Toggle("按评分排序", isOn: $sortByRating)
                     .font(.subheadline)
                 SectionHeading(title: "已保存的企业", detail: "\(jobs.count) / \(model.state.jobs.count)")
                 if jobs.isEmpty {
@@ -303,6 +311,11 @@ struct CompanyListView: View {
                                     Spacer(minLength: 4)
                                     Text(job.status).font(.caption.bold())
                                         .foregroundStyle(PhoneStyle.accent)
+                                }
+                                if let rating = job.rating, rating > 0 {
+                                    Text(String(repeating: "★", count: min(rating, 5)) + String(repeating: "☆", count: max(0, 5 - rating)))
+                                        .font(.caption).foregroundStyle(.orange)
+                                        .accessibilityLabel("个人评分 \(rating) 星")
                                 }
                                 if let next = job.nextAction, !next.isEmpty {
                                     Label(next, systemImage: "calendar")
@@ -395,6 +408,7 @@ struct CompanyDetailView: View {
                 ("公司类型", job.companyType), ("雇用形式", job.employmentType),
                 ("外国人招聘信息", job.foreigner), ("在留资格支持", job.visa),
                 ("投递状态", job.status), ("优先级", job.priority),
+                ("个人评分", job.rating.flatMap { $0 > 0 ? "\($0) / 5 星" : nil }),
                 ("下一步", job.nextAction), ("下次日期", job.nextDate),
                 ("公司业务与特点", job.business), ("我的跟进记录", job.notes)
             ])

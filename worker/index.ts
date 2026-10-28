@@ -387,13 +387,16 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
     const nextAction = validateString(data.nextAction, 'nextAction', { max: 100000 });
     const nextDate = validateString(data.nextDate, 'nextDate', { max: 20 });
     const notes = validateString(data.notes, 'notes', { max: 100000 });
+    const rating = data.rating === undefined ? (old?.rating ?? 0) : Number(data.rating);
 
     if (!STATUSES.includes(status as JobStatus)) throw new AppError(400, '无效的投递状态');
     if (!PRIORITIES.includes(priority as JobPriority)) throw new AppError(400, '无效的优先级');
     if (nextDate) validateDate(nextDate, 'nextDate');
+    if (!Number.isInteger(rating) || rating < 0 || rating > 5) throw new AppError(400, '评分必须是 0 到 5 星');
 
     base.status = status;
     base.priority = priority;
+    base.rating = rating;
     base.nextAction = nextAction;
     base.nextDate = nextDate;
     base.notes = notes;
@@ -408,6 +411,7 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
     base.history = old.history || [];
     base.status = old.status || '关注中';
     base.priority = old.priority || '普通';
+    base.rating = old.rating || 0;
     base.nextAction = old.nextAction || '';
     base.nextDate = old.nextDate || '';
     base.notes = old.notes || '';
@@ -418,6 +422,7 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
   if (researchOnly && !old) {
     base.status = '关注中';
     base.priority = '普通';
+    base.rating = 0;
     base.nextAction = '';
     base.nextDate = '';
     base.notes = '';
@@ -1035,7 +1040,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         if (seen.has(key)) throw new AppError(400, '数据包中存在重复 id');
         seen.add(key);
         if (
-          ['status', 'history', 'notes', 'nextDate', 'nextAction', 'priority', 'revision'].some(
+          ['status', 'history', 'notes', 'nextDate', 'nextAction', 'priority', 'rating', 'revision'].some(
             (field) => Object.prototype.hasOwnProperty.call(obj, field),
           )
         ) {

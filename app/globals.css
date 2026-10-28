@@ -3974,7 +3974,8 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 
   /* Company list: application status is the first decision point; preparation is supporting context. */
   .prep-list .dt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'company status' 'schedule schedule' 'progress progress'; align-items: start; gap: 8px 10px; padding: 16px 0; }
-  .prep-list .dt-row.is-managing { grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: 'select company status' 'select schedule schedule' 'select progress progress'; }
+  .prep-list .dt-row { grid-template-areas: 'company status' 'rating rating' 'schedule schedule' 'progress progress'; }
+  .prep-list .dt-row.is-managing { grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: 'select company status' 'select rating rating' 'select schedule schedule' 'select progress progress'; }
   .prep-list .dt-row.is-managing > .job-select { grid-area: select; align-self: start; padding-top: 3px; }
   .prep-list .dt-row.dt-head { display: none; }
   .prep-list .dt-row::before { display: none; }
@@ -3983,6 +3984,7 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
   .prep-list .dt-row .dt-main .record-title-button { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.9375rem; line-height: 1.4; }
   .prep-list .dt-row .dt-main .record-meta { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; line-height: 1.5; }
   .prep-list .dt-row > .prep-status { grid-area: status; max-width: none; margin: 1px 0 0; }
+  .prep-list .dt-row > .prep-rating { grid-area: rating; max-width: none; margin: 0; }
   .prep-list .dt-row > .prep-status .status-mark { padding: 1px 8px 1px 6px; }
   .prep-list .dt-row > .prep-schedule { display: flex; grid-area: schedule; align-items: baseline; gap: 8px; min-width: 0; max-width: none; margin: 0; }
   .prep-list .prep-schedule > .prep-when { flex: none; }
@@ -3991,6 +3993,9 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
   .prep-list .prep-progress > .prep-stage { flex: none; }
   .prep-list .prep-progress > small { display: block; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; }
 }
+.prep-rating { color: #a86a0a; white-space: nowrap; }
+.prep-rating .rating-empty { color: var(--ink-3); }
+.rating-sort-button.is-active { border-color: #c69a45; background: #fff5de; color: #795000; }
 
 /* Platform directory: category and registration state share one meta line under the name on phones. */
 .platform-compact-meta { display: contents; }
