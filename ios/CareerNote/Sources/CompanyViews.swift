@@ -218,10 +218,36 @@ struct CareerScheduleView: View {
 struct ScheduleHomeView: View {
     @Bindable var model: AppModel
 
+    private var todayReport: CareerReport? {
+        let format = DateFormatter()
+        format.calendar = Calendar(identifier: .gregorian)
+        format.timeZone = TimeZone(identifier: "Asia/Tokyo")
+        format.dateFormat = "yyyy-MM-dd"
+        let today = format.string(from: .now)
+        return model.state.reports
+            .filter { $0.date.hasPrefix(today) && !($0.sourceNotes?.hasPrefix("career-event-v1:") ?? false) }
+            .sorted { $0.date > $1.date }
+            .first
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("日程").font(.largeTitle.bold())
+                if let report = todayReport {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionHeading(title: "今日简报", detail: nil)
+                        NavigationLink(value: AppRoute.report(report.id)) {
+                            PhoneCard {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text(report.title).font(.headline).foregroundStyle(.primary)
+                                    Text(report.content).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
                 PhoneCard { CareerScheduleView(reports: model.state.reports, jobs: model.state.jobs, userID: model.userID) }
             }
             .frame(maxWidth: 620, alignment: .leading)

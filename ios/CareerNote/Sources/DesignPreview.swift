@@ -28,7 +28,18 @@ enum DesignPreview {
           "reviews": [{"id":"sample-review","attemptId":"sample-attempt","summary":"可以补充你负责的具体功能。","revisedAnswer":"SwiftUIを使って、学習画面を開発しました。"}]
         }
         """#
-        return (try? JSONDecoder().decode(CareerState.self, from: Data(json.utf8))) ?? CareerState()
+        var state = (try? JSONDecoder().decode(CareerState.self, from: Data(json.utf8))) ?? CareerState()
+        if let index = state.reports.firstIndex(where: { $0.id == "sample-report" }) {
+            let format = DateFormatter()
+            format.calendar = Calendar(identifier: .gregorian)
+            format.timeZone = TimeZone(identifier: "Asia/Tokyo")
+            format.dateFormat = "yyyy-MM-dd"
+            let report = state.reports[index]
+            state.reports[index] = CareerReport(id: report.id, title: report.title,
+                                               content: report.content, date: format.string(from: .now),
+                                               sourceNotes: report.sourceNotes)
+        }
+        return state
     }()
 
     static let pending = [
