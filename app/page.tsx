@@ -1371,7 +1371,20 @@ export default function Home() {
               {active === '日程' && (
                 <section className="schedule-page">
                   <div className="section-head"><h2><CalendarDays size={20} />{tr('日程')}</h2></div>
-                  <TodayCalendar today={data.today} marks={calendarMarks} events={calendarEvents} activity={collectActivity(data.jobs, data.attempts, data.materials)} onOpenJob={openJob} />
+                  <TodayCalendar
+                    today={data.today}
+                    marks={calendarMarks}
+                    events={calendarEvents}
+                    activity={collectActivity(data.jobs, data.attempts, data.materials)}
+                    onOpenJob={openJob}
+                    busy={busy}
+                    onSaveEvent={(event) => action(() => api('events/update', {
+                      id: event.id, title: event.title, content: event.description, date: event.date,
+                      start: event.start, end: event.end, timeStatus: event.timeStatus, status: event.status,
+                      kind: event.kind, location: event.location || '', url: event.url || '', jobId: event.jobId || '',
+                    }), '日程已更新')}
+                    onRemoveEvent={(event) => action(() => api('events/remove', { id: event.id, removed: true }), '已从日程移除')}
+                  />
                 </section>
               )}
               {active === '求职平台' && (

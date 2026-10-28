@@ -32,3 +32,36 @@ test('calendar export uses Tokyo time and preserves tentative status', () => {
   assert.match(ics, /SUMMARY:咨询\\, 仮予約/);
   assert.equal(eventIcs({ ...event, start: undefined, timeStatus: 'unknown' }), null);
 });
+
+const { parseEventHeader, withEventHeader } = cjsModule.exports;
+const header = (json) => `career-event-v1:${JSON.stringify(json)}\n来源`;
+
+test('a newer version supersedes, and a removed report leaves, the calendar', () => {
+  const reports = [
+    { id: 'old', date: '2026-10-29', title: '仮予約', content: '', sourceNotes: header({ date: '2026-10-29', start: '10:00', end: '11:30', timeStatus: 'end-estimated', status: 'provisional', kind: 'counseling' }) },
+    { id: 'new', date: '2026-10-29', title: '確定', content: '', sourceNotes: header({ date: '2026-10-29', start: '10:05', end: '11:30', timeStatus: 'end-estimated', status: 'confirmed', kind: 'counseling', supersedes: ['old'] }) },
+    { id: 'gone', date: '2026-10-30', title: '削除済み', content: '', archivedAt: '2026-10-28T00:00:00Z', sourceNotes: header({ date: '2026-10-30', timeStatus: 'unknown', status: 'confirmed', kind: 'interview' }) },
+  ];
+  assert.deepEqual(eventsFromReports(reports).map((event) => event.id), ['new']);
+  assert.equal(eventsFromReports(reports)[0].supersedes, undefined);
+  // A removed replacement no longer hides what it replaced.
+  assert.deepEqual(eventsFromReports([reports[0], { ...reports[1], archivedAt: '2026-10-28T00:00:00Z' }]).map((event) => event.id), ['old']);
+});
+
+test('cancelled events export as cancelled and headers are validated', () => {
+  const [event] = eventsFromReports([{ id: 'c', date: '2026-10-28', title: '面接', content: '', sourceNotes: header({ date: '2026-10-28', start: '10:00', end: '11:00', timeStatus: 'exact', status: 'cancelled', kind: 'interview', supersedes: 'x' }) }]);
+  assert.equal(event.status, 'cancelled');
+  assert.match(eventIcs(event), /STATUS:CANCELLED/);
+  assert.equal(parseEventHeader('ordinary', '2026-10-28'), null);
+  assert.ok(parseEventHeader('career-event-v1:{bad', '2026-10-28').error);
+  assert.ok(parseEventHeader(header({ date: '2026-10-28', timeStatus: 'exact', status: 'confirmed', kind: 'interview' }), '2026-10-28').error);
+  assert.ok(parseEventHeader(header({ date: '2026-10-28', timeStatus: 'unknown', status: 'done', kind: 'interview' }), '2026-10-28').error);
+  assert.equal(JSON.stringify(parseEventHeader(header({ date: '2026-10-28', timeStatus: 'unknown', status: 'confirmed', kind: 'fair', supersedes: 'a' }), '2026-10-28').supersedes), '["a"]');
+});
+
+test('rewriting the header keeps the source notes after it', () => {
+  const next = { date: '2026-10-29', start: '10:05', end: '11:00', timeStatus: 'exact', status: 'confirmed', kind: 'counseling' };
+  assert.equal(withEventHeader(header({ date: '2026-10-29', timeStatus: 'unknown', status: 'provisional', kind: 'counseling' }), next), `career-event-v1:${JSON.stringify(next)}\n来源`);
+  assert.equal(withEventHeader('career-event-v1:{}', next), `career-event-v1:${JSON.stringify(next)}`);
+  assert.equal(withEventHeader('来源のみ', next), `career-event-v1:${JSON.stringify(next)}\n来源のみ`);
+});

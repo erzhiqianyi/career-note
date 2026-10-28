@@ -218,6 +218,21 @@ Agent 生成或改写日语题目、点评、公司准备资料、文稿及日�
 
 使用 career-source-sync 收集明确授权的网站或邮箱更新；简历版本、投递事件与结果分析分别处理。当前仅通过 reports 保存来源、事件时间、建议状态、去重键与待确认项。通用导入仍拒绝 status/history；无专用状态更新接口，不得声称已同步投递状态。定时任务的来源、频率、时区、窗口、通知与失败策略见 [配置说明](scheduled-sync.md)。无新事件的来源收集不重复写报告；明确要求每日复盘的任务仍按该任务约定生成报告。
 
+## 日程（面试・面谈・招聘会）
+
+日程是 `reports` 中 sourceNotes **第一行**以 `career-event-v1:` 开头的报告，网页「日程」页与日历只显示这类报告。第一行之后写来源说明（邮件 message id、截图等）。
+
+```text
+career-event-v1:{"date":"2026-10-29","start":"10:05","end":"11:30","timeStatus":"end-estimated","status":"confirmed","kind":"counseling","location":"Google Meet","url":"https://meet.google.com/xxx","jobId":"已有职位 id"}
+```
+
+- `date` 必须与报告 `date` 相同（YYYY-MM-DD）；`timeStatus` 为 `exact`、`end-estimated`（结束时间为估计）或 `unknown`（此时省略 start/end）；start/end 为 HH:MM（Asia/Tokyo）。
+- `status`：`confirmed`（已确定）、`provisional`（暂约，对方只给候补或未最终确认）、`cancelled`（已取消）。`kind`：`interview`、`counseling`、`fair`。location、url、jobId 可省略，只写来源明确的内容。
+- 导入时会校验格式，格式错误的日程报告会被拒绝。
+- **修改或取消**：报告不能覆盖，导入一个新 id 的版本，并在 JSON 中加 `"supersedes": ["旧日程报告 id"]`（可多个）。被替换的旧版本不再显示在日历里，原文仍保留。取消用 `"status":"cancelled"` 并 supersedes 原日程；日历上以删除线显示，不导出日历文件。只能替换已存在的日程报告，不能替换自身。
+- 本人可在网页日程中直接修改或移除日程；移除只是从日历隐藏，报告保留。Agent 不能调用网页的修改/移除接口，一律用 supersedes 版本。
+- 只给候补日期、需要本人回复选择的邀约不登记为日程，在报告中列为待回复事项。
+
 ## 構造化された履歴情報
 
 履歴の事実は `career_get_resume_overview` → `career_list_resume` → `career_get_resume_details` の順で必要な範囲だけ読む。document の一覧・詳細は本文を含まない版情報として返り、必要な本文だけ `career_get_resume_document_chunk({ id, revision, offset, limit })`（または互換の `career_get_resume_version`）で取得する。`career_resume_history({ id })` は data を含まない修訂一覧を返す。data.version は表示用の版名で、取得には数値の revision を使う。構造化データがある場合、旧profile.experienceよりも新しい各レコードを優先する。元文書との矛盾は残して本人へ確認する。
