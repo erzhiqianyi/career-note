@@ -17,6 +17,40 @@ void test('local Worker state and profile persistence use D1',async t=>{
  assert.equal((await (await send('state')).json()).profile.summary,'Test profile');
  const preview=await send('import/preview',{schemaVersion:1,jobs:[],materials:[],reports:[],completeTaskIds:[]});assert.equal(preview.status,200);
 });
+void test('event updates save links and todos, and keep them when left out',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const head={date:'2026-11-02',start:'14:00',end:'15:00',timeStatus:'exact',status:'confirmed',kind:'interview'};
+ assert.equal((await send('import',{schemaVersion:1,reports:[{id:'event-a',date:'2026-11-02',title:'一次面接',content:'持ち物',sourceNotes:'career-event-v1:'+JSON.stringify(head)+'\nmail'}],completeTaskIds:[]})).status,200);
+ const read=async()=>{const r=(await (await send('state')).json()).reports.find(item=>item.id==='event-a');return {report:r,header:JSON.parse(r.sourceNotes.split('\n')[0].slice('career-event-v1:'.length))};};
+ const update=extra=>send('events/update',{id:'event-a',title:'一次面接',content:'持ち物',...head,...extra});
+ assert.equal((await update({links:[{label:'求人票',url:'https://example.com/job'}],todos:[{text:'履歴書を印刷',done:false}]})).status,200);
+ let saved=await read();
+ assert.deepEqual(saved.header.links,[{label:'求人票',url:'https://example.com/job'}]);
+ assert.deepEqual(saved.header.todos,[{text:'履歴書を印刷',done:false}]);
+ assert.match(saved.report.sourceNotes,/\nmail$/);
+ assert.equal((await update({})).status,200);
+ saved=await read();assert.equal(saved.header.todos.length,1);assert.equal(saved.header.links.length,1);
+ assert.equal((await update({todos:[]})).status,200);
+ saved=await read();assert.equal(saved.header.todos,undefined);
+ assert.equal((await update({links:[{url:'ftp://x'}]})).status,400);
+});
+
+void test('application bodies keep only formal content and review items stay structured',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{id:'formal-job',company:'Example',role:'Engineer'}],completeTaskIds:[]})).status,200);
+ const save=(id,content,extra={})=>send('import',{schemaVersion:1,materials:[{id,jobId:'formal-job',kind:'履歴書',title:'Example · 履歴書 v2',content,sourceNotes:'Test',...extra}],completeTaskIds:[]});
+ for(const content of ['# 履歴書草稿（未提出）v2\n\n氏名：例','# 履歴書\n\n応募先：Example\n\n氏名：例','# 履歴書\n\n| 職歴 | 退職【本人確認：理由】 |','# 履歴書\n\n氏名：例\n\n## 記入メモ\n\n希望年収を確認。']){
+  const response=await save('formal-bad',content);assert.equal(response.status,400,content);assert.match((await response.json()).error,/reviewItems/);
+ }
+ assert.equal((await save('formal-bad',' # 履歴書\n\n氏名：例',{reviewItems:[{field:'職歴'}]})).status,400);
+ assert.equal((await save('formal-ok','氏名：例\n\n## 本人希望記入欄\n\n貴社規定に従います。',{reviewItems:[{field:'職歴',note:'退職理由の表現を確認'}]})).status,200);
+ const saved=(await (await send('state')).json()).materials.find(m=>m.id==='formal-ok');
+ assert.deepEqual(saved.reviewItems,[{field:'職歴',note:'退職理由の表現を確認'}]);
+ assert.equal(saved.content,'氏名：例\n\n## 本人希望記入欄\n\n貴社規定に従います。');
+});
+
 void test('saved material PDFs and shared photos survive reload and can be removed',async t=>{
  const mf=await worker(t);
  const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
@@ -177,6 +211,22 @@ void test('built-in question bank accepts attempts and review requests without a
  // Imports must not shadow a built-in pack id.
  const clash=await send('import',{schemaVersion:1,questionSets:[{id:'builtin-basics',jobId:'none',title:'t',scenario:'s',plan:'p',sourceNotes:'n',questions:[]}]});
  assert.equal(clash.status,400);
+});
+void test('personal general interview pack is stored outside jobs and keeps answer snapshots',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const question={id:'leaving',title:'転職理由',questionJa:'転職理由を教えてください。',meaning:'Why change jobs?',why:'General interview question',outline:'Experience, motivation, next step',sampleAnswer:'最初の参考回答。',followUps:'なぜ日本ですか。',category:'動機',targetSeconds:120};
+ const pack={id:'personal-general-interview',jobId:'builtin:general',title:'我的通用面试题',scenario:'本人通用练习',plan:'先回答，再核对参考答案',sourceNotes:'Disposable test data',questions:[question]};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[pack],completeTaskIds:[]})).status,200);
+ const duplicate=await send('import',{schemaVersion:1,questionSets:[{...pack,id:'other-general-pack'}],completeTaskIds:[]});
+ assert.equal(duplicate.status,400);
+ const attempt=await (await send('attempts',{questionSetId:pack.id,questionId:question.id,answer:'本人回答。',language:'日语',durationSeconds:90})).json();
+ assert.equal(attempt.jobId,'');
+ assert.equal(attempt.question.sampleAnswer,'最初の参考回答。');
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[{...pack,questions:[{...question,sampleAnswer:'新しい参考回答。'}]}],completeTaskIds:[]})).status,200);
+ const state=await (await send('state')).json();
+ assert.equal(state.jobs.length,0);
+ assert.equal(state.questionSets[0].questions[0].sampleAnswer,'新しい参考回答。');
+ assert.equal(state.attempts[0].question.sampleAnswer,'最初の参考回答。');
 });
 void test('one company question set is updated in place while answers keep their question snapshot',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});

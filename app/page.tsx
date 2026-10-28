@@ -15,8 +15,8 @@ import {
   mcpSetupPage,
 } from '@/lib/mcp-clients';
 import ScheduledTemplates from '@/components/scheduled-templates';
-import TodayCalendar, { collectActivity, type CalendarMark } from '@/components/today-calendar';
-import { eventsFromReports } from '@/lib/calendar-events';
+import TodayCalendar, { EventDetail, collectActivity, type CalendarMark } from '@/components/today-calendar';
+import { eventsFromReports, type CareerEvent } from '@/lib/calendar-events';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
 import { Ja, JaChildren } from '@/components/japanese-text';
@@ -27,7 +27,7 @@ import StatusMark from '@/components/status-mark';
 import DailyBrief, { collectBrief, briefSize } from '@/components/daily-brief';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { MaterialPrint } from '@/components/material-print';
-import { prepareMaterialPrint } from '@/lib/material-print-content';
+import { prepareMaterialPrint, type ApplicationKind } from '@/lib/material-print-content';
 import { MaterialPublications } from '@/components/material-publications';
 import ResumeManager from '@/components/resume-manager';
 import PersonalizedResumes from '@/components/personalized-resumes';
@@ -311,6 +311,8 @@ export default function Home() {
   const [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
     [doc, setDoc] = useRecordPage<Material | Report>('#documents', 'view', id => [...(data?.materials || []), ...(data?.reports || [])].find(item => item.id === id) || null, item => item.id);
   const [printMaterial, setPrintMaterial] = useRecordPage<Material>('#documents', 'print', id => data?.materials.find(m => m.id === id && !!m.jobId && ['履歴書', '職務経歴書'].includes(m.kind)) || null, m => m.id);
+  // Only the id is routed; the event itself is read from the latest data so saved edits show at once.
+  const [eventId, setEventId] = useRecordPage<string>('#calendar', 'event', id => id, id => id);
   const [taskPage, setTaskPage] = useRecordPage<State['tasks'][number]>('#agents', 'task', id => data?.tasks.find(t => t.id === id) || null, t => t.id);
   const [archivedTokens, setArchivedTokens] = useRecordPage<boolean>('#agents', 'archive', () => true, () => 'all');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -631,7 +633,7 @@ export default function Home() {
   }
   async function request(kind: string, jobId = '') {
     await action(
-      () => api('tasks', { kind, jobId, instructions: kind === '公司准备' ? '请先为指定公司分别生成并保存履歴書、職務経歴書两份独立 materials 版本（各自使用对应 kind）。参考 Hello Work：https://www.hellowork.mhlw.go.jp/member/career_doc01.html 。履歴書按厚生劳动省样式的栏目组织为可打印表格；職務経歴書突出岗位相关经历与成果，正文包含姓名、日期及职务经历。正文必须是完整的投递草稿，来源、解释和缺失信息清单放 sourceNotes；不得编造缺失事实。网页在保存后直接打印该版本正文。其他公司研究和面试准备材料照常生成。' : '' }),
+      () => api('tasks', { kind, jobId, instructions: kind === '公司准备' ? '请先为指定公司分别生成并保存履歴書、職務経歴書两份独立 materials 版本（各自使用对应 kind）。参考 Hello Work：https://www.hellowork.mhlw.go.jp/member/career_doc01.html 。履歴書按厚生劳动省样式的栏目组织为可打印表格；職務経歴書突出岗位相关经历与成果，正文包含姓名、日期及职务经历。正文只放正式投递内容，标题固定为「# 履歴書」或「# 職務経歴書」，不写草稿/版本/应募先等记录信息或任何备注；需本人填写、确认、修改的事项逐条放 reviewItems（field、note），来源与解释放 sourceNotes；不得编造缺失事实。网页在保存后直接打印该版本正文。其他公司研究和面试准备材料照常生成。' : '' }),
       '已加入 AI Agent 待处理队列；分析完成后会显示结果。',
     );
   }
@@ -695,6 +697,14 @@ export default function Home() {
         (j) => !['未通过', '已撤回', '内定'].includes(j.status),
       ) || [];
   const calendarEvents = data ? eventsFromReports(data.reports) : [];
+  const eventPage = eventId ? calendarEvents.find(event => event.id === eventId) || null : null;
+  const saveEvent = (event: CareerEvent) => action(() => api('events/update', {
+    id: event.id, title: event.title, content: event.description, date: event.date,
+    start: event.start, end: event.end, timeStatus: event.timeStatus, status: event.status,
+    kind: event.kind, location: event.location || '', url: event.url || '', jobId: event.jobId || '',
+    links: (event.links || []).map(link => ({ label: link.label.trim(), url: link.url.trim() })).filter(link => link.url),
+    todos: (event.todos || []).map(todo => ({ text: todo.text.trim(), done: todo.done })).filter(todo => todo.text),
+  }), '日程已更新');
   const calendarMarks: Record<string, CalendarMark> = {};
   for (const job of openJobs) {
     if (!job.nextDate) continue;
@@ -730,7 +740,7 @@ export default function Home() {
   const recordView = subViews.size ? [...subViews.values()][subViews.size - 1] : null;
   const applicationDoc = doc && 'kind' in doc && ['履歴書', '職務経歴書'].includes(doc.kind) ? doc : null;
   const printableDoc = applicationDoc?.jobId ? applicationDoc : null;
-  const applicationContent = applicationDoc ? prepareMaterialPrint(applicationDoc.content).printableContent : '';
+  const applicationContent = applicationDoc ? prepareMaterialPrint(applicationDoc.content, applicationDoc.kind as ApplicationKind).printableContent : '';
   const isSubPage = !!(recordView || jobEdit || subPages[active] || prepRoute || briefOpen);
   const due = openJobs.filter(
       (j) => j.nextDate && j.nextDate <= (data?.today || ''),
@@ -967,7 +977,7 @@ export default function Home() {
           </div>
         </header>
         <div className="page">
-          {!doc && !printMaterial && !profileEdit && !importOpen && !agentTrail && !taskPage && !archivedTokens && <>
+          {!doc && !eventPage && !printMaterial && !profileEdit && !importOpen && !agentTrail && !taskPage && !archivedTokens && <>
           {jobEdit ? (
 <section className="panel job-editor-page" key={jobEdit.id || 'new'} aria-labelledby="page-subtitle">
           {jobEdit.company && <div className="editor-heading"><p>{jobEdit.company}</p></div>}
@@ -1377,13 +1387,7 @@ export default function Home() {
                     events={calendarEvents}
                     activity={collectActivity(data.jobs, data.attempts, data.materials)}
                     onOpenJob={openJob}
-                    busy={busy}
-                    onSaveEvent={(event) => action(() => api('events/update', {
-                      id: event.id, title: event.title, content: event.description, date: event.date,
-                      start: event.start, end: event.end, timeStatus: event.timeStatus, status: event.status,
-                      kind: event.kind, location: event.location || '', url: event.url || '', jobId: event.jobId || '',
-                    }), '日程已更新')}
-                    onRemoveEvent={(event) => action(() => api('events/remove', { id: event.id, removed: true }), '已从日程移除')}
+                    onOpenEvent={(event) => setEventId(event.id)}
                   />
                 </section>
               )}
@@ -1605,13 +1609,30 @@ export default function Home() {
           />
         </RecordPage>
       )}
+      {eventPage && data && (
+        <RecordPage title={eventPage.title} onClose={() => setEventId(null)}>
+          <EventDetail
+            event={eventPage}
+            company={data.jobs.find(job => job.id === eventPage.jobId)?.company}
+            busy={busy}
+            onSave={saveEvent}
+            onRemove={async (event) => {
+              const removed = await action(() => api('events/remove', { id: event.id, removed: true }), '已从日程移除');
+              if (removed) setEventId(null);
+              return removed;
+            }}
+            onOpenJob={openJob}
+          />
+        </RecordPage>
+      )}
       {doc && (
         <RecordPage title={doc.title} onClose={() => setDoc(null)} headingAction={printableDoc && <div className="document-heading-actions">
           <details className="document-review-alert">
             <summary><TriangleAlert size={16} aria-hidden="true" />{tr('待核对')}</summary>
             <div>
               {data && (printableDoc.profileRevision !== data.profile.revision || printableDoc.jobRevision !== data.jobs.find(j => j.id === printableDoc.jobId)?.revision) && <p>{tr('此文稿生成后，个人履历或职位信息有更新，请核对是否需要重新准备。')}</p>}
-              {doc.sourceNotes && <p className="prewrap"><Ja text={doc.sourceNotes.split('\n').filter(line => /^(?:未記入|要確認|待确认|缺失|不足)/.test(line.trim())).join('\n') || doc.sourceNotes} /></p>}
+              {printableDoc.reviewItems?.length ? <ul className="review-items">{printableDoc.reviewItems.map((item, index) => <li key={index}><strong><Ja text={item.field} /></strong><Ja text={item.note} /></li>)}</ul>
+                : doc.sourceNotes && <p className="prewrap"><Ja text={doc.sourceNotes.split('\n').filter(line => /^(?:未記入|要確認|待确认|缺失|不足)/.test(line.trim())).join('\n') || doc.sourceNotes} /></p>}
             </div>
           </details>
           <button type="button" className="secondary document-print-desktop" title={tr('预览并打印已生成的简历')} onClick={() => setPrintMaterial(printableDoc)}><Printer size={17} aria-hidden="true" />{tr('打印版预览')}</button>

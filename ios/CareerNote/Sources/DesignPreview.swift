@@ -20,12 +20,26 @@ enum DesignPreview {
             {"id":"intro","title":"60 秒自我介绍","questionJa":"自己紹介をお願いします。","meaning":"请介绍自己。","outline":"当前方向 → 一个相关项目 → 想继续做的工作","sampleAnswer":"本人的事实请自行填写。","targetSeconds":60},
             {"id":"project","title":"介绍项目经历","questionJa":"担当したプロジェクトについて教えてください。","meaning":"请介绍你负责的项目。","outline":"背景 → 个人行动 → 结果","targetSeconds":90},
             {"id":"reverse","title":"逆質問","questionJa":"{何|なに}か{質問|しつもん}はありますか。","meaning":"あなたからの質問","outline":"一つずつ質問し、回答を聞いてから次を選ぶ。","sampleAnswer":"① JavaやSpring Bootの{開発案件|かいはつあんけん}はありますか。\n\n② {設計|せっけい}から{運用|うんよう}まで、どの{工程|こうてい}を{担当|たんとう}しますか。\n\n③ {日本語|にほんご}はどのような{場面|ばめん}で{使います|つかいます}か。\n\n④ {募集|ぼしゅう}の{背景|はいけい}を{教えて|おしえて}いただけますか。","targetSeconds":90,"category":"逆質問"}
+          ]},
+          {"id":"sample-general-pack","jobId":"builtin:general","title":"我的通用面试练习","scenario":"不针对具体公司。","questions":[
+            {"id":"leaving","title":"転職理由","questionJa":"転職理由を教えてください。","meaning":"请说明转职理由。","outline":"经历 → 选择 → 今后","sampleAnswer":"これまでの経験を活かして働きたいです。","targetSeconds":90}
           ]}],
           "attempts": [{"id":"sample-attempt","questionSetId":"sample-pack","questionId":"intro","answer":"アプリ開発をしています。SwiftUIで画面を作りました。","language":"日语","createdAt":"2026-10-22T09:00:00Z"}],
           "reviews": [{"id":"sample-review","attemptId":"sample-attempt","summary":"可以补充你负责的具体功能。","revisedAnswer":"SwiftUIを使って、学習画面を開発しました。"}]
         }
         """#
-        return (try? JSONDecoder().decode(CareerState.self, from: Data(json.utf8))) ?? CareerState()
+        var state = (try? JSONDecoder().decode(CareerState.self, from: Data(json.utf8))) ?? CareerState()
+        if let index = state.reports.firstIndex(where: { $0.id == "sample-report" }) {
+            let format = DateFormatter()
+            format.calendar = Calendar(identifier: .gregorian)
+            format.timeZone = TimeZone(identifier: "Asia/Tokyo")
+            format.dateFormat = "yyyy-MM-dd"
+            let report = state.reports[index]
+            state.reports[index] = CareerReport(id: report.id, title: report.title,
+                                               content: report.content, date: format.string(from: .now),
+                                               sourceNotes: report.sourceNotes)
+        }
+        return state
     }()
 
     static let pending = [

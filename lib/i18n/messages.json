@@ -5533,5 +5533,22 @@
   "移除": { "ja": "削除", "en": "Remove" },
   "从日程中移除「{0}」？记录会保留，可在报告中查看。": { "ja": "「{0}」を日程から削除しますか？記録は残り、レポートで確認できます。", "en": "Remove “{0}” from the schedule? The record is kept and stays visible in reports." },
   "日程已更新": { "ja": "日程を更新しました", "en": "Schedule updated" },
-  "已从日程移除": { "ja": "日程から削除しました", "en": "Removed from the schedule" }
+  "已从日程移除": { "ja": "日程から削除しました", "en": "Removed from the schedule" },
+  "相关链接": { "ja": "関連リンク", "en": "Related links" },
+  "链接名称": { "ja": "リンク名", "en": "Link name" },
+  "链接地址": { "ja": "リンク先", "en": "Link URL" },
+  "添加链接": { "ja": "リンクを追加", "en": "Add link" },
+  "待办事项": { "ja": "やること", "en": "To-dos" },
+  "待办内容": { "ja": "やることの内容", "en": "To-do" },
+  "添加待办": { "ja": "やることを追加", "en": "Add to-do" },
+  "说明": { "ja": "説明", "en": "Notes" },
+  "待办 {0}/{1}": { "ja": "未完了 {0}/{1}", "en": "{0} of {1} to-dos open" },
+  "待办已完成": { "ja": "やること完了", "en": "To-dos done" },
+  "（结束为估计）": { "ja": "（終了は目安）", "en": "(end time estimated)" },
+  "关联公司": { "ja": "関連企業", "en": "Company" },
+  "查看公司": { "ja": "企業を見る", "en": "View company" },
+  "打开会议链接": { "ja": "会議リンクを開く", "en": "Open meeting link" },
+  "新的待办": { "ja": "新しいやること", "en": "New to-do" },
+  "添加待办，回车保存": { "ja": "やることを入力して Enter で保存", "en": "Add a to-do and press Enter" },
+  "还没有说明。": { "ja": "説明はまだありません。", "en": "No notes yet." }
 }

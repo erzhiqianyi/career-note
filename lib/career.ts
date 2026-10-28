@@ -75,6 +75,8 @@ export type Material = {
   title: string;
   content: string;
   sourceNotes: string;
+  /** What the applicant still has to fill in, confirm or reword; never part of the printed body. Older versions lack it. */
+  reviewItems?: { field: string; note: string }[];
   jobId: string;
   kind: string;
   createdAt: string;

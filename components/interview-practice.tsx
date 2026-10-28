@@ -253,7 +253,7 @@ export default function InterviewPractice({
     return () => window.removeEventListener('beforeunload', warn);
   }, [drafts]);
   const packs = isBank
-    ? builtinQuestionSets
+    ? [...(data.questionSets || []).filter((p) => p.jobId === BANK_JOB_ID), ...builtinQuestionSets]
     : (data.questionSets || [])
         .filter((p) => p.jobId === jobId)
         .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
@@ -441,8 +441,9 @@ export default function InterviewPractice({
       return next;
     });
     const toggleSort = (key: PrepColumn) => setSort(s => ({ key, desc: s.key === key ? !s.desc : false }));
-    const bankAnswered = new Set(data.attempts.filter(a => builtinQuestionSets.some(p => p.id === a.questionSetId)).map(a => a.questionSetId + '|' + a.questionId)).size;
-    const bankTotal = builtinQuestionSets.reduce((n, p) => n + p.questions.length, 0);
+    const bankPacks = [...data.questionSets.filter(p => p.jobId === BANK_JOB_ID), ...builtinQuestionSets];
+    const bankAnswered = new Set(data.attempts.filter(a => bankPacks.some(p => p.id === a.questionSetId)).map(a => a.questionSetId + '|' + a.questionId)).size;
+    const bankTotal = bankPacks.reduce((n, p) => n + p.questions.length, 0);
     // 一家公司一行：状态与日程、资料齐全度、练习进度都在同一行里，细节点进公司再看。
     // 通用题库模板只在右上角留一个图标入口。
     return <div className="practice-workspace">

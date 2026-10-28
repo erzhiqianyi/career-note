@@ -67,9 +67,10 @@ export function MaterialPrint({ material, companyName, onBack }: { material: Mat
     } catch (cause) { setError(cause instanceof Error ? cause.message : t('删除失败')); }
     finally { setBusy(false); }
   }
-  const { printableContent, internalNotes, hasPlaceholders } = prepareMaterialPrint(material.content);
-  const body = renderToStaticMarkup(<ReactMarkdown remarkPlugins={[remarkGfm]}>{plainJapanese(printableContent)}</ReactMarkdown>);
   const title = material.kind === '履歴書' ? '履歴書' : '職務経歴書';
+  const { printableContent, internalNotes, hasPlaceholders } = prepareMaterialPrint(material.content, title);
+  const reviewItems = material.reviewItems || [];
+  const body = renderToStaticMarkup(<ReactMarkdown remarkPlugins={[remarkGfm]}>{plainJapanese(printableContent)}</ReactMarkdown>);
   const photo = title === '履歴書' && photoUrl ? `<img class="passport-photo" alt="証明写真" src="${photoUrl}">` : '';
   const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${title}</title><style>${materialPrintStyle(title)}</style></head><body><main class="${photo ? 'has-photo' : ''}">${materialPrintBody(title, body)}${photo}</main></body></html>`;
   return <section className="panel material-print-page">
@@ -77,9 +78,9 @@ export function MaterialPrint({ material, companyName, onBack }: { material: Mat
       <button className="secondary" aria-label={t('返回 {0}', [material.title])} onClick={onBack}><ArrowLeft size={16} />{t('返回文档')}</button>
       <div className="material-print-heading">
         <h1>{companyName}<span className="material-print-kind"> · {t(title)}</span></h1>
-        {(internalNotes.length > 0 || hasPlaceholders) && <details className="material-print-alert">
+        {(reviewItems.length > 0 || internalNotes.length > 0 || hasPlaceholders) && <details className="material-print-alert">
           <summary><TriangleAlert size={15} aria-hidden="true" />{t('打印前需核对')}</summary>
-          <div>{internalNotes.length > 0 && <p>{t('内部备注已从打印正文排除。')}</p>}{hasPlaceholders && <p>{t('打印正文仍有待填写项，请核对。')}</p>}</div>
+          <div>{reviewItems.length > 0 && <ul className="review-items">{reviewItems.map((item, index) => <li key={index}><strong>{plainJapanese(item.field)}</strong>{plainJapanese(item.note)}</li>)}</ul>}{internalNotes.length > 0 && <p>{t('内部备注已从打印正文排除。')}</p>}{hasPlaceholders && <p>{t('打印正文仍有待填写项，请核对。')}</p>}</div>
         </details>}
       </div>
       <button className="primary" disabled={loadingFiles || (title === '履歴書' && !!files.photo && !photoUrl)} onClick={async () => {

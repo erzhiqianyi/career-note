@@ -379,63 +379,45 @@ private struct LoginView: View {
 
 private struct PracticeList: View {
     @Bindable var model: AppModel
-    @State private var showAllPacks = false
+    @State private var scope: PracticeScope = .general
 
-    private var today: String {
-        let format = DateFormatter()
-        format.calendar = Calendar(identifier: .gregorian)
-        format.timeZone = TimeZone(identifier: "Asia/Tokyo")
-        format.dateFormat = "yyyy-MM-dd"
-        return format.string(from: .now)
+    private enum PracticeScope: Hashable { case general, company }
+
+    private struct GeneralQuestion: Identifiable {
+        let pack: QuestionSet
+        let question: CareerQuestion
+        var id: String { pack.id + "|" + question.id }
     }
 
-    private var todayReport: CareerReport? {
-        model.state.reports.filter { $0.date.hasPrefix(today) && !($0.sourceNotes?.hasPrefix("career-event-v1:") ?? false) }
-            .sorted { $0.date > $1.date }.first
-    }
-
-    private var focus: [(pack: QuestionSet, question: CareerQuestion, reason: String)] {
-        let packs = model.state.questionSets + BuiltinBank.packs
-        let answered = Set(model.state.attempts.map { $0.questionSetId + "|" + $0.questionId } +
-                           model.pending.map { $0.questionSetId + "|" + $0.questionId })
-        var picked = Set<String>()
-        var result: [(pack: QuestionSet, question: CareerQuestion, reason: String)] = []
-        func add(_ pack: QuestionSet, reason: String, allowRepeat: Bool = false,
-                 preferredQuestionID: String? = nil) {
-            guard result.count < 3 else { return }
-            let question = pack.questions.first { $0.id == preferredQuestionID } ??
-                pack.questions.first { !answered.contains(pack.id + "|" + $0.id) } ??
-                (allowRepeat ? pack.questions.first : nil)
-            guard let question else { return }
-            let key = pack.id + "|" + question.id
-            guard picked.insert(key).inserted else { return }
-            result.append((pack, question, reason))
+    private var generalQuestions: [GeneralQuestion] {
+        let personal = model.state.questionSets.filter { $0.jobId == "builtin:general" }
+        let hasPersonalLeavingReason = personal.flatMap(\.questions).contains { question in
+            let text = CareerRichText.plain(question.title + " " + question.questionJa)
+            return text.contains("転職理由") || text.contains("退職理由")
         }
-        let due = model.state.jobs.filter {
-            !["未通过", "已撤回", "内定"].contains($0.status) &&
-            $0.nextDate?.isEmpty == false && String($0.nextDate!.prefix(10)) <= today
-        }.sorted { ($0.nextDate ?? "") < ($1.nextDate ?? "") }
-        for job in due {
-            for pack in packs where pack.jobId == job.id {
-                add(pack, reason: "今日到期 · \(job.company)", allowRepeat: true)
+        return (personal + BuiltinBank.packs).flatMap { pack in
+            pack.questions.compactMap { question -> GeneralQuestion? in
+                if hasPersonalLeavingReason && pack.id == "builtin-conditions" && question.id == "leaving-reason" {
+                    return nil
+                }
+                return GeneralQuestion(pack: pack, question: question)
             }
         }
-        for review in model.state.reviews.sorted(by: { ($0.createdAt ?? "") > ($1.createdAt ?? "") }) {
-            guard let next = review.nextPractice, !next.isEmpty,
-                  let attempt = model.state.attempts.first(where: { $0.id == review.attemptId }),
-                  let pack = packs.first(where: { $0.id == attempt.questionSetId }) else { continue }
-            add(pack, reason: "点评后复练：\(next)", allowRepeat: true,
-                preferredQuestionID: attempt.questionId)
-        }
-        for pack in model.state.questionSets { add(pack, reason: "公司题组 · 尚未练习") }
-        for pack in BuiltinBank.packs { add(pack, reason: "通用题库 · 尚未练习") }
-        return result
+    }
+
+    private var companyPacks: [QuestionSet] {
+        model.state.questionSets.filter { $0.jobId != "builtin:general" }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                Text("今日重点").font(.largeTitle.bold())
+                Text("面试练习").font(.largeTitle.bold())
+                Picker("练习类型", selection: $scope) {
+                    Text("通用练习").tag(PracticeScope.general)
+                    Text("公司相关").tag(PracticeScope.company)
+                }
+                .pickerStyle(.segmented)
                 if !model.pending.isEmpty || model.message != nil {
                     PhoneCard {
                         HStack(alignment: .top, spacing: 12) {
@@ -455,48 +437,16 @@ private struct PracticeList: View {
                         }
                     }
                 }
-                if let report = todayReport {
+                if scope == .general {
                     VStack(alignment: .leading, spacing: 10) {
-                        SectionHeading(title: "今日简报", detail: nil)
-                        NavigationLink(value: AppRoute.report(report.id)) {
-                            PhoneCard {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(report.title).font(.headline).foregroundStyle(.primary)
-                                    Text(report.content).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                                }
-                            }
+                        SectionHeading(title: "通用面试题", detail: "\(generalQuestions.count) 道")
+                        ForEach(Array(generalQuestions.enumerated()), id: \.element.id) { index, item in
+                            PracticeQuestionLink(model: model, pack: item.pack, question: item.question, number: index + 1)
                         }
-                        .buttonStyle(.plain)
                     }
+                } else {
+                    packSection("公司相关", packs: companyPacks)
                 }
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionHeading(title: "今天练这几题", detail: "\(focus.count) 道")
-                    if focus.isEmpty {
-                        PhoneCard { Text("同步题组后，这里会列出今日练习重点。")
-                            .foregroundStyle(.secondary) }
-                    }
-                    ForEach(Array(focus.enumerated()), id: \.offset) { _, item in
-                        NavigationLink(value: AppRoute.answer(packID: item.pack.id, questionID: item.question.id)) {
-                            PhoneCard {
-                                VStack(alignment: .leading, spacing: 7) {
-                                    Text(item.reason).font(.caption.bold())
-                                        .foregroundStyle(PhoneStyle.accent).lineLimit(2)
-                                    Text(item.question.title).font(.headline).foregroundStyle(.primary)
-                                    Text(item.pack.title).font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                DisclosureGroup("浏览全部题组", isExpanded: $showAllPacks) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        packSection("公司题组", packs: model.state.questionSets)
-                        packSection("通用面试题", packs: BuiltinBank.packs)
-                    }
-                    .padding(.top, 12)
-                }
-                .font(.subheadline.bold())
             }
             .frame(maxWidth: 620, alignment: .leading)
             .padding(.horizontal, 16)

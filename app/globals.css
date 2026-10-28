@@ -2905,14 +2905,53 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
   overflow-wrap: anywhere;
 }
 .calendar-interviews li.calendar-event-row { grid-template-columns: auto auto minmax(0, 1fr); }
-.calendar-event-row span { display: grid; gap: 2px; }
-.calendar-event-row span strong { font-weight: 600; color: var(--ink); }
-.calendar-event-row span small { font-size: 0.75rem; color: var(--ink-3); }
-.calendar-event-row .calendar-event-actions { grid-column: 3; display: flex; flex-wrap: wrap; gap: 4px 16px; }
-.calendar-event-row .text-button { justify-self: start; min-height: 32px; }
-.calendar-event-row.is-cancelled span strong { color: var(--ink-3); text-decoration: line-through; }
+.calendar-event-open { display: grid; gap: 2px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.calendar-event-open strong { font-weight: 600; color: var(--ink); }
+.calendar-event-open small { font-size: 0.75rem; color: var(--ink-3); }
+.calendar-event-open:hover strong { color: var(--accent); }
+.calendar-event-open:disabled { cursor: default; }
+.calendar-event-row.is-cancelled .calendar-event-open strong { color: var(--ink-3); text-decoration: line-through; }
 .calendar-event-row.is-cancelled > svg, .calendar-event-row.is-cancelled > b { color: var(--ink-3); }
-.calendar-interviews li.calendar-event-row.is-editing { display: block; }
+.calendar-event-editor-list { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.calendar-event-editor-list legend { margin-bottom: 6px; padding: 0; font-size: 0.875rem; color: var(--ink-2); }
+.calendar-event-editor-list > .text-button { justify-self: start; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; }
+.calendar-event-editor-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.calendar-event-editor-item input:not([type="checkbox"]) { flex: 1 1 0; min-width: 0; }
+.calendar-event-editor-item input:not([type="checkbox"]), .event-todo-add input { border: 1px solid #d9e2ee; border-radius: 6px; padding: 8px 10px; background: var(--surface); color: #354d72; font-size: 0.9375rem; }
+.calendar-event-editor-item input:focus, .event-todo-add input:focus { outline: 2px solid #9db6e5; outline-offset: 1px; }
+.calendar-event-editor-item input[type="checkbox"] { width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
+.event-detail { display: grid; gap: 20px; }
+.event-detail-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.event-detail-facts { display: grid; gap: 10px; margin: 0; }
+.event-detail-facts > div { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: start; }
+.event-detail-facts dt { padding-top: 3px; color: var(--ink-3); }
+.event-detail-facts dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.event-detail-facts a { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
+.event-detail-facts .text-button { min-height: 0; padding: 0; font-size: inherit; }
+.event-detail.is-cancelled .event-detail-facts b { text-decoration: line-through; }
+.event-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.event-detail-actions > a, .event-detail-actions > button { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.event-detail-section { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.event-detail-section h3 { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 0.9375rem; }
+.event-detail-section h3 small { font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.event-todos { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.event-todos label { display: flex; align-items: flex-start; gap: 10px; min-height: 36px; padding: 6px 0; cursor: pointer; }
+.event-todos input { margin-top: 3px; width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
+.event-todos .is-done span { color: var(--ink-3); text-decoration: line-through; }
+.event-todo-add { display: flex; gap: 8px; }
+.event-todo-add input { flex: 1 1 0; min-width: 0; }
+.event-todo-add button { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.event-links { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.event-links a { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); text-decoration: none; }
+.event-links a:hover { border-color: var(--accent); }
+.event-links a svg { margin-top: 3px; flex: none; color: var(--ink-3); }
+.event-links span { display: grid; gap: 1px; min-width: 0; }
+.event-links small { color: var(--ink-3); font-size: 0.75rem; overflow-wrap: anywhere; }
+.event-description { color: var(--ink-2); line-height: 1.7; overflow-wrap: anywhere; }
+.event-description h1, .event-description h2, .event-description h3, .event-description h4 { margin: 14px 0 6px; font-size: 0.9375rem; color: var(--ink); }
+.event-description ul, .event-description ol { padding-left: 20px; }
+.event-description > :first-child { margin-top: 0; }
+.event-description > :last-child { margin-bottom: 0; }
 .calendar-event-editor { display: grid; gap: 12px; padding: 4px 0 8px; }
 .calendar-event-editor-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
 .calendar-event-editor-actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -3280,6 +3319,10 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 .document-review-alert > div { position: absolute; right: 0; z-index: 5; width: min(420px, calc(100vw - 48px)); max-height: 45vh; overflow: auto; padding: 12px 14px; border: 1px solid #eab4ae; border-radius: 8px; background: white; box-shadow: 0 8px 24px #1d263326; color: var(--ink-2); line-height: 1.6; }
 .document-review-alert p { margin: 0; }
 .document-review-alert p + p { margin-top: 10px; }
+.review-items { margin: 0; padding-left: 18px; }
+.review-items li + li { margin-top: 6px; }
+.review-items strong { margin-right: 8px; font-weight: 600; }
+.review-items + p { margin-top: 10px; }
 .document-print-desktop { display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--accent); white-space: nowrap; }
 @media (max-width: 640px) {
   .record-page-heading { flex-wrap: wrap; }

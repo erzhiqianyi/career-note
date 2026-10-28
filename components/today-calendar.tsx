@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Flag, MessageSquare, X } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Plus, Trash2, Video, X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useLocale } from '@/components/locale-provider';
 import type { Attempt, Job, Material } from '@/lib/career';
-import { eventIcs, type CareerEvent, type EventKind, type EventStatus, type EventTimeStatus } from '../lib/calendar-events';
+import { eventIcs, type CareerEvent, type EventKind, type EventLink, type EventStatus, type EventTimeStatus, type EventTodo } from '../lib/calendar-events';
 
 export type CalendarMarkKind = 'due' | 'interview' | 'target';
 /** A dated item on the calendar; `jobs` are the companies involved (empty for the target date). */
@@ -55,11 +57,38 @@ const EVENT_KINDS: Array<[EventKind, string]> = [['interview', '面试'], ['coun
 const EVENT_STATUSES: Array<[EventStatus, string]> = [['confirmed', '已确定'], ['provisional', '暂约'], ['cancelled', '已取消']];
 const TIME_STATUSES: Array<[EventTimeStatus, string]> = [['exact', '时间确定'], ['end-estimated', '结束时间为估计'], ['unknown', '具体时间待确认']];
 
-/** Inline editor for one schedule entry; the job link and source notes stay as they are. */
+/** Share the event as an .ics file where the platform can, otherwise download it. */
+async function exportEvent(event: CareerEvent) {
+  const ics = eventIcs(event);
+  if (!ics) return;
+  const file = new File([ics], `${event.date}-${event.id}.ics`, { type: 'text/calendar' });
+  try {
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: event.title });
+      return;
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return;
+  }
+  const url = URL.createObjectURL(file);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = file.name;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+const hostOf = (url: string) => { try { return new URL(url).host; } catch { return url; } };
+
+/** Editor for one schedule entry; the job link and source notes stay as they are. */
 function EventEditor({ event, busy, onSave, onCancel }: { event: CareerEvent; busy?: boolean; onSave: (event: CareerEvent) => void; onCancel: () => void }) {
   const { t } = useLocale();
   const [draft, setDraft] = useState(event);
   const set = (patch: Partial<CareerEvent>) => setDraft({ ...draft, ...patch });
+  const links = draft.links || [];
+  const todos = draft.todos || [];
+  const setLinks = (next: EventLink[]) => set({ links: next });
+  const setTodos = (next: EventTodo[]) => set({ todos: next });
   const timed = draft.timeStatus !== 'unknown';
   return <form className="calendar-event-editor" onSubmit={(e) => { e.preventDefault(); onSave(draft); }}>
     <label className="field">{t('标题')}<input required maxLength={200} value={draft.title} onChange={(e) => set({ title: e.target.value })} /></label>
@@ -75,7 +104,25 @@ function EventEditor({ event, busy, onSave, onCancel }: { event: CareerEvent; bu
     </div>
     <label className="field">{t('地点')}<input maxLength={200} value={draft.location || ''} onChange={(e) => set({ location: e.target.value })} /></label>
     <label className="field">{t('会议链接')}<input type="url" maxLength={2000} value={draft.url || ''} onChange={(e) => set({ url: e.target.value })} /></label>
-    <label className="field">{t('备注')}<textarea rows={4} value={draft.description || ''} onChange={(e) => set({ description: e.target.value })} /></label>
+    <fieldset className="calendar-event-editor-list">
+      <legend>{t('相关链接')}</legend>
+      {links.map((link, index) => <div key={index} className="calendar-event-editor-item">
+        <input aria-label={t('链接名称')} placeholder={t('名称')} maxLength={100} value={link.label} onChange={(e) => setLinks(links.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} />
+        <input aria-label={t('链接地址')} type="url" required placeholder="https://" maxLength={2000} value={link.url} onChange={(e) => setLinks(links.map((item, i) => i === index ? { ...item, url: e.target.value } : item))} />
+        <button type="button" className="icon-button" aria-label={t('删除')} onClick={() => setLinks(links.filter((_, i) => i !== index))}><X size={14} /></button>
+      </div>)}
+      {links.length < 20 && <button type="button" className="text-button" onClick={() => setLinks([...links, { label: '', url: '' }])}><Plus size={14} />{t('添加链接')}</button>}
+    </fieldset>
+    <fieldset className="calendar-event-editor-list">
+      <legend>{t('待办事项')}</legend>
+      {todos.map((todo, index) => <div key={index} className="calendar-event-editor-item">
+        <input type="checkbox" aria-label={t('已完成')} checked={todo.done} onChange={(e) => setTodos(todos.map((item, i) => i === index ? { ...item, done: e.target.checked } : item))} />
+        <input aria-label={t('待办内容')} required maxLength={500} value={todo.text} onChange={(e) => setTodos(todos.map((item, i) => i === index ? { ...item, text: e.target.value } : item))} />
+        <button type="button" className="icon-button" aria-label={t('删除')} onClick={() => setTodos(todos.filter((_, i) => i !== index))}><X size={14} /></button>
+      </div>)}
+      {todos.length < 50 && <button type="button" className="text-button" onClick={() => setTodos([...todos, { text: '', done: false }])}><Plus size={14} />{t('添加待办')}</button>}
+    </fieldset>
+    <label className="field">{t('说明')}<textarea rows={5} value={draft.description || ''} onChange={(e) => set({ description: e.target.value })} /></label>
     <div className="calendar-event-editor-actions">
       <button type="button" className="secondary" disabled={busy} onClick={onCancel}>{t('取消')}</button>
       <button type="submit" className="primary" disabled={busy}>{busy ? t('保存中…') : t('保存')}</button>
@@ -93,24 +140,18 @@ export default function TodayCalendar({
   events,
   activity,
   onOpenJob,
-  onSaveEvent,
-  onRemoveEvent,
-  busy,
+  onOpenEvent,
 }: {
   today: string;
   marks: Record<string, CalendarMark>;
   events: CareerEvent[];
   activity: Record<string, DayActivity>;
   onOpenJob?: (jobId: string) => void;
-  /** Resolves true once saved; the editor closes then. */
-  onSaveEvent?: (event: CareerEvent) => Promise<boolean>;
-  onRemoveEvent?: (event: CareerEvent) => Promise<boolean>;
-  busy?: boolean;
+  onOpenEvent?: (event: CareerEvent) => void;
 }) {
   const { locale, t } = useLocale();
   const [offset, setOffset] = useState(0); // months from the current one
   const [selected, setSelected] = useState(''); // YYYY-MM-DD, or '' for the month's interview list
-  const [editing, setEditing] = useState(''); // id of the event being edited
   const [ty, tm] = today.split('-').map(Number);
   const first = new Date(Date.UTC(ty, tm - 1 + offset, 1));
   const year = first.getUTCFullYear();
@@ -130,37 +171,18 @@ export default function TodayCalendar({
     .filter(([date, mark]) => date.startsWith(prefix) && mark.kind === 'interview')
     .sort(([a], [b]) => a.localeCompare(b));
   const monthEvents = events.filter(event => event.date.startsWith(prefix));
-  const exportEvent = async (event: CareerEvent) => {
-    const ics = eventIcs(event);
-    if (!ics) return;
-    const file = new File([ics], `${event.date}-${event.id}.ics`, { type: 'text/calendar' });
-    try {
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: event.title });
-        return;
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-    }
-    const url = URL.createObjectURL(file);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = file.name;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  const eventRow = (event: CareerEvent) => {
+    const todos = event.todos || [];
+    const open = todos.filter(todo => !todo.done).length;
+    return <li key={event.id} className={'calendar-event-row' + (event.status === 'cancelled' ? ' is-cancelled' : '')}>
+      <Clock size={14} />
+      <b>{shortDay(event.date)} {event.start || t('上午')}</b>
+      <button type="button" className="calendar-event-open" onClick={() => onOpenEvent?.(event)} disabled={!onOpenEvent}>
+        <strong>{event.title}</strong>
+        <small>{event.status === 'provisional' ? `${t('暂约')} · ` : event.status === 'cancelled' ? `${t('已取消')} · ` : ''}{event.timeStatus === 'unknown' ? t('具体时间待确认') : event.timeStatus === 'end-estimated' ? t('结束约 {0}', [event.end]) : t('结束 {0}', [event.end])}{event.location ? ` · ${event.location}` : ''}{todos.length ? ` · ${open ? t('待办 {0}/{1}', [open, todos.length]) : t('待办已完成')}` : ''}</small>
+      </button>
+    </li>;
   };
-  const eventRow = (event: CareerEvent) => editing === event.id && onSaveEvent ? <li key={event.id} className="calendar-event-row is-editing">
-    <EventEditor event={event} busy={busy} onCancel={() => setEditing('')} onSave={(draft) => void onSaveEvent(draft).then((saved) => { if (saved) setEditing(''); })} />
-  </li> : <li key={event.id} className={'calendar-event-row' + (event.status === 'cancelled' ? ' is-cancelled' : '')}>
-    <Clock size={14} />
-    <b>{shortDay(event.date)} {event.start || t('上午')}</b>
-    <span><strong>{event.title}</strong><small>{event.status === 'provisional' ? `${t('暂约')} · ` : event.status === 'cancelled' ? `${t('已取消')} · ` : ''}{event.timeStatus === 'unknown' ? t('具体时间待确认') : event.timeStatus === 'end-estimated' ? t('结束约 {0}', [event.end]) : t('结束 {0}', [event.end])}{event.location ? ` · ${event.location}` : ''}</small></span>
-    <span className="calendar-event-actions">
-      {event.start && event.end && event.status !== 'cancelled' && <button type="button" className="text-button" onClick={() => void exportEvent(event)}>{t('导出日历文件')}</button>}
-      {onSaveEvent && <button type="button" className="text-button" disabled={busy} onClick={() => setEditing(event.id)}>{t('修改')}</button>}
-      {onRemoveEvent && <button type="button" className="text-button" disabled={busy} onClick={() => { if (window.confirm(t('从日程中移除「{0}」？记录会保留，可在报告中查看。', [event.title]))) void onRemoveEvent(event); }}>{t('移除')}</button>}
-    </span>
-  </li>;
   /** Tooltip for a day: its mark plus a short summary of what was done. */
   const tooltip = (date: string) => {
     const mark = marks[date];
@@ -257,4 +279,66 @@ export default function TodayCalendar({
       )}
     </div>
   );
+}
+
+/**
+ * Detail page of one schedule entry: time and place, the join link, reference links, a checklist and notes.
+ * Ticking a todo saves at once; everything else goes through the editor.
+ */
+export function EventDetail({ event, company, busy, onSave, onRemove, onOpenJob }: {
+  event: CareerEvent;
+  company?: string;
+  busy?: boolean;
+  /** Resolves true once saved; the editor closes then. */
+  onSave: (event: CareerEvent) => Promise<boolean>;
+  onRemove: (event: CareerEvent) => Promise<boolean>;
+  onOpenJob?: (jobId: string) => void;
+}) {
+  const { locale, t } = useLocale();
+  const [editing, setEditing] = useState(false);
+  const [newTodo, setNewTodo] = useState('');
+  if (editing) return <EventEditor event={event} busy={busy} onCancel={() => setEditing(false)} onSave={(draft) => void onSave(draft).then((saved) => { if (saved) setEditing(false); })} />;
+  const todos = event.todos || [];
+  const links = event.links || [];
+  const kind = EVENT_KINDS.find(([value]) => value === event.kind)?.[1] || '';
+  const status = EVENT_STATUSES.find(([value]) => value === event.status)?.[1] || '';
+  const day = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', timeZone: 'UTC' }).format(new Date(event.date + 'T00:00:00Z'));
+  const time = event.timeStatus === 'unknown' ? t('具体时间待确认') : `${event.start}–${event.end}${event.timeStatus === 'end-estimated' ? ' ' + t('（结束为估计）') : ''}`;
+  const saveTodos = (next: EventTodo[]) => onSave({ ...event, todos: next });
+  return <div className={'event-detail' + (event.status === 'cancelled' ? ' is-cancelled' : '')}>
+    <div className="event-detail-meta">
+      <span className={'badge' + (event.status === 'confirmed' ? '' : ' amber')}>{t(status)}</span>
+      <span className="badge">{t(kind)}</span>
+    </div>
+    <dl className="event-detail-facts">
+      <div><dt><Clock size={15} aria-label={t('时间')} /></dt><dd><b>{day}</b> {time}</dd></div>
+      {event.location && <div><dt><MapPin size={15} aria-label={t('地点')} /></dt><dd>{event.location}</dd></div>}
+      {event.url && <div><dt><Video size={15} aria-label={t('会议链接')} /></dt><dd><a href={event.url} target="_blank" rel="noopener noreferrer">{hostOf(event.url)}<ExternalLink size={13} /></a></dd></div>}
+      {event.jobId && <div><dt><Flag size={15} aria-label={t('关联公司')} /></dt><dd>{onOpenJob ? <button type="button" className="text-button" onClick={() => onOpenJob(event.jobId!)}>{company || t('查看公司')}</button> : company}</dd></div>}
+    </dl>
+    <div className="event-detail-actions">
+      {event.url && event.status !== 'cancelled' && <a className="primary" href={event.url} target="_blank" rel="noopener noreferrer"><Video size={16} />{t('打开会议链接')}</a>}
+      {event.start && event.end && event.status !== 'cancelled' && <button type="button" className="secondary" onClick={() => void exportEvent(event)}><CalendarPlus size={16} />{t('导出日历文件')}</button>}
+      <button type="button" className="secondary" disabled={busy} onClick={() => setEditing(true)}><Pencil size={15} />{t('修改')}</button>
+      <button type="button" className="secondary" disabled={busy} onClick={() => { if (window.confirm(t('从日程中移除「{0}」？记录会保留，可在报告中查看。', [event.title]))) void onRemove(event); }}><Trash2 size={15} />{t('移除')}</button>
+    </div>
+    <section className="event-detail-section">
+      <h3>{t('待办事项')}{todos.length > 0 && <small>{todos.filter(todo => todo.done).length}/{todos.length}</small>}</h3>
+      {todos.length > 0 && <ul className="event-todos">{todos.map((todo, index) => <li key={index} className={todo.done ? 'is-done' : undefined}>
+        <label><input type="checkbox" disabled={busy} checked={todo.done} onChange={(e) => void saveTodos(todos.map((item, i) => i === index ? { ...item, done: e.target.checked } : item))} /><span>{todo.text}</span></label>
+      </li>)}</ul>}
+      {todos.length < 50 && <form className="event-todo-add" onSubmit={(e) => { e.preventDefault(); const text = newTodo.trim(); if (text) void saveTodos([...todos, { text, done: false }]).then((saved) => { if (saved) setNewTodo(''); }); }}>
+        <input aria-label={t('新的待办')} placeholder={t('添加待办，回车保存')} maxLength={500} value={newTodo} onChange={(e) => setNewTodo(e.target.value)} disabled={busy} />
+        <button type="submit" className="secondary" disabled={busy || !newTodo.trim()}><Plus size={15} />{t('添加')}</button>
+      </form>}
+    </section>
+    {links.length > 0 && <section className="event-detail-section">
+      <h3>{t('相关链接')}</h3>
+      <ul className="event-links">{links.map((link, index) => <li key={index}><a href={link.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /><span><b>{link.label || hostOf(link.url)}</b>{link.label && <small>{hostOf(link.url)}</small>}</span></a></li>)}</ul>
+    </section>}
+    <section className="event-detail-section">
+      <h3>{t('说明')}</h3>
+      {event.description.trim() ? <div className="event-description"><ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown></div> : <p className="muted">{t('还没有说明。')}</p>}
+    </section>
+  </div>;
 }
