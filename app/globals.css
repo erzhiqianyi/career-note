@@ -4171,3 +4171,16 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .resume-income-note {margin:0 0 18px;}
 .document-copy-button.secondary { min-height: 42px; border-color: var(--accent); color: var(--accent); font-weight: 550; }
 .document-copy-button.secondary:hover { background: var(--accent); color: #fff; }
+
+/* Tips open inside the app; the header back arrow returns to the list. */
+.agent-article-reader {display:grid;gap:22px;max-width:860px;padding:clamp(22px,4vw,44px);}
+.agent-article-reader header {display:grid;gap:8px;margin:0;padding:0 0 20px;border-bottom:1px solid var(--list-border);}
+.agent-article-reader header .agent-tips-kicker {display:flex;gap:8px;align-items:center;}
+.agent-article-reader h2 {margin:0;font-size:clamp(1.5rem,3vw,2rem);line-height:1.35;}
+.agent-article-reader header p {margin:0;color:var(--ink-2);line-height:1.75;}
+.agent-article-reader h3 {margin:0 0 10px;font-size:1.05rem;}
+.agent-article-reader ol {margin:0;padding-left:22px;line-height:1.8;list-style:decimal;}
+.agent-article-reader section p {line-height:1.8;}
+.agent-article-prompt {margin:0;padding:16px 18px;border-radius:10px;background:#f0f5fa;color:var(--ink);font:inherit;font-size:.9rem;line-height:1.75;white-space:pre-wrap;}
+.agent-article-reader-actions {display:flex;gap:12px;align-items:center;margin-top:12px;color:var(--ink-3);font-size:.85rem;}
+.agent-article-reader footer a {display:inline-flex;gap:6px;align-items:center;font-size:.85rem;}

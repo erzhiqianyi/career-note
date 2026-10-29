@@ -5787,5 +5787,8 @@
   "结论引用真实回答与点评，样本与未处理数量明确；不编造进步或评价未听取的发音，保存后读回关联。": {
     "ja": "本人の回答とレビューを引用し、対象件数と未処理数を明示します。進歩や未確認の発音を推測せず、保存後に関連付けを再確認します。",
     "en": "Cite actual answers and reviews, report sample and pending counts, avoid invented progress or unheard pronunciation judgments, and verify saved links."
-  }
+  },
+  "详细说明": { "ja": "詳しい説明", "en": "Details" },
+  "复制失败": { "ja": "コピーできませんでした", "en": "Copy failed" },
+  "打开公开页面（可分享）": { "ja": "公開ページを開く（共有用）", "en": "Open the public page (shareable)" }
 }
