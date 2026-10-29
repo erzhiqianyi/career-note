@@ -15,18 +15,17 @@ export function ApplicationReason({ material }: { material: Material }) {
     try { await navigator.clipboard.writeText(text); setCopied(key); }
     catch { setCopied('failed'); }
   };
-  const button = (key: string, label: string, text: string) => <button type="button" className="secondary" onClick={() => void copy(key, text)}>
+  const button = (key: string, label: string, text: string) => <button type="button" className="secondary document-copy-button" onClick={() => void copy(key, text)}>
     {copied === key ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}{tr(copied === key ? '已复制' : label)}
   </button>;
   return <>
   <section className="application-reason" lang="ja" aria-label={tr('応募理由・100字版')}>
-    <header>
+    <div className="application-reason-heading">
       <h3>{tr('応募理由・100字版')} <small>{tr('{0} / 100 字', [String([...reason].length)])}</small></h3>
       <div>
         {reason && button('reason', '复制应募理由', reason)}
       </div>
-    </header>
-    <p className="muted">{tr('用于申请表的「ご応募理由（任意）」等 100 字以内输入栏。与下方完整版一起保存和管理。')}</p>
+    </div>
     {reason ? <p><Ja text={material.applicationReason} /></p> : <p className="muted">{tr('这个版本尚未准备申请表短版。请让 Agent 为这份志望動機补充 100 字以内的応募理由。')}</p>}
     {copied === 'failed' && <p className="muted" role="status">{tr('复制失败，请手动复制。')}</p>}
   </section>

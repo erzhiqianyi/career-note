@@ -1,24 +1,23 @@
 'use client';
 import { useState } from 'react';
-import { CalendarPlus, ChevronLeft, ChevronRight, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Plus, Trash2, Video, X } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight, Clock, ExternalLink, FileText, Flag, MapPin, MessageSquare, Pencil, Plus, Trash2, Video, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useLocale } from '@/components/locale-provider';
-import type { Attempt, Job, Material } from '@/lib/career';
+import type { Job } from '@/lib/career';
 import { eventIcs, type CareerEvent, type EventKind, type EventLink, type EventStatus, type EventTimeStatus, type EventTodo } from '../lib/calendar-events';
 
 export type CalendarMarkKind = 'due' | 'interview' | 'target';
 /** A dated item on the calendar; `jobs` are the companies involved (empty for the target date). */
 export type CalendarMark = { kind: CalendarMarkKind; jobs: { id: string; company: string }[] };
 
-/** What the user did on one day, derived from record timestamps (workspace timezone). */
+/** Selection milestones for companies currently being followed, in the workspace timezone. */
 export type DayActivity = {
-  added: string[]; // companies saved
   applied: string[]; // "company · role" moved to 已投递
   progressed: string[]; // other status changes, "company · status"
-  practiced: string[]; // question titles answered
-  materials: string[]; // preparation materials that arrived
 };
+
+export const isFollowingJob = (job: Job) => ['已投递', '书类选考', '面试中'].includes(job.status);
 
 const TOKYO_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' });
 /** ISO timestamp → YYYY-MM-DD in the workspace timezone (the API's `today` uses Asia/Tokyo too). */
@@ -27,30 +26,33 @@ export function workspaceDay(at: string): string {
   return Number.isNaN(time) ? at.slice(0, 10) : TOKYO_DAY.format(time);
 }
 
-export function collectActivity(jobs: Job[], attempts: Attempt[], materials: Material[]): Record<string, DayActivity> {
+export function collectActivity(jobs: Job[]): Record<string, DayActivity> {
   const days: Record<string, DayActivity> = {};
-  const at = (date: string) => (days[date] ??= { added: [], applied: [], progressed: [], practiced: [], materials: [] });
-  for (const job of jobs) {
-    job.history.forEach((entry, index) => {
-      if (!entry.at) return;
+  const at = (date: string) => (days[date] ??= { applied: [], progressed: [] });
+  for (const job of jobs.filter(isFollowingJob)) {
+    job.history.forEach((entry) => {
+      if (!entry.at || !['已投递', '书类选考', '面试中'].includes(entry.status)) return;
       const date = workspaceDay(entry.at);
-      if (index === 0) at(date).added.push(job.company);
-      else if (entry.status === '已投递') at(date).applied.push(`${job.company} · ${job.role}`);
+      if (entry.status === '已投递') at(date).applied.push(`${job.company} · ${job.role}`);
       else at(date).progressed.push(`${job.company} · ${entry.status}`);
     });
   }
-  for (const attempt of attempts) if (attempt.createdAt) at(workspaceDay(attempt.createdAt)).practiced.push(attempt.question?.title || attempt.questionId);
-  for (const material of materials) if (material.createdAt) at(workspaceDay(material.createdAt)).materials.push(material.title);
   return days;
 }
 
 const KINDS: Array<[keyof DayActivity, string]> = [
-  ['added', '新增公司'],
   ['applied', '投递'],
   ['progressed', '进展'],
-  ['practiced', '练习'],
-  ['materials', '资料'],
 ];
+
+/** Count appointments separately from selection progress; cancelled appointments remain in details only. */
+export function calendarDayCounts(date: string, events: CareerEvent[], marks: Record<string, CalendarMark>, activity: Record<string, DayActivity>) {
+  const mark = marks[date];
+  return {
+    scheduled: events.filter(event => event.date === date && event.status !== 'cancelled').length + (mark ? Math.max(1, mark.jobs.length) : 0),
+    records: KINDS.reduce((sum, [key]) => sum + (activity[date]?.[key].length || 0), 0),
+  };
+}
 
 const MARK_LABEL: Record<CalendarMarkKind, string> = { due: '待跟进', interview: '面试日', target: '目标日期' };
 const EVENT_KINDS: Array<[EventKind, string]> = [['interview', '面试'], ['counseling', '面谈・咨询'], ['fair', '招聘会・说明会']];
@@ -131,8 +133,7 @@ function EventEditor({ event, busy, onSave, onCancel }: { event: CareerEvent; bu
 }
 
 /**
- * Month grid with today, follow-up / interview / target marks and the month's interviews listed underneath.
- * Tapping a day swaps that list for what is on that day; the company names open the company page.
+ * Month grid and the selected day's appointments and selection progress.
  */
 export default function TodayCalendar({
   today,
@@ -151,7 +152,7 @@ export default function TodayCalendar({
 }) {
   const { locale, t } = useLocale();
   const [offset, setOffset] = useState(0); // months from the current one
-  const [selected, setSelected] = useState(''); // YYYY-MM-DD, or '' for the month's interview list
+  const [selected, setSelected] = useState(today);
   const [ty, tm] = today.split('-').map(Number);
   const first = new Date(Date.UTC(ty, tm - 1 + offset, 1));
   const year = first.getUTCFullYear();
@@ -165,12 +166,14 @@ export default function TodayCalendar({
   const cells: (number | null)[] = [...Array<null>(leading).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   while (cells.length % 7) cells.push(null);
   const iso = (d: number) => `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  const prefix = `${year}-${String(month).padStart(2, '0')}-`;
   const shortDay = (date: string) => new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric', timeZone: 'UTC' }).format(new Date(date + 'T00:00:00Z'));
-  const interviews = Object.entries(marks)
-    .filter(([date, mark]) => date.startsWith(prefix) && mark.kind === 'interview')
-    .sort(([a], [b]) => a.localeCompare(b));
-  const monthEvents = events.filter(event => event.date.startsWith(prefix));
+  const selectedTitle = new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', weekday: 'long', timeZone: 'UTC' }).format(new Date(selected + 'T00:00:00Z'));
+  const selectedCounts = calendarDayCounts(selected, events, marks, activity);
+  const changeMonth = (next: number) => {
+    const date = new Date(Date.UTC(ty, tm - 1 + next, 1)).toISOString().slice(0, 10);
+    setOffset(next);
+    setSelected(date.slice(0, 7) === today.slice(0, 7) ? today : date);
+  };
   const eventRow = (event: CareerEvent) => {
     const todos = event.todos || [];
     const open = todos.filter(todo => !todo.done).length;
@@ -195,12 +198,13 @@ export default function TodayCalendar({
   };
   return (
     <div className="calendar">
+      <div className="calendar-month">
       <div className="calendar-head">
-        <button type="button" className="icon-button" aria-label={t('上个月')} onClick={() => setOffset(offset - 1)}>
+        <button type="button" className="icon-button" aria-label={t('上个月')} onClick={() => changeMonth(offset - 1)}>
           <ChevronLeft size={18} />
         </button>
         <div className="calendar-title">{title}</div>
-        <button type="button" className="icon-button" aria-label={t('下个月')} onClick={() => setOffset(offset + 1)}>
+        <button type="button" className="icon-button" aria-label={t('下个月')} onClick={() => changeMonth(offset + 1)}>
           <ChevronRight size={18} />
         </button>
       </div>
@@ -216,31 +220,38 @@ export default function TodayCalendar({
           const mark = marks[date];
           const hasEvent = events.some(event => event.date === date && event.status !== 'cancelled');
           const done = !!activity[date];
+          const counts = calendarDayCounts(date, events, marks, activity);
           return (
             <button
               type="button"
               key={i}
               className={['calendar-day', date === today && 'is-today', date === selected && 'is-selected', done && 'has-activity', mark && 'has-' + mark.kind, hasEvent && 'has-event'].filter(Boolean).join(' ')}
-              aria-label={date}
+              aria-label={[date, counts.scheduled > 0 && t('{0} 项日程', [counts.scheduled]), counts.records > 0 && t('{0} 项进展', [counts.records])].filter(Boolean).join(' · ')}
               aria-pressed={date === selected}
               title={tooltip(date)}
-              onClick={() => setSelected(date === selected ? '' : date)}
+              onClick={() => setSelected(date)}
             >
-              {d}
+              <span>{d}</span>
+              <span className="calendar-day-counts" aria-hidden="true">
+                {counts.scheduled > 0 && <small className="calendar-scheduled-count"><Clock size={11} />{counts.scheduled}</small>}
+                {counts.records > 0 && <small><FileText size={11} />{counts.records}</small>}
+              </span>
             </button>
           );
         })}
       </div>
-      {selected ? (
-        <div className="calendar-day-detail">
+      <div className="calendar-legend"><span><Clock size={13} />{t('日程')}</span><span><FileText size={13} />{t('选考进展')}</span></div>
+      </div>
+        <section className="calendar-day-detail" aria-label={selectedTitle}>
           <div className="calendar-day-detail-head">
-            <b>{shortDay(selected)}{selected === today && <small>{t('今天')}</small>}</b>
-            <button type="button" className="icon-button" aria-label={t('关闭')} onClick={() => setSelected('')}><X size={14} /></button>
+            <h3>{selectedTitle}{selected === today && <small>{t('今天')}</small>}</h3>
+            {selected !== today && <button type="button" className="secondary" onClick={() => { setOffset(0); setSelected(today); }}>{t('今天')}</button>}
           </div>
+          <p className="calendar-day-summary">{t('{0} 项日程', [selectedCounts.scheduled])} · {t('{0} 项进展', [selectedCounts.records])}</p>
           {(() => {
             const mark = marks[selected];
             const dayLog = activity[selected];
-            const dayEvents = events.filter(event => event.date === selected);
+            const dayEvents = events.filter(event => event.date === selected).sort((a, b) => (a.start || '99:99').localeCompare(b.start || '99:99'));
             if (!mark && !dayLog && !dayEvents.length) return <p className="muted">{t('这一天没有安排或记录。')}</p>;
             return <ul className="calendar-interviews">
               {dayEvents.map(eventRow)}
@@ -257,26 +268,12 @@ export default function TodayCalendar({
                 <li key={key} className="is-activity">
                   <span className="calendar-activity-count">{dayLog[key].length}</span>
                   <b>{t(label)}</b>
-                  <span>{dayLog[key].join('、')}</span>
+                  <ul className="calendar-record-list">{dayLog[key].map((item, index) => <li key={index}>{item}</li>)}</ul>
                 </li>
               ))}
             </ul>;
           })()}
-        </div>
-      ) : (interviews.length > 0 || monthEvents.length > 0) && (
-        <ul className="calendar-interviews">
-          {monthEvents.map(eventRow)}
-          {interviews.map(([date, mark]) => (
-            <li key={date} className={date < today ? 'is-past' : undefined}>
-              <MessageSquare size={14} />
-              <b>{shortDay(date)}</b>
-              <span>
-                {t('面试')} · {mark.jobs.map((job, index) => <span key={job.id}>{index > 0 && '、'}{onOpenJob ? <button type="button" className="text-button" onClick={() => onOpenJob(job.id)}>{job.company}</button> : job.company}</span>)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+        </section>
     </div>
   );
 }

@@ -1,4 +1,9 @@
 {
+  "{0} 项进展": { "ja": "選考の進展 {0} 件", "en": "{0} selection updates" },
+  "选考进展": { "ja": "選考の進展", "en": "Selection progress" },
+  "{0} 项日程": { "ja": "予定 {0} 件", "en": "{0} scheduled" },
+  "{0} 条记录": { "ja": "記録 {0} 件", "en": "{0} records" },
+  "活动记录": { "ja": "活動記録", "en": "Activity records" },
   "志望群": { "ja": "志望群", "en": "Preference group" },
   "第一志望群": { "ja": "第一志望群", "en": "First-choice group" },
   "第二志望群": { "ja": "第二志望群", "en": "Second-choice group" },
@@ -5498,5 +5503,289 @@
   "其他津贴 {0}": { "ja": "その他手当 {0}", "en": "Other allowance {0}" },
   "{0} 小时": { "ja": "{0} 時間", "en": "{0} h" },
   "还没有现年收明细": { "ja": "現年収の詳細はまだありません", "en": "No current pay details yet" },
-  "应募表单「現在の状況・職歴」里的年収詳細・諸手当与年収参照先。请填写税前金额，且「月收×12＋奖金」须与现年收一致；面试或入职时可能要求提交源泉徴収票或工资单，最好照着票据填写。": { "ja": "応募フォーム「現在の状況・職歴」の年収詳細・諸手当と年収参照先です。税込額で記入し、「月収×12＋賞与」を現年収と一致させてください。面接や入社時に源泉徴収票や給与明細の提出を求められることがあるため、書類どおりに記入するのが安心です。", "en": "For the 年収詳細・諸手当 and 年収参照先 fields under 現在の状況・職歴 on application forms. Enter pre-tax amounts; monthly pay × 12 + bonus must equal current annual income. You may be asked for a withholding slip or payslips at interview or hiring, so copy the figures from them." }
+  "应募表单「現在の状況・職歴」里的年収詳細・諸手当与年収参照先。请填写税前金额，且「月收×12＋奖金」须与现年收一致；面试或入职时可能要求提交源泉徴収票或工资单，最好照着票据填写。": { "ja": "応募フォーム「現在の状況・職歴」の年収詳細・諸手当と年収参照先です。税込額で記入し、「月収×12＋賞与」を現年収と一致させてください。面接や入社時に源泉徴収票や給与明細の提出を求められることがあるため、書類どおりに記入するのが安心です。", "en": "For the 年収詳細・諸手当 and 年収参照先 fields under 現在の状況・職歴 on application forms. Enter pre-tax amounts; monthly pay × 12 + bonus must equal current annual income. You may be asked for a withholding slip or payslips at interview or hiring, so copy the figures from them." },
+  "邀约筛选与资料准备": {
+    "ja": "スカウトの選別と資料準備",
+    "en": "Invitation screening and preparation"
+  },
+  "从授权邮件和求职网站收集邀约，核验岗位、匹配推荐，并按配置准备公司专属资料。": {
+    "ja": "許可されたメールと求人サイトからスカウトを収集し、求人を確認・比較して、設定に応じた企業別資料を準備します。",
+    "en": "Collect authorized email and job-site invitations, verify and match roles, and prepare company-specific materials as configured."
+  },
+  "系统仅提供模板与数据接口。请使用自己的 AI Agent 完成分析、资料生成和定时调度。": {
+    "ja": "本システムはテンプレートとデータ接続を提供します。分析・資料生成・定期実行には、ご自身の AI Agent を使用してください。",
+    "en": "This system provides templates and data access. Use your own AI agent for analysis, material generation, and scheduling."
+  },
+  "由自己的 Agent 执行": {
+    "ja": "自分の Agent で実行",
+    "en": "Run with your own agent"
+  },
+  "选择模板，查看所需输入、预期成果和验收标准，再配置并复制任务指令。": {
+    "ja": "テンプレートを選び、必要な入力・成果物・確認基準を確認してから、設定して指示文をコピーします。",
+    "en": "Choose a template, review inputs, outputs and acceptance criteria, then configure and copy the instructions."
+  },
+  "所需输入": {
+    "ja": "必要な入力",
+    "en": "Required inputs"
+  },
+  "运行条件": {
+    "ja": "実行条件",
+    "en": "Requirements"
+  },
+  "预期成果": {
+    "ja": "成果物",
+    "en": "Expected outputs"
+  },
+  "验收标准": {
+    "ja": "確認基準",
+    "en": "Acceptance criteria"
+  },
+  "如何使用": {
+    "ja": "使い方",
+    "en": "How to use"
+  },
+  "执行计划": {
+    "ja": "実行スケジュール",
+    "en": "Schedule"
+  },
+  "补充筛选条件": {
+    "ja": "追加の選別条件",
+    "en": "Additional criteria"
+  },
+  "每轮推荐岗位上限": {
+    "ja": "1 回の求人推薦数の上限",
+    "en": "Maximum recommendations per run"
+  },
+  "资料准备策略": {
+    "ja": "資料準備の方針",
+    "en": "Preparation policy"
+  },
+  "仅筛选推荐": {
+    "ja": "選別・推薦のみ",
+    "en": "Recommendations only"
+  },
+  "仅处理本人已有准备待办": {
+    "ja": "本人が登録した準備タスクのみ",
+    "en": "Existing preparation tasks only"
+  },
+  "自动为优先匹配岗位准备草稿": {
+    "ja": "優先候補の資料案を自動準備",
+    "en": "Prepare drafts for top matches"
+  },
+  "每轮准备岗位上限": {
+    "ja": "1 回の資料準備対象数の上限",
+    "en": "Maximum roles to prepare per run"
+  },
+  "填写执行计划和输入范围，生成完整任务指令。": {
+    "ja": "実行スケジュールと入力範囲を設定し、指示文を生成します。",
+    "en": "Set a schedule and input scope, then generate the complete instructions."
+  },
+  "将指令交给自己的 Agent，连接 Career Note MCP，并授权所需的邮件或网站访问。": {
+    "ja": "指示文をご自身の Agent に渡し、Career Note MCP と必要なメール・サイトへのアクセスを設定します。",
+    "en": "Give the instructions to your agent, connect Career Note MCP, and authorize the required email or website access."
+  },
+  "让 Agent 先试跑并核对成果，再在它自己的系统中创建定时任务，返回任务 ID、启用状态和下次运行时间。": {
+    "ja": "Agent で試行して成果物を確認した後、Agent 側で定期タスクを作成し、タスク ID・有効状態・次回実行時刻を確認します。",
+    "en": "Have the agent run a trial and verify results, then create a task in its own scheduler and return its ID, enabled status, and next run time."
+  },
+  "在 Career Note 查看写回的资料与报告；任务的修改、暂停和运行记录在自己的 Agent 中管理。": {
+    "ja": "保存された資料とレポートは Career Note で確認し、タスクの変更・停止・実行履歴はご自身の Agent で管理します。",
+    "en": "View saved materials and reports in Career Note; manage task changes, pauses and run history in your own agent."
+  },
+  "可补充目标岗位、地区、硬性条件、偏好与排除项；留空沿用已有求职条件。": {
+    "ja": "希望職種・地域・必須条件・希望条件・除外条件を追加できます。空欄の場合は現在の就活条件を使います。",
+    "en": "Add target roles, locations, requirements, preferences or exclusions. Leave blank to use existing job-search criteria."
+  },
+  "仅推荐时生成推荐报告与岗位记录；选择准备后才生成五类材料和模拟题组。关键硬性条件未知时先列待确认。": {
+    "ja": "推薦のみの場合はレポートと求人記録を作成します。資料準備を選ぶと 5 種類の資料と模擬問題を追加します。重要な必須条件が不明な場合は確認待ちにします。",
+    "en": "Recommendations produce a report and job records. Preparation adds five material types and mock questions. Unknown key requirements are flagged for confirmation."
+  },
+  "授权邮箱与筛选条件、求职网站消息页、履历与求职条件、推荐及准备数量。": {
+    "ja": "許可されたメールと検索条件、求人サイトのメッセージ、履歴・就活条件、推薦と準備の上限数。",
+    "en": "Authorized mailbox filters, job-site messages, resume and job-search criteria, and recommendation and preparation limits."
+  },
+  "Agent 可读取授权邮件、打开原始职位页，并连接 Career Note MCP。使用站内会话时需在对应浏览器环境运行。": {
+    "ja": "Agent が許可されたメール・元の求人ページ・Career Note MCP にアクセスできること。サイトのログインを使う場合は対応するブラウザー環境で実行します。",
+    "en": "The agent needs authorized email access, original job pages and Career Note MCP. Website sessions require the corresponding browser environment."
+  },
+  "邀约核对与推荐报告、岗位记录；按准备策略生成五类材料和岗位模拟题组。": {
+    "ja": "スカウトの照合・推薦レポートと求人記録。準備方針に応じて 5 種類の資料と求人別の模擬問題を作成します。",
+    "en": "Invitation review and recommendation reports, job records, and five material types plus mock questions when preparation is selected."
+  },
+  "来源覆盖可追溯，推荐有事实依据；资料逐项列出版本、缺口和读回结果，标为待本人审核。": {
+    "ja": "調査範囲と推薦根拠を追跡でき、資料ごとに版・不足項目・保存後の確認結果を記録し、本人確認待ちとします。",
+    "en": "Traceable coverage and evidence-based recommendations; list each material version, gaps and readback results as awaiting owner review."
+  },
+  "求职网站、账号别名、搜索页或筛选条件；Career Note 中的目标岗位与条件。": {
+    "ja": "求人サイト・アカウントの別名・検索ページや条件、Career Note の希望職種と条件。",
+    "en": "Job sites, account aliases, search pages or filters, and target roles and criteria from Career Note."
+  },
+  "Agent 运行环境可以访问已登录浏览器与 Career Note MCP。": {
+    "ja": "Agent の実行環境からログイン済みブラウザーと Career Note MCP にアクセスできること。",
+    "en": "The agent environment must access the signed-in browser and Career Note MCP."
+  },
+  "最多 10 个新增或更新的岗位记录，包含来源、条件、匹配依据与未知项。": {
+    "ja": "出典・条件・適合根拠・不明点を含む、新規または更新の求人記録を最大 10 件。",
+    "en": "Up to 10 new or updated jobs with sources, requirements, match evidence and unknowns."
+  },
+  "原始职位页已核验，稳定 id 去重，写入后读回来源与数量；不投递。": {
+    "ja": "元の求人ページを確認し、固定 ID で重複を除去。保存後に出典と件数を再確認し、応募はしません。",
+    "en": "Verify original job pages, deduplicate by stable IDs, and read back sources and counts after saving. No applications."
+  },
+  "邮箱账号别名、文件夹、发件域名或关键词；已有岗位与历史核对报告。": {
+    "ja": "メールのアカウント別名・フォルダー・送信元ドメインやキーワード、既存の求人と照合レポート。",
+    "en": "Mailbox aliases, folders, sender domains or keywords, plus existing jobs and past review reports."
+  },
+  "Agent 的邮箱连接已获授权，并能连接 Career Note MCP。": {
+    "ja": "Agent のメール接続が許可され、Career Note MCP に接続できること。",
+    "en": "The agent needs an authorized email connection and Career Note MCP access."
+  },
+  "新增邮件事件核对报告，列出关联岗位、原文、建议状态、截止时间与待确认项。": {
+    "ja": "新しいメールの出来事を照合し、関連求人・原文・推奨ステータス・期限・確認事項をレポートにします。",
+    "en": "A report of new email events with linked jobs, source text, suggested status, deadlines and open questions."
+  },
+  "区分事件时间与抓取时间，按消息 id 去重，读回报告；不更改投递状态。": {
+    "ja": "発生時刻と取得時刻を分け、メッセージ ID で重複を除去して保存後に再確認。応募状況は変更しません。",
+    "en": "Separate event and retrieval times, deduplicate by message ID and read back the report. Application status stays unchanged."
+  },
+  "Career Note 中待处理的公司准备与回答点评任务，以及相关履历、岗位和真实回答。": {
+    "ja": "Career Note の未処理の企業準備・回答レビュータスクと、関連する履歴・求人・本人の回答。",
+    "en": "Pending company preparation and answer review tasks, with related resume records, jobs and actual answers."
+  },
+  "Agent 可连接 Career Note MCP；公司准备时可核验原始招聘来源。": {
+    "ja": "Career Note MCP に接続でき、企業準備時に元の求人情報を確認できること。",
+    "en": "Career Note MCP access and the ability to verify original job sources for preparation."
+  },
+  "每轮最多处理 3 个任务：五类公司材料与题组，或关联真实回答的新点评。": {
+    "ja": "1 回に最大 3 タスク。5 種類の企業資料と問題セット、または本人の回答に関連付けた新しいレビュー。",
+    "en": "Up to 3 tasks per run: five company material types and questions, or new reviews linked to actual answers."
+  },
+  "空队列立即退出，只补缺失交付；全部读回确认后才完成对应任务。": {
+    "ja": "キューが空なら終了。不足分のみ補い、全成果物の保存後確認を終えてからタスクを完了します。",
+    "en": "Exit on an empty queue, fill only missing outputs and complete tasks only after full readback verification."
+  },
+  "Career Note 已保存的当天岗位、邮件核对报告、材料、点评、待办和跟进记录。": {
+    "ja": "Career Note に保存済みの当日の求人・メール照合レポート・資料・レビュー・タスク・フォロー記録。",
+    "en": "Saved jobs, email reports, materials, reviews, tasks and follow-up records for the day."
+  },
+  "Agent 可连接 Career Note MCP；如有收集任务，建议安排在其完成之后。": {
+    "ja": "Career Note MCP に接続できること。収集タスクがある場合は、その完了後の実行を推奨します。",
+    "en": "Career Note MCP access; schedule after collection tasks when applicable."
+  },
+  "每日一份中文分析报告，包含最多 3 个优先行动、预计用时及资料缺口。": {
+    "ja": "毎日 1 件の中国語分析レポート。最大 3 つの優先行動、所要時間の目安、資料の不足を含みます。",
+    "en": "One daily analysis report in Chinese, with up to 3 priority actions, estimated time and material gaps."
+  },
+  "引用已保存记录，不重复抓取；每日保存并读回，不推测投递结果。": {
+    "ja": "保存済み記録を引用し、再収集せず、毎日保存して再確認。応募結果を推測しません。",
+    "en": "Cite saved records without collecting again; save and read back daily without inferring application results."
+  },
+  "Career Note 最近 7 天的真实回答、点评、投递历史与报告。": {
+    "ja": "Career Note の直近 7 日間の本人の回答・レビュー・応募履歴・レポート。",
+    "en": "Actual answers, reviews, application history and reports from the last 7 days."
+  },
+  "Agent 可连接 Career Note MCP。": {
+    "ja": "Agent が Career Note MCP に接続できること。",
+    "en": "The agent must connect to Career Note MCP."
+  },
+  "每周一份复盘报告：事实摘要、反复弱点、下周练习重点与待确认事项。": {
+    "ja": "週 1 件の振り返りレポート。事実の要約、繰り返す弱点、翌週の練習重点と確認事項。",
+    "en": "One weekly review: facts, recurring weaknesses, next week’s practice focus and open questions."
+  },
+  "分析引用原回答与已有历史，无反馈不算拒绝；只分析文本，不推断发音。": {
+    "ja": "本人の回答と既存履歴を引用し、未返信を不採用扱いにしません。文章のみを分析し、発音を推測しません。",
+    "en": "Cite original answers and history; no response is not rejection. Analyze text without inferring pronunciation."
+  },
+  "求职信息收集与准备": {
+    "ja": "求人情報の収集と準備",
+    "en": "Job collection and preparation"
+  },
+  "从授权邮件和求职网站收集岗位与邀约，筛选推荐公司，并按配置准备申请材料和面试资料。": {
+    "ja": "許可されたメールや求人サイトから求人とスカウトを収集し、企業を推薦して設定に応じて応募・面接資料を準備します。",
+    "en": "Collect authorized jobs and invitations, recommend companies, and prepare application and interview materials as configured."
+  },
+  "求职状态更新与跟进": {
+    "ja": "選考状況の照合とフォロー",
+    "en": "Application status and follow-up"
+  },
+  "核对邮件与求职网站中的选考进展，整理状态更新建议、截止日期及今日和逾期跟进事项，由本人确认后更新。": {
+    "ja": "メールと求人サイトの選考情報を照合し、状況変更の提案・期限・本日と期限超過の対応をまとめます。実際の変更は本人確認後に行います。",
+    "en": "Check selection progress in email and job sites, summarize suggested updates, deadlines and due or overdue follow-ups for owner confirmation."
+  },
+  "练习分析与总结": {
+    "ja": "練習の分析とまとめ",
+    "en": "Practice analysis and summary"
+  },
+  "分析已保存的真实练习回答与点评，处理已请求的回答点评，归纳反复弱点并给出下一轮练习计划。": {
+    "ja": "保存済みの本人の回答とレビューを分析し、依頼済みの回答レビューを処理して、繰り返す課題と次の練習計画をまとめます。",
+    "en": "Analyze saved answers and reviews, process requested feedback, and summarize recurring weaknesses and the next practice plan."
+  },
+  "三类常用任务": {
+    "ja": "3 つの基本タスク",
+    "en": "Three common tasks"
+  },
+  "更多专项模板": {
+    "ja": "その他の専用テンプレート",
+    "en": "More specialized templates"
+  },
+  "专项模板用于拆分执行；请避免与常用任务重复处理同一批资料或回答。": {
+    "ja": "専用テンプレートは分割実行用です。基本タスクと同じ資料・回答を重複処理しないようにしてください。",
+    "en": "Use specialized templates for separate execution; avoid processing the same materials or answers in overlapping tasks."
+  },
+  "练习分析天数": {
+    "ja": "練習の分析対象日数",
+    "en": "Practice analysis window (days)"
+  },
+  "分析重点": {
+    "ja": "分析の重点",
+    "en": "Analysis focus"
+  },
+  "跟进重点": {
+    "ja": "フォローの重点",
+    "en": "Follow-up focus"
+  },
+  "例如：自我介绍、经历说明、回答结构或日语表达；留空按默认维度分析。": {
+    "ja": "例：自己紹介・経験説明・回答の構成・日本語表現。空欄の場合は標準の観点で分析します。",
+    "en": "For example: introductions, experience, answer structure or Japanese expression. Leave blank for standard analysis."
+  },
+  "例如：关注面试日程、补交资料期限和逾期跟进；留空核对全部已有岗位。": {
+    "ja": "例：面接日程・追加資料の期限・期限超過のフォロー。空欄の場合は既存の全求人を照合します。",
+    "en": "For example: interview dates, document deadlines or overdue follow-ups. Leave blank to check all existing jobs."
+  },
+  "授权邮箱与筛选条件、求职网站消息或搜索页、履历与求职条件、推荐及准备数量。": {
+    "ja": "許可されたメールと検索条件、求人サイトのメッセージや検索ページ、履歴・就活条件、推薦と準備の上限数。",
+    "en": "Authorized mailbox filters, job-site messages or search pages, resume and search criteria, and recommendation and preparation limits."
+  },
+  "授权邮箱与求职网站的投递记录、已有公司岗位及投递状态、跟进日期和历史核对报告。": {
+    "ja": "許可されたメールと求人サイトの応募記録、既存企業・求人の選考状況、フォロー日と過去の照合レポート。",
+    "en": "Authorized email and job-site application records, existing jobs and statuses, follow-up dates and past reconciliation reports."
+  },
+  "Agent 可访问授权来源与 Career Note MCP。当前接口仅保存核对与跟进报告，实际状态由本人确认后更新。": {
+    "ja": "Agent が許可された情報源と Career Note MCP に接続できること。現在の接続では照合・フォローレポートを保存し、実際の状況は本人確認後に更新します。",
+    "en": "The agent needs authorized sources and Career Note MCP. Current interfaces save reconciliation and follow-up reports; the owner confirms actual status changes."
+  },
+  "状态变化核对报告、建议更新及证据、今日和逾期跟进清单、需本人回复或确认的事项。": {
+    "ja": "状況変更の照合レポート、変更提案と根拠、本日・期限超過のフォロー一覧、本人の返信や確認が必要な事項。",
+    "en": "A status reconciliation report, suggested changes and evidence, due and overdue follow-ups, and items requiring owner response or confirmation."
+  },
+  "事件可追溯且关联正确岗位，旧消息不回退新状态；报告读回成功，不把建议写成已更新状态。": {
+    "ja": "出来事を正しい求人と出典に関連付け、古い通知で新しい状況を戻さず、保存後に再確認します。提案を更新済みと表示しません。",
+    "en": "Trace events to the correct job and source; old messages must not revert newer status. Read back reports without presenting suggestions as applied updates."
+  },
+  "指定回看窗口内的真实练习回答、问题快照、已有点评、已请求的回答点评待办及相关履历。": {
+    "ja": "指定期間内の本人の回答、質問のスナップショット、既存レビュー、依頼済みのレビュータスクと関連履歴。",
+    "en": "Actual answers within the window, question snapshots, saved reviews, requested feedback tasks and related resume evidence."
+  },
+  "Agent 可连接 Career Note MCP；只读取已保存的练习数据，无需邮箱或求职网站连接。": {
+    "ja": "Agent が Career Note MCP に接続できること。保存済みの練習データのみを使い、メールや求人サイトへの接続は不要です。",
+    "en": "Career Note MCP access only. Uses saved practice data without email or job-site connections."
+  },
+  "练习总结报告、最多 3 个改进重点与下一轮练习计划；每轮最多处理 3 个已请求的回答点评。": {
+    "ja": "練習のまとめ、最大 3 つの改善点と次回の練習計画。1 回に依頼済みの回答レビューを最大 3 件処理します。",
+    "en": "A practice summary, up to 3 improvement priorities and a next-session plan; up to 3 requested answer reviews per run."
+  },
+  "结论引用真实回答与点评，样本与未处理数量明确；不编造进步或评价未听取的发音，保存后读回关联。": {
+    "ja": "本人の回答とレビューを引用し、対象件数と未処理数を明示します。進歩や未確認の発音を推測せず、保存後に関連付けを再確認します。",
+    "en": "Cite actual answers and reviews, report sample and pending counts, avoid invented progress or unheard pronunciation judgments, and verify saved links."
+  }
 }

@@ -15,7 +15,7 @@ import {
   mcpSetupPage,
 } from '@/lib/mcp-clients';
 import ScheduledTemplates from '@/components/scheduled-templates';
-import TodayCalendar, { EventDetail, collectActivity, type CalendarMark } from '@/components/today-calendar';
+import TodayCalendar, { EventDetail, collectActivity, isFollowingJob, type CalendarMark } from '@/components/today-calendar';
 import { eventsFromReports, type CareerEvent } from '@/lib/calendar-events';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
@@ -53,6 +53,8 @@ import {
 } from 'react';
 import {
   ArrowLeft,
+  Archive,
+  ArchiveRestore,
   ArrowUpRight,
   BriefcaseBusiness,
   CalendarClock,
@@ -704,6 +706,8 @@ export default function Home() {
         (j) => !['未通过', '已撤回', '内定'].includes(j.status),
       ) || [];
   const calendarEvents = data ? eventsFromReports(data.reports) : [];
+  const followedCalendarEvents = calendarEvents.filter(event => event.status !== 'cancelled' &&
+    (!event.jobId || data?.jobs.some(job => job.id === event.jobId && isFollowingJob(job))));
   const eventPage = eventId ? calendarEvents.find(event => event.id === eventId) || null : null;
   const saveEvent = (event: CareerEvent) => action(() => api('events/update', {
     id: event.id, title: event.title, content: event.description, date: event.date,
@@ -713,18 +717,16 @@ export default function Home() {
     todos: (event.todos || []).map(todo => ({ text: todo.text.trim(), done: todo.done })).filter(todo => todo.text),
   }), '日程已更新');
   const calendarMarks: Record<string, CalendarMark> = {};
-  for (const job of openJobs) {
+  for (const job of openJobs.filter(isFollowingJob)) {
     if (!job.nextDate) continue;
     const date = job.nextDate.slice(0, 10);
-    if (calendarEvents.some(event => event.date === date && event.jobId === job.id)) continue;
+    if (followedCalendarEvents.some(event => event.date === date && event.jobId === job.id)) continue;
     const interview = job.status === '面试中' || /面试|面接|interview/i.test(job.nextAction);
     const kind = interview ? 'interview' : 'due';
     const previous = calendarMarks[date];
     if (previous?.kind === 'interview' && !interview) continue;
     calendarMarks[date] = { kind, jobs: [...(previous?.kind === kind ? previous.jobs : []), { id: job.id, company: job.company }] };
   }
-  const targetDate = data?.profile.targetDate;
-  if (targetDate && !calendarMarks[targetDate]) calendarMarks[targetDate] = { kind: 'target', jobs: [] };
   // A drilled-in view (company detail, agent sub-pages): the header shows "back", phones drop the tab bar.
   // Drilled-in interview routes: the header carries their title and back arrow, so the pages themselves show neither.
   const prepRoute = (() => {
@@ -1407,8 +1409,8 @@ export default function Home() {
                   <TodayCalendar
                     today={data.today}
                     marks={calendarMarks}
-                    events={calendarEvents}
-                    activity={collectActivity(data.jobs, data.attempts, data.materials)}
+                    events={followedCalendarEvents}
+                    activity={collectActivity(data.jobs)}
                     onOpenJob={openJob}
                     onOpenEvent={(event) => setEventId(event.id)}
                   />
@@ -1659,6 +1661,7 @@ export default function Home() {
           </details>
           <button type="button" className="secondary document-print-desktop" title={tr('预览并打印已生成的简历')} onClick={() => setPrintMaterial(printableDoc)}><Printer size={17} aria-hidden="true" />{tr('打印版预览')}</button>
         </div>}>
+          <div className="document-toolbar">
           <div className="document-meta">
             <Badge>{'kind' in doc ? tr(doc.kind) : tr('每日分析')}</Badge>
             <span>
@@ -1666,19 +1669,22 @@ export default function Home() {
               {!printableDoc && tr('· AI 草稿，使用前请核对')}
             </span>
             {'kind' in doc && <Badge>{tr(doc.archivedAt ? '已归档' : doc.reviewStatus || '待核对')}</Badge>}
-            {'kind' in doc && !doc.archivedAt && <button type="button" className="text-button" disabled={busy} onClick={() => void action(async () => {
+          </div>
+          {'kind' in doc && <div className="document-actions">
+            {!doc.archivedAt && <button type="button" className={doc.reviewStatus === '已核对' ? 'secondary' : 'primary'} disabled={busy} onClick={() => void action(async () => {
               const reviewed = doc.reviewStatus !== '已核对';
               await api('materials/review', { id: doc.id, reviewed });
               setDoc({ ...doc, reviewStatus: reviewed ? '已核对' : '待核对', reviewedAt: reviewed ? new Date().toISOString() : undefined });
             }, doc.reviewStatus === '已核对' ? '资料已重新标记为待核对' : '资料已标记为已核对')}>
-              {tr(doc.reviewStatus === '已核对' ? '重新标记为待核对' : '标记为已核对')}
+              {doc.reviewStatus === '已核对' ? <RefreshCw size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}{tr(doc.reviewStatus === '已核对' ? '重新标记为待核对' : '标记为已核对')}
             </button>}
-            {'kind' in doc && <button type="button" className="text-button" disabled={busy} onClick={() => void action(async () => {
+            <button type="button" className="secondary" disabled={busy} onClick={() => void action(async () => {
               await api('materials/archive', { items: [{ id: doc.id, archived: !doc.archivedAt }] });
               setDoc({ ...doc, archivedAt: doc.archivedAt ? undefined : new Date().toISOString() });
             }, doc.archivedAt ? '已恢复到资料列表' : '已归档，资料列表不再显示此版本')}>
-              {tr(doc.archivedAt ? '恢复到资料列表' : '归档此旧版本')}
-            </button>}
+              {doc.archivedAt ? <ArchiveRestore size={16} aria-hidden="true" /> : <Archive size={16} aria-hidden="true" />}{tr(doc.archivedAt ? '恢复到资料列表' : '归档此旧版本')}
+            </button>
+          </div>}
           </div>
           {!printableDoc && 'jobId' in doc &&
             data &&

@@ -28,14 +28,18 @@ export function CompanyBoard({ job }: { job: Job }) {
     window.print();
   };
   return <div className="prep-tab-panel company-board-wrap">
-    <div className="company-board-toolbar">
-      <button type="button" className="secondary" onClick={print}><Printer size={16} />{tr('打印 / 保存 PDF')}</button>
-    </div>
     <article className="company-board" lang="ja" aria-label={`${job.company} 企業ボード`}>
       <header className="cb-head">
-        <p className="cb-kicker">企業研究ボード</p>
-        <h2 className="cb-name">{job.company}</h2>
-        {job.companyReading && <p className="cb-reading">{job.companyReading}</p>}
+        <div className="cb-title-row">
+          <div className="cb-title">
+            <p className="cb-kicker">企業研究ボード</p>
+            <h2 className="cb-name">{job.company}</h2>
+            {job.companyReading && <p className="cb-reading">{job.companyReading}</p>}
+          </div>
+          <div className="company-board-toolbar">
+            <button type="button" className="secondary" onClick={print}><Printer size={16} aria-hidden="true" />{tr('打印 / 保存 PDF')}</button>
+          </div>
+        </div>
         {profile.tagline && <p className="cb-tagline"><Ja text={profile.tagline} /></p>}
         {profile.facts.length > 0 && <dl className="cb-facts">
           {profile.facts.map((fact, i) => <div key={i}><dt>{fact.label}</dt><dd><Ja text={fact.value} /></dd></div>)}
