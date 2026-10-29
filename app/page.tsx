@@ -93,6 +93,7 @@ import {
   api,
   download,
   statuses,
+  statusSince,
   matchLevels,
   sourceChannels,
   type MpcTokenRecord,
@@ -1053,13 +1054,25 @@ export default function Home() {
               </datalist>
               <label className="field">
                 <span>{tr('投递状态')}</span>
-                <select name="status" defaultValue={jobEdit.status || '关注中'}>
+                <select
+                  name="status"
+                  defaultValue={jobEdit.status || '关注中'}
+                  onChange={(e) => {
+                    // A newly chosen status starts out dated today; going back to the saved one restores its date.
+                    const date = e.currentTarget.form?.elements.namedItem('statusDate') as HTMLInputElement | null;
+                    if (date) date.value = e.currentTarget.value === jobEdit.status ? statusSince(jobEdit) || data?.today || '' : data?.today || '';
+                  }}
+                >
                   {statuses.map((s) => (
                     <option key={s} value={s}>
                       {tr(s)}
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="field">
+                <span>{tr('状态更新日期')}</span>
+                <input type="date" name="statusDate" max={data?.today} defaultValue={statusSince(jobEdit) || data?.today || ''} />
               </label>
               <label className="field">
                 <span>{tr('优先级')}</span>
@@ -1170,6 +1183,7 @@ export default function Home() {
                   onAddJob={() => openJobEditor({})}
                   onImport={() => { setImportOpen(true); setPreview(null); }}
                   onEditJob={(j) => openJobEditor(j)}
+                  onOpenEvent={(event) => setEventId(event.id)}
                 />
               </div>
               {briefOpen && (

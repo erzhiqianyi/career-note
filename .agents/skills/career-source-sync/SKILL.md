@@ -21,11 +21,11 @@ description: 从用户指定的求职网站、邮箱或简历文件收集更新�
 
 ## 保存与运行结果
 
-当前 MCP 仅提供通用报告导入，尚无来源事件库、持久化抓取游标或投递状态更新工具。默认将新增的来源摘要、履历差异、建议状态、待确认项及成功/失败的来源范围写为 `reports` 新版本，按 contract 填 date、title、content、sourceNotes，`completeTaskIds` 默认为空。不要声称已更新 jobs.status/history 或 profile。
+当前 MCP 提供通用报告导入；尚无来源事件库或持久化抓取游标。`career_update_job_status` 只用于记录用户明确告知的状态，不能用来写入从来源推断出的状态。默认将新增的来源摘要、履历差异、建议状态、待确认项及成功/失败的来源范围写为 `reports` 新版本，按 contract 填 date、title、content、sourceNotes，`completeTaskIds` 默认为空。未经本人确认并调用相应工具读回前，不要声称已更新 jobs.status/history 或 profile。
 
 请求同步时调用 `career_preview_import` → `career_import` → `career_get_context`，读回报告 id 与来源键。部分失败先读回，不重复写入已有报告。用户仅要求预览则不写。无需把完整邮箱、整份附件或无关个人信息复制进报告。
 
-未来服务提供专用状态事件/更新工具时，先读取其协议，并确认用户已明确授权的来源、字段和自动更新策略；本技能不以推断或写报告代替该接口。需要更新履历时，依据本轮明确授权用 career_update_profile 和最新 revision 保存，否则交付变更建议。
+来源中出现状态变化时，在报告里列出建议状态和原文依据，请用户确认；用户明确说出新状态后，才可用 `career_update_job_status` 和最新 revision 记录并读回。需要更新履历时，依据本轮明确授权用 career_update_profile 和最新 revision 保存，否则交付变更建议。
 
 ## 定时运行
 

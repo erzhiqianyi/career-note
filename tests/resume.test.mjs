@@ -352,3 +352,15 @@ test('current pay is one record that must add up the way application forms check
   // A second record in another language would split the facts; the existing one must be edited instead.
   assert.equal((await send({ ...base, id: 'pay-en', language: 'en', data })).status, 409);
 });
+
+test('work and school records keep the form names used for copying', async (t) => {
+  const mf = new Miniflare({ modules: true, script: bundled.outputFiles[0].text, compatibilityDate: '2026-05-22', d1Databases: ['CAREER_DB'] });
+  t.after(() => mf.dispose());
+  const send = (body) => mf.dispatchFetch('http://local/api/career/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const base = { revision: 0, language: 'zh', parentId: '', sourceNotes: '', verification: 'confirmed', archived: false };
+  assert.equal((await send({ ...base, id: 'job', kind: 'employment', data: { employer: '华为技术有限公司', employerEn: 'Huawei Technologies Co., Ltd.', role: '工程师' } })).status, 200);
+  assert.equal((await send({ ...base, id: 'school', kind: 'education', data: { school: '华中科技大学', schoolJa: '華中科技大学' } })).status, 200);
+  const { entries } = await (await mf.dispatchFetch('http://local/api/career/resume')).json();
+  assert.equal(entries.find((e) => e.id === 'job').data.employerEn, 'Huawei Technologies Co., Ltd.');
+  assert.equal(entries.find((e) => e.id === 'school').data.schoolJa, '華中科技大学');
+});

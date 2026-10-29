@@ -6,6 +6,7 @@ import { personalizedResumeSchema } from '../lib/personalized-resume';
 import { resumeWriteSchema, resumeSections } from '../lib/resume';
 import protocol from '../lib/career-protocol.generated.json';
 import { preferenceGroups } from '../lib/job-preferences';
+import { jobStatuses } from '../lib/job-status';
 
 export const CAREER_SCOPES = {
   'career:read': { description: 'Read profile, resume, jobs, materials, tasks and practice records', required: true },
@@ -276,6 +277,19 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       handler: (payload, ctx) => api(ctx, 'jobs/rating', payload),
+    },
+    {
+      name: 'career_update_job_status',
+      scope: 'career:write',
+      description: 'Record one existing job’s application status only when the user explicitly tells you the new status (for example “#19 is now 书类选考”). Never infer it from emails, job sites, interview invitations or your own judgment, and never submit applications or contact employers. Read career_get_context first for id and current revision. Pass statusDate (YYYY-MM-DD, not in the future) when the user says on which day it changed; omitted means now. Only status, history (a new dated entry when the status changes), revision and updatedAt change; priority, rating, match notes, next action, dates and notes are preserved. Repeating the current status with a different statusDate corrects the date of its latest history entry; otherwise it changes nothing. A stale revision is rejected; read back after saving and call once per job.',
+      inputSchema: {
+        id: z.string().min(1).max(120),
+        revision: z.number().int().positive(),
+        status: z.enum(jobStatuses),
+        statusDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      handler: (payload, ctx) => api(ctx, 'jobs/status', payload),
     },
     {
       name: 'career_update_job_preference',

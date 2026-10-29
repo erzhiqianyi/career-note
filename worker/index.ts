@@ -20,8 +20,8 @@ import { applicationBodyIssues, type ApplicationKind, type MaterialReviewItem } 
 import { normalizeCompanyProfile } from '../lib/company-profile';
 import { plainJapanese } from '../lib/japanese-readings';
 import { preferenceGroups } from '../lib/job-preferences';
+import { jobStatuses, type JobStatus } from '../lib/job-status';
 
-type JobStatus = '关注中' | '准备投递' | '已投递' | '书类选考' | '面试中' | '内定' | '未通过' | '已撤回';
 type JobPriority = '高' | '普通' | '低';
 type McpScope = 'career:read' | 'career:write' | 'agent:write' | 'admin';
 type FirebaseClaim = Record<string, unknown>;
@@ -68,7 +68,7 @@ class AppError extends Error {
   }
 }
 
-const STATUSES: JobStatus[] = ['关注中', '准备投递', '已投递', '书类选考', '面试中', '内定', '未通过', '已撤回'];
+const STATUSES: readonly JobStatus[] = jobStatuses;
 const PRIORITIES: JobPriority[] = ['高', '普通', '低'];
 // Research verdict from the company-search skill; empty means not yet assessed.
 const MATCH_LEVELS = ['优先准备', '先确认条件', '暂不匹配'];
@@ -363,6 +363,25 @@ function validateResearch(data: Record<string, unknown>) {
   return result;
 }
 
+type StatusEntry = { status: string; at: string };
+/**
+ * Status history after recording `status`. A new status appends an entry dated `statusDate` (YYYY-MM-DD, the day
+ * it actually changed) or now; repeating the current status with a different date corrects the latest entry.
+ */
+function statusHistory(history: unknown, previous: unknown, status: string, statusDate: string): StatusEntry[] {
+  const list = [...((history as StatusEntry[]) || [])];
+  const at = statusDate ? statusDate + 'T00:00:00.000Z' : now();
+  const last = list[list.length - 1];
+  if (previous !== status) list.push({ status, at });
+  else if (statusDate && last?.status === status && last.at.slice(0, 10) !== statusDate) list[list.length - 1] = { ...last, at };
+  return list;
+}
+function validateStatusDate(value: unknown) {
+  const date = validateDay(value, 'statusDate');
+  if (date && date > today()) throw new AppError(400, '状态更新日期不能晚于今天');
+  return date;
+}
+
 async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnly = false) {
   await ensureCompanyNumbers(db);
   const key = data.id ? validateString(data.id, 'id', { required: true, max: 120 }) : toId();
@@ -414,9 +433,7 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
     base.nextAction = nextAction;
     base.nextDate = nextDate;
     base.notes = notes;
-    const history = [...((old?.history as unknown[]) || [])] as Array<{ status: string; at: string }>;
-    if (!old || old.status !== status) history.push({ status, at: now() });
-    base.history = history;
+    base.history = statusHistory(old?.history, old?.status, status, validateStatusDate(data.statusDate));
     base.revision = (old ? Number(old.revision) : 0) + 1;
     base.updatedAt = now();
   }
@@ -477,6 +494,35 @@ async function updateJobPersonalField(db: Workspace, data: Record<string, unknow
     if (!(await getRecord(db, 'jobs', id))) throw new AppError(404, '职位不存在');
     throw new AppError(409, '职位已更新，请读取最新 revision 后重试');
   }
+  return JSON.parse(saved.body);
+}
+
+/**
+ * Changes only the application status, appending to history as the job editor does. Follow-ups, notes,
+ * priority, rating and research are left untouched, so an agent can record a status the user reports.
+ */
+async function updateJobStatus(db: Workspace, data: Record<string, unknown>) {
+  if (Array.isArray(data) || Object.keys(data).some(key => !['id', 'revision', 'status', 'statusDate'].includes(key))) {
+    throw new AppError(400, '更新只接受 id、revision、status 和 statusDate');
+  }
+  const id = validateString(data.id, 'id', { required: true, max: 120 });
+  const revision = data.revision;
+  const status = data.status;
+  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
+    throw new AppError(400, 'revision 必须是正整数');
+  }
+  if (typeof status !== 'string' || !STATUSES.includes(status as JobStatus)) throw new AppError(400, '无效的投递状态');
+  const statusDate = validateStatusDate(data.statusDate);
+  const job = await getRecord(db, 'jobs', id);
+  if (!job) throw new AppError(404, '职位不存在');
+  if (job.revision !== revision) throw new AppError(409, '职位已更新，请读取最新 revision 后重试');
+  const history = statusHistory(job.history, job.status, status, statusDate);
+  if (JSON.stringify(history) === JSON.stringify(job.history || [])) return job;
+  const at = now();
+  const saved = await db.connection.prepare(
+    "UPDATE records SET body=json_set(body, '$.status', ?3, '$.history', json(?4), '$.revision', ?5, '$.updatedAt', ?6) WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?7 RETURNING body",
+  ).bind(workspaceKey(db, 'jobs'), id, status, JSON.stringify(history), revision + 1, at, revision).first<{ body: string }>();
+  if (!saved) throw new AppError(409, '职位已更新，请读取最新 revision 后重试');
   return JSON.parse(saved.body);
 }
 
@@ -1091,7 +1137,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
             (field) => Object.prototype.hasOwnProperty.call(obj, field),
           )
         ) {
-          throw new AppError(400, 'Agent 导入不能修改投递状态或个人跟进信息，请在网页编辑');
+          throw new AppError(400, 'Agent 导入不能修改投递状态或个人跟进信息；投递状态请按本人指示使用 career_update_job_status，其余请在网页编辑');
         }
         if (preview && obj.companyProfile !== undefined) {
           try { normalizeCompanyProfile(obj.companyProfile); }
@@ -1683,6 +1729,10 @@ const handler = async (
     case '/api/career/jobs/preference':
       ensureScopes(context, ['career:write']);
       result = await updateJobPersonalField(db, payload, 'preferenceGroup');
+      break;
+    case '/api/career/jobs/status':
+      ensureScopes(context, ['career:write']);
+      result = await updateJobStatus(db, payload);
       break;
     case '/api/career/jobs/delete':
       ensureScopes(context, ['career:write']);

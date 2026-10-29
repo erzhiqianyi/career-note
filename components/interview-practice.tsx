@@ -31,13 +31,15 @@ import {
   X,
 } from 'lucide-react';
 import StatusMark from '@/components/status-mark';
-import { api, apiBlob, apiUpload, materialKinds, statuses, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
+import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { buildHints, type Hints } from '@/lib/interview-hints';
 import { resumeSections } from '@/lib/resume';
 import { prepRank, prepStage, prepStageTone, type PrepProgress } from '@/lib/prep-stage';
 import { Ja } from '@/components/japanese-text';
 import { CompanyBoard } from '@/components/company-board';
+import { CompanyTimeline, ProgressStepper } from '@/components/company-progress';
+import type { CareerEvent } from '@/lib/calendar-events';
 import { plainJapanese } from '@/lib/japanese-readings';
 const profileLabels: Record<string, string> = {
   summary: '个人概要',
@@ -62,9 +64,10 @@ const emptyDraft: Draft = {
 type PrepSortKey = 'company' | 'rating' | 'status' | 'schedule' | 'prep';
 type PrepColumn = PrepSortKey;
 /** Sections of one company's preparation page. */
-type PrepTab = 'info' | 'board' | 'materials' | 'practice' | 'summary';
+type PrepTab = 'info' | 'progress' | 'board' | 'materials' | 'practice' | 'summary';
 const PREP_TABS: Array<[PrepTab, string]> = [
   ['info', '企业'],
+  ['progress', '进度'],
   ['board', '企业看板'],
   ['materials', '资料'],
   ['practice', '练习'],
@@ -113,6 +116,7 @@ export default function InterviewPractice({
   onAddJob,
   onImport,
   onEditJob,
+  onOpenEvent,
 }: {
   data: State;
   reload: () => Promise<void>;
@@ -125,6 +129,7 @@ export default function InterviewPractice({
   onAddJob?: () => void;
   onImport?: () => void;
   onEditJob?: (job: Job) => void;
+  onOpenEvent?: (event: CareerEvent) => void;
 }) {
   const { t: tr, locale } = useLocale();
   const day = (v: string) => (v ? v.slice(0, 10).replaceAll('-', '.') : '—');
@@ -516,7 +521,7 @@ export default function InterviewPractice({
             {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
             <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{job.preferenceGroup && <> · {tr(job.preferenceGroup)}</>}</>} onClick={() => setCompany(job.id)} />
             <DataCell label={tr('个人评分')} className="prep-rating"><span aria-label={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')} title={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')}>{job.rating ? <>{'★'.repeat(job.rating)}<span className="rating-empty">{'☆'.repeat(5 - job.rating)}</span></> : <span className="muted">{tr('未评分')}</span>}</span></DataCell>
-            <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label /></DataCell>
+            <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label />{statusSince(job) && <small className="muted prep-status-date" title={tr('状态更新日期')}>{day(statusSince(job))}</small>}</DataCell>
             <DataCell label={tr('面试 / 跟进')} className="prep-schedule">
               {job.nextDate ? <>
                 <b className={'prep-when' + (overdue ? ' prep-overdue' : interview ? ' prep-interview' : '')} title={tr(overdue ? '已逾期' : interview ? '面试日' : '待跟进')}>
@@ -545,7 +550,7 @@ export default function InterviewPractice({
   const currentJob = data.jobs.find(j => j.id === jobId);
   if (company && !practiceRecord && !guide && !help) {
     // Keep the company and posting together, and show practice feedback with its summary.
-    const tabs = PREP_TABS.filter(([id]) => !isBank || (id !== 'info' && id !== 'board'));
+    const tabs = PREP_TABS.filter(([id]) => !isBank || (id !== 'info' && id !== 'progress' && id !== 'board'));
     const activeTab = tabs.some(([id]) => id === tab) ? tab : 'practice';
     const companyMaterials = materialsFor(isBank ? '' : jobId);
     const archivedMaterials = materialsFor(isBank ? '' : jobId, true);
@@ -579,6 +584,8 @@ export default function InterviewPractice({
     ));
     return <div className="practice-workspace practice-company-page">
       <RecordBack onBack={() => setCompany(null)} title={currentJob ? `${tr('公司')}${currentJob.companyNumber ? ` #${currentJob.companyNumber}` : ''} · ${currentJob.company}` : tr('面试准备')} action={{ label: tr('操作'), onClick: () => setActionOpen(true) }} />
+      {/* Where the application stands, visible from every tab; the 进度 tab holds the full timeline. */}
+      {currentJob && !isBank && activeTab !== 'progress' && <ProgressStepper job={currentJob} today={data.today} />}
       <div className="prep-tabs" role="tablist" aria-label={tr('面试准备')}>
         {tabs.map(([id, label]) => {
           const count = id === 'materials' ? companyMaterials.length : 0;
@@ -587,6 +594,13 @@ export default function InterviewPractice({
           </button>;
         })}
       </div>
+      {activeTab === 'progress' && currentJob && <CompanyTimeline
+        job={currentJob}
+        data={data}
+        onOpenMaterial={(id) => { const material = materials.find((m) => m.id === id); if (material) openMaterial(material); }}
+        onOpenEvent={onOpenEvent}
+        onOpenPractice={() => setTab('practice')}
+      />}
       {activeTab === 'info' && currentJob && <div className="prep-tab-panel prep-info">
         <details className="panel prep-info-section" open>
           <summary className="prep-info-heading"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><Building2 size={18} /></span>{tr('公司信息')}</h2></summary>
@@ -609,11 +623,6 @@ export default function InterviewPractice({
             ['公司业务与特点', currentJob.business],
             ['我的跟进记录', currentJob.notes],
           ], ['公司业务与特点'])}
-          <details className="text-section detail-disclosure"><summary><span className="prep-detail-icon" aria-hidden="true"><Clock3 size={16} /></span><span>{tr('投递时间线')} · {currentJob.history.length}</span></summary>
-            <div className="timeline">
-              {currentJob.history.map((h, i) => <div key={i}><span className="timeline-dot" /><b>{tr(h.status)}</b><small>{day(h.at)}</small></div>)}
-            </div>
-          </details>
         </details>
         <details className="panel prep-info-section" open>
           <summary className="prep-info-heading"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><BriefcaseBusiness size={18} /></span>{tr('招聘信息')}</h2></summary>
