@@ -2,7 +2,7 @@
 
 履歴情報を `resume_entries` の独立したレコードとして保存する。種類は基本資料、職歴、学歴、個人・業務プロジェクト、技能、成果、言語、希望条件、文書版。種類別のフィールド定義と入力検証は `lib/resume.ts` を共有する。年月、URL、必須値、未知フィールドをAPI側でも検証する。
 
-各レコードはユーザーの名前空間、id、kind、language（ja/zh/en、省略時はja）、revision、parent_id、archived、構造化JSONのbody、更新日時を持つ。言語ごとに独立したレコードを保持し、画面は表示言語に一致する記録だけを表示する。基本資料と希望条件は言語ごとに1件。bodyは単一のMarkdownではなく、employer、client、role、startDateなどの種類別フィールドを持つ。プロジェクトは職歴へ、技能・成果は職歴またはプロジェクトへ関連付けられる。由来と確認状態は各レコードに保存する。
+各レコードはユーザーの名前空間、id、kind、language（ja/zh/en、省略時はja）、revision、parent_id、archived、構造化JSONのbody、更新日時を持つ。言語ごとに独立したレコードを保持し、画面は表示言語に一致する記録だけを表示する。基本資料と希望条件は言語ごとに1件。bodyは単一のMarkdownではなく、employer、client、role、startDateなどの種類別フィールドを持つ。職歴のemployerEn（勤務先の英語名）と学歴のschoolJa（学校名の日本語表記）は応募フォームへのコピー用で、画面のコピーボタンはこれを優先し、なければ原名をコピーする。プロジェクトは職歴へ、技能・成果は職歴またはプロジェクトへ関連付けられる。由来と確認状態は各レコードに保存する。
 
 - `GET /api/career/resume`：本人の全レコード（アーカイブを含む）。
 - `POST /api/career/resume`：1レコードの作成・編集・アーカイブ・復元。新規はrevision 0、更新は最新revision。idと種類は変更しない。

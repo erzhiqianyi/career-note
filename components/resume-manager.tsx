@@ -74,7 +74,9 @@ const sectionIcon: Record<ResumeKind, typeof Briefcase> = {
 const headFields = new Set([
   'name',
   'employer',
+  'employerEn',
   'school',
+  'schoolJa',
   'title',
   'role',
   'client',
@@ -148,6 +150,28 @@ const overviewLabels: Partial<Record<ResumeKind, string>> = { basics: '个人信
 /** Amounts as typed may carry commas or a trailing 円; the server stores plain digits. */
 const plainAmount = (value = '') => value.replace(/[,，\s]/g, '').replace(/円$/, '');
 const yen = (value: string | number) => Number(value).toLocaleString('ja-JP') + ' 円';
+/** The name a Japanese application form wants: the company in English, the school in Japanese, else the original. */
+function formName(entry: ResumeEntry) {
+  if (entry.kind === 'employment') return entry.data.employerEn || entry.data.employer || '';
+  if (entry.kind === 'education') return entry.data.schoolJa || entry.data.school || '';
+  return '';
+}
+/** One-click copy of a name, without the {reading} annotations shown on screen. */
+function CopyName({ text }: { text: string }) {
+  const { t } = useLocale();
+  const [copied, setCopied] = useState(false);
+  const plain = plainJapanese(text);
+  return <button
+    type="button"
+    className={'icon-button resume-copy-name' + (copied ? ' is-copied' : '')}
+    title={copied ? t('已复制') : t('复制「{0}」', [plain])}
+    aria-label={t('复制「{0}」', [plain])}
+    onClick={async (event) => {
+      event.stopPropagation();
+      try { await navigator.clipboard.writeText(plain); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard blocked: nothing to undo */ }
+    }}
+  >{copied ? <Check size={16} /> : <Copy size={16} />}</button>;
+}
 function initials(name = '') {
   name = plainJapanese(name);
   const parts = name.trim().split(/\s+/);
@@ -683,7 +707,14 @@ export default function ResumeManager({
         <div className="resume-record-main">
           <div className="resume-record-head">
             <div>
-              <h3><Ja text={resumeTitle(entry)} /></h3>
+              <h3><Ja text={resumeTitle(entry)} />{formName(entry) && <CopyName text={entry.kind === 'employment' ? entry.data.employer : entry.data.school} />}</h3>
+              {(entry.data.employerEn || entry.data.schoolJa) && (
+                <p className="resume-name-variant">
+                  <small>{t(entry.kind === 'employment' ? '英文名称' : '日语名称')}</small>
+                  <span lang={entry.kind === 'employment' ? 'en' : 'ja'}>{entry.kind === 'employment' ? entry.data.employerEn : <Ja text={entry.data.schoolJa} />}</span>
+                  <CopyName text={entry.kind === 'employment' ? entry.data.employerEn : entry.data.schoolJa} />
+                </p>
+              )}
               {subtitle && <p><Ja text={subtitle} /></p>}
               {(entry.data.location || entry.data.url) && (
                 <p className="resume-record-meta">
@@ -993,6 +1024,7 @@ export default function ResumeManager({
                     {row.period && <span className="resume-record-period">{row.period}</span>}
                     {entry.verification === 'pending' && <span className="resume-record-pending">{t('待确认')}</span>}
                   </button>
+                  {!role && formName(entry) && <CopyName text={formName(entry)} />}
                   <button className="icon-button resume-record-edit" title={t('编辑')} aria-label={t('编辑') + ' ' + plainJapanese(row.title)} disabled={busy} onClick={() => start(k, entry)}><Pencil size={19} /></button>
                 </li>;
               })}

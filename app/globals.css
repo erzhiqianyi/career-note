@@ -4232,3 +4232,14 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
   .step-day-full {display:none;}
   .step-day-short {display:inline;}
 }
+
+/* Copy a company or school name straight into an application form. */
+.resume-copy-name { flex-shrink: 0; min-width: 44px; min-height: 44px; color: var(--ink-3); }
+.resume-record-list > li .resume-copy-name { margin-right: -16px; }
+.resume-copy-name.is-copied { color: #2f6b45; }
+.resume-record-head h3 { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.resume-record-head h3 .resume-copy-name { min-width: 32px; min-height: 32px; padding: 6px; }
+.resume-name-variant { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 2px 0 6px; }
+.resume-name-variant small { padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .6875rem; }
+.resume-name-variant .resume-copy-name { min-width: 32px; min-height: 32px; padding: 6px; }
+@media (max-width: 700px) { .resume-record-list > li .resume-copy-name { margin-right: -4px; } }

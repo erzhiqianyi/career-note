@@ -5796,5 +5796,10 @@
   "未定日期": { "ja": "日付未定", "en": "No date" },
   "接下来": { "ja": "これから", "en": "Coming up" },
   "已经发生": { "ja": "これまで", "en": "So far" },
-  "还没有记录": { "ja": "まだ記録がありません", "en": "Nothing recorded yet" }
+  "还没有记录": { "ja": "まだ記録がありません", "en": "Nothing recorded yet" },
+  "雇主英文名称": { "ja": "勤務先（英語名）", "en": "Employer (English name)" },
+  "学校日语名称": { "ja": "学校名（日本語表記）", "en": "School (Japanese name)" },
+  "英文名称": { "ja": "英語名", "en": "English name" },
+  "日语名称": { "ja": "日本語表記", "en": "Japanese name" },
+  "复制「{0}」": { "ja": "「{0}」をコピー", "en": "Copy “{0}”" }
 }

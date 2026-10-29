@@ -74,6 +74,8 @@ export const resumeSections: Record<
     label: '工作经历',
     fields: [
       field('employer', '雇主', { required: true }),
+      // Japanese forms often ask for the company in English; only the official English name, never a made-up one.
+      field('employerEn', '雇主英文名称'),
       field('client', '客户或项目'),
       field('role', '职位', { required: true }),
       field('startDate', '开始年月', { date: true }),
@@ -87,6 +89,8 @@ export const resumeSections: Record<
     label: '教育经历',
     fields: [
       field('school', '学校', { required: true }),
+      // Official Japanese name, or the name in Japanese kanji (新字体) when there is none.
+      field('schoolJa', '学校日语名称'),
       field('major', '专业或课程'),
       field('degree', '学位'),
       field('startDate', '开始年月', { date: true }),
