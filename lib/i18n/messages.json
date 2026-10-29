@@ -648,10 +648,6 @@
     "ja": "求人一覧に戻る",
     "en": "Back to jobs"
   },
-  "投递时间线": {
-    "ja": "応募履歴",
-    "en": "Application timeline"
-  },
   "更新进展": {
     "ja": "進捗を更新",
     "en": "Update progress"
@@ -5791,5 +5787,14 @@
   "详细说明": { "ja": "詳しい説明", "en": "Details" },
   "复制失败": { "ja": "コピーできませんでした", "en": "Copy failed" },
   "打开公开页面（可分享）": { "ja": "公開ページを開く（共有用）", "en": "Open the public page (shareable)" },
-  "状态更新日期": { "ja": "ステータス更新日", "en": "Status date" }
+  "状态更新日期": { "ja": "ステータス更新日", "en": "Status date" },
+  "进度": { "ja": "進捗", "en": "Progress" },
+  "选考进度": { "ja": "選考の進捗", "en": "Selection progress" },
+  "未填写内容": { "ja": "内容未記入", "en": "No details yet" },
+  "回答 {0} 题": { "ja": "{0} 問回答", "en": "{0} answers" },
+  "点评 {0} 条": { "ja": "講評 {0} 件", "en": "{0} reviews" },
+  "未定日期": { "ja": "日付未定", "en": "No date" },
+  "接下来": { "ja": "これから", "en": "Coming up" },
+  "已经发生": { "ja": "これまで", "en": "So far" },
+  "还没有记录": { "ja": "まだ記録がありません", "en": "Nothing recorded yet" }
 }

@@ -4,11 +4,13 @@ import type { CompanyProfile } from './company-profile';
 import type { PreferenceGroup } from './job-preferences';
 export { preferenceGroups } from './job-preferences';
 import { jobStatuses } from './job-status';
+import { workspaceDay } from './workspace-day';
 // Plain string[] so existing callers can index it with any stored value.
 export const statuses: string[] = [...jobStatuses];
-/** Day (YYYY-MM-DD) the job entered its current status, from the latest matching history entry. */
+/** Day (YYYY-MM-DD, Tokyo) the job entered its current status, from the latest matching history entry. */
 export function statusSince(job: { status?: string; history?: { status: string; at: string }[] }): string {
-  return [...(job.history || [])].reverse().find((entry) => entry.status === job.status)?.at.slice(0, 10) || '';
+  const at = [...(job.history || [])].reverse().find((entry) => entry.status === job.status)?.at;
+  return at ? workspaceDay(at) : '';
 }
 export const matchLevels = ['优先准备', '先确认条件', '暂不匹配'];
 export const sourceChannels = ['主动发现', 'AI 搜索', 'Agent 推荐'] as const;

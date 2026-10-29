@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { useLocale } from '@/components/locale-provider';
 import type { Job } from '@/lib/career';
 import { eventIcs, type CareerEvent, type EventKind, type EventLink, type EventStatus, type EventTimeStatus, type EventTodo } from '../lib/calendar-events';
+import { workspaceDay } from '../lib/workspace-day';
 
 export type CalendarMarkKind = 'due' | 'interview' | 'target';
 /** A dated item on the calendar; `jobs` are the companies involved (empty for the target date). */
@@ -19,12 +20,7 @@ export type DayActivity = {
 
 export const isFollowingJob = (job: Job) => ['已投递', '书类选考', '面试中'].includes(job.status);
 
-const TOKYO_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' });
-/** ISO timestamp → YYYY-MM-DD in the workspace timezone (the API's `today` uses Asia/Tokyo too). */
-export function workspaceDay(at: string): string {
-  const time = Date.parse(at);
-  return Number.isNaN(time) ? at.slice(0, 10) : TOKYO_DAY.format(time);
-}
+export { workspaceDay };
 
 export function collectActivity(jobs: Job[]): Record<string, DayActivity> {
   const days: Record<string, DayActivity> = {};

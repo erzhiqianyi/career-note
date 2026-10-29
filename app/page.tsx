@@ -1183,6 +1183,7 @@ export default function Home() {
                   onAddJob={() => openJobEditor({})}
                   onImport={() => { setImportOpen(true); setPreview(null); }}
                   onEditJob={(j) => openJobEditor(j)}
+                  onOpenEvent={(event) => setEventId(event.id)}
                 />
               </div>
               {briefOpen && (
