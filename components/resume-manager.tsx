@@ -18,6 +18,7 @@ import {
   Globe,
   GraduationCap,
   History,
+  JapaneseYen,
   Languages,
   Layers,
   Link2,
@@ -32,6 +33,8 @@ import {
 } from 'lucide-react';
 import { api, download, type Profile } from '@/lib/career';
 import {
+  annualFromMonthly,
+  incomeSources,
   resumeKinds,
   resumeLanguageLabels,
   resumeLanguages,
@@ -65,6 +68,7 @@ const sectionIcon: Record<ResumeKind, typeof Briefcase> = {
   achievement: Trophy,
   language: Languages,
   preferences: Target,
+  compensation: JapaneseYen,
   document: FileText,
 };
 const headFields = new Set([
@@ -101,7 +105,7 @@ const groupedKinds: Partial<Record<ResumeKind, ResumeKind[]>> = {
 const kindsOf = (k: ResumeKind) => groupedKinds[k] || [k];
 const sectionLabels: Record<ResumeKind, string> = {
   basics: '概要', employment: '工作经历与项目', education: '基本信息', project: '工作经历与项目',
-  skill: '技能与语言', achievement: '成果与案例', language: '技能与语言', preferences: '基本信息', document: '资料与版本',
+  skill: '技能与语言', achievement: '成果与案例', language: '技能与语言', preferences: '基本信息', compensation: '基本信息', document: '资料与版本',
 };
 
 /** 把多行文本拆成条目，去掉手写的「1.」「-」等前缀，交给真正的列表渲染。 */
@@ -138,6 +142,12 @@ function headlineLead(text: string) {
   }
   return text.trim();
 }
+/** 概要 groups the one-per-person records behind sub-tabs. */
+const overviewKinds: ResumeKind[] = ['basics', 'education', 'preferences', 'compensation'];
+const overviewLabels: Partial<Record<ResumeKind, string>> = { basics: '个人信息', education: '教育经历', preferences: '求职方向', compensation: '现年收' };
+/** Amounts as typed may carry commas or a trailing 円; the server stores plain digits. */
+const plainAmount = (value = '') => value.replace(/[,，\s]/g, '').replace(/円$/, '');
+const yen = (value: string | number) => Number(value).toLocaleString('ja-JP') + ' 円';
 function initials(name = '') {
   name = plainJapanese(name);
   const parts = name.trim().split(/\s+/);
@@ -180,7 +190,9 @@ export default function ResumeManager({
     }))
     .filter((x) => x.n);
   const basics = active.find((e) => e.kind === 'basics');
-  const records = active.filter((e) => e.kind !== 'basics');
+  // One record whatever the interface language: pay figures are facts, not translations.
+  const compensation = entries.find((e) => e.kind === 'compensation' && !e.archived);
+  const records = active.filter((e) => e.kind !== 'basics' && e.kind !== 'compensation');
   const counts = (list: ResumeEntry[]) => ({
     confirmed: list.filter((e) => e.verification === 'confirmed').length,
     pending: list.filter((e) => e.verification === 'pending').length,
@@ -251,7 +263,7 @@ export default function ResumeManager({
             id: crypto.randomUUID(),
             revision: 0,
             kind: target,
-            language,
+            language: target === 'compensation' ? 'ja' : language,
             data: {},
             parentId: '',
             sourceNotes: '',
@@ -281,6 +293,17 @@ export default function ResumeManager({
     }
   }
 
+  /** 月收×12＋奖金 against 现年收, as the application forms check it. */
+  function incomeCheck(data: Record<string, string>) {
+    const computed = annualFromMonthly({ monthlyIncome: plainAmount(data.monthlyIncome), annualBonus: plainAmount(data.annualBonus) });
+    if (computed === null || Number.isNaN(computed)) return null;
+    const annual = data.annualIncome ? Number(plainAmount(data.annualIncome)) : null;
+    const matches = annual === computed;
+    return <output className={'resume-income-check ' + (annual === null ? '' : matches ? 'is-ok' : 'is-off')}>
+      {t('月收×12＋奖金 = {0}', [yen(computed)])}
+      {annual !== null && (matches ? ' · ' + t('与现年收一致') : ' · ' + t('与现年收相差 {0}', [yen(Math.abs(annual - computed))]))}
+    </output>;
+  }
   const editor = draft && (
     <form
       className="resume-editor"
@@ -309,9 +332,18 @@ export default function ResumeManager({
           <label key={f.key} className={'field' + (f.multiline ? ' wide' : '')}>
             <span>
               {t(f.label)}
+              {f.amount ? '（' + t(f.amount === 'yen' ? '日元' : '小时') + '）' : ''}
               {f.required ? ' *' : ''}
             </span>
-            {f.multiline ? (
+            {f.options ? (
+              <select
+                value={draft.data[f.key] || ''}
+                onChange={(e) => setDraft({ ...draft, data: { ...draft.data, [f.key]: e.target.value } })}
+              >
+                <option value="">{t('（未选择）')}</option>
+                {f.options.map((option) => <option key={option.value} value={option.value}>{t(option.label)}</option>)}
+              </select>
+            ) : f.multiline ? (
               <textarea
                 required={f.required}
                 rows={f.key === 'content' ? 14 : 4}
@@ -327,6 +359,7 @@ export default function ResumeManager({
               <input
                 required={f.required}
                 type={f.date ? 'month' : 'text'}
+                inputMode={f.amount === 'yen' ? 'numeric' : f.amount === 'hours' ? 'decimal' : undefined}
                 value={draft.data[f.key] || ''}
                 onChange={(e) =>
                   setDraft({
@@ -339,6 +372,7 @@ export default function ResumeManager({
           </label>
         ))}
       </div>
+      {draft.kind === 'compensation' && incomeCheck(draft.data)}
       <fieldset className="resume-verify">
         <legend>{t('来源与核对')}</legend>
         <div className="resume-fields">
@@ -367,7 +401,7 @@ export default function ResumeManager({
               </select>
             </label>
           )}
-          <label className="field">
+          {draft.kind !== 'compensation' && <label className="field">
             <span>{t('记录语言')}</span>
             <select
               value={draft.language}
@@ -384,7 +418,7 @@ export default function ResumeManager({
                 </option>
               ))}
             </select>
-          </label>
+          </label>}
           <label className="field">
             <span>{t('确认状态')}</span>
             <select
@@ -832,7 +866,7 @@ export default function ResumeManager({
       </section>
 
       <nav className="resume-category-tabs" aria-label={t('履历分类')}>
-        <button aria-current={['basics', 'education', 'preferences'].includes(kind) ? 'page' : undefined} onClick={() => chooseKind('basics')}>{t('概要')}</button>
+        <button aria-current={overviewKinds.includes(kind) ? 'page' : undefined} onClick={() => chooseKind('basics')}>{t('概要')}</button>
         {primaryKinds.map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={() => chooseKind(k)}>{t(sectionLabels[k])}</button>)}
         {moreKinds.length > 0 && <details className="resume-category-more" onKeyDown={event => {
           if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); }
@@ -850,8 +884,8 @@ export default function ResumeManager({
         </details>}
       </nav>
 
-      {['basics', 'education', 'preferences'].includes(kind) && <nav className="resume-sub-tabs" aria-label={t('基本信息')}>
-        {(['basics', 'education', 'preferences'] as ResumeKind[]).map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={() => chooseKind(k)}>{t(k === 'basics' ? '个人信息' : k === 'education' ? '教育经历' : '求职方向')}</button>)}
+      {overviewKinds.includes(kind) && <nav className="resume-sub-tabs" aria-label={t('基本信息')}>
+        {overviewKinds.map(k => <button key={k} aria-current={kind === k ? 'page' : undefined} onClick={() => chooseKind(k)}>{t(overviewLabels[k] || '')}</button>)}
       </nav>}
 
       {showTools && <aside className="resume-library-tools" aria-label={t('资料状态与筛选')}>
@@ -899,6 +933,32 @@ export default function ResumeManager({
             <div className="empty"><Icon size={26} /><h3>{t('还没有基本资料')}</h3></div>
           )}
           {basics && <div className="resume-basics-footer">{footer(basics)}</div>}
+        </section>
+      ) : kind === 'compensation' ? (
+        <section className="resume-records resume-basics-card" aria-labelledby="resume-records-heading">
+          <div className="resume-records-heading">
+            <h2 id="resume-records-heading">{t(resumeSections.compensation.label)}</h2>
+            <button className={compensation ? 'secondary' : 'primary'} disabled={busy} onClick={() => start('compensation', compensation)}>
+              {compensation ? <Pencil size={16} /> : <Plus size={18} />}{compensation ? t('编辑') : t('添加{0}', [t(resumeSections.compensation.label)])}
+            </button>
+          </div>
+          <p className="page-note resume-income-note">{t('应募表单「現在の状況・職歴」里的年収詳細・諸手当与年収参照先。请填写税前金额，且「月收×12＋奖金」须与现年收一致；面试或入职时可能要求提交源泉徴収票或工资单，最好照着票据填写。')}</p>
+          {error && <p role="alert" className="resume-error">{error}</p>}
+          {compensation ? <>
+            <dl className="resume-details resume-basics-details">
+              {resumeSections.compensation.fields.filter(f => f.amount).map(f => {
+                const value = compensation.data[f.key];
+                const allowance = f.key.match(/^allowance(\d)Amount$/);
+                if (allowance && !value) return null;
+                const label = allowance ? compensation.data['allowance' + allowance[1] + 'Name'] || t('其他津贴 {0}', [allowance[1]]) : t(f.label);
+                return <div key={f.key}><dt>{label}</dt><dd>{value ? f.amount === 'yen' ? yen(value) : t('{0} 小时', [value]) : <span className="muted">{t('（尚未填写）')}</span>}</dd></div>;
+              })}
+              <div><dt>{t('年收参照先')}</dt><dd>{compensation.data.incomeSource ? t(incomeSources.find(o => o.value === compensation.data.incomeSource)?.label || '') : <span className="muted">{t('（尚未填写）')}</span>}</dd></div>
+              {compensation.data.incomeSourceNote && <div className="wide"><dt>{t('参照先说明')}</dt><dd className="prewrap">{compensation.data.incomeSourceNote}</dd></div>}
+            </dl>
+            {incomeCheck(compensation.data)}
+            <div className="resume-basics-footer">{footer(compensation)}</div>
+          </> : <div className="empty"><Icon size={26} /><h3>{t('还没有现年收明细')}</h3></div>}
         </section>
       ) : (
       <section className="resume-records" aria-labelledby="resume-records-heading">

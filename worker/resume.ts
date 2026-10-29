@@ -145,6 +145,15 @@ export async function writeResume(
         value: { error: '该分类在此语言下已有记录，请编辑现有记录' },
       };
   }
+  // Current pay is a fact about the person, not a translation: one record serves every interface language.
+  if (!entry.archived && entry.kind === 'compensation') {
+    const duplicate = await db
+      .prepare("SELECT id FROM resume_entries WHERE owner=? AND kind='compensation' AND archived=0 AND id<>?")
+      .bind(owner, entry.id)
+      .first();
+    if (duplicate)
+      return { status: 409, value: { error: '现年收明细已有记录，请编辑现有记录' } };
+  }
   const existing = await db
     .prepare('SELECT body FROM resume_entries WHERE owner=? AND id=?')
     .bind(owner, entry.id)

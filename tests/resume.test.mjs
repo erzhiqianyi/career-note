@@ -329,3 +329,26 @@ test('MCP resume reads request summaries and retrieve only the selected revision
   await deletion.handler({ id: 'doc/a', revision: 2 }, {});
   assert.equal(paths.at(-1), 'resume/delete');
 });
+
+test('current pay is one record that must add up the way application forms check it', async (t) => {
+  const mf = new Miniflare({ modules: true, script: bundled.outputFiles[0].text, compatibilityDate: '2026-05-22', d1Databases: ['CAREER_DB'] });
+  t.after(() => mf.dispose());
+  const send = (body) => mf.dispatchFetch('http://local/api/career/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const base = { id: 'pay', revision: 0, kind: 'compensation', language: 'zh', parentId: '', sourceNotes: '令和7年分 源泉徴収票', verification: 'confirmed', archived: false };
+  const data = { annualIncome: '5,400,000', monthlyIncome: '400000円', overtimeHours: '12.5', overtimePay: '35000', housingAllowance: '20000', companyHousing: '0', allowance1Name: '通勤手当', allowance1Amount: '10000', annualBonus: '600000', incomeSource: 'withholding' };
+  const mismatch = await send({ ...base, data: { ...data, annualBonus: '500000' } });
+  assert.equal(mismatch.status, 400);
+  assert.match((await mismatch.json()).error, /不一致/);
+  assert.equal((await send({ ...base, data: { ...data, incomeSource: 'other' } })).status, 400);
+  assert.equal((await send({ ...base, data: { ...data, incomeSource: 'payslip' } })).status, 400);
+  assert.equal((await send({ ...base, data: { ...data, overtimePay: '3.5万' } })).status, 400);
+  const saved = await send({ ...base, data });
+  assert.equal(saved.status, 200, await saved.clone().text());
+  const { entries } = await (await mf.dispatchFetch('http://local/api/career/resume')).json();
+  const pay = entries.find((e) => e.id === 'pay');
+  assert.equal(pay.language, 'ja');
+  assert.equal(pay.data.annualIncome, '5400000');
+  assert.equal(pay.data.monthlyIncome, '400000');
+  // A second record in another language would split the facts; the existing one must be edited instead.
+  assert.equal((await send({ ...base, id: 'pay-en', language: 'en', data })).status, 409);
+});
