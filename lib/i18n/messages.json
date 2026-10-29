@@ -10,7 +10,7 @@
   "第三志望群": { "ja": "第三志望群", "en": "Third-choice group" },
   "未选择": { "ja": "未選択", "en": "Not selected" },
   "申请意愿排序，与匹配星级分开记录。": { "ja": "応募先の志望度です。マッチ評価の星とは別に記録します。", "en": "Your application preference, recorded separately from the fit rating." },
-  "只在你要求时修改履历摘要、履历记录、公司个人星级或志望群。仅保存研究不需要这项权限。": { "ja": "あなたが求めたときだけプロフィール要約・履歴情報・企業の個人評価・志望群を変更します。調査の保存だけなら不要です。", "en": "Changes the profile summary, resume records, personal company ratings or preference groups only when you ask. Not needed for saving research alone." },
+  "只在你要求时修改履历摘要、履历记录、公司个人星级、志望群或投递状态。仅保存研究不需要这项权限。": { "ja": "あなたが求めたときだけプロフィール要約・履歴情報・企業の個人評価・志望群・応募ステータスを変更します。調査の保存だけなら不要です。", "en": "Changes the profile summary, resume records, personal company ratings, preference groups or application status only when you ask. Not needed for saving research alone." },
   "応募理由・100字版": { "ja": "応募理由・100字版", "en": "Application reason · 100 chars" },
   "応募理由・未准备": { "ja": "応募理由・未作成", "en": "Application reason · not prepared" },
   "志望動機・完整版": { "ja": "志望動機・全文", "en": "Motivation · full version" },
@@ -2980,9 +2980,9 @@
     "ja": "調査レポート、資料の版、質問集、講評を保存し、準備タスクを登録します。",
     "en": "Save research reports, material versions, question sets and reviews, and queue preparation tasks."
   },
-  "更新履历与个人评分": {
-    "ja": "プロフィール・履歴・個人評価を更新する",
-    "en": "Update profile, resume and personal ratings"
+  "更新履历、评分与投递状态": {
+    "ja": "プロフィール・履歴・個人評価・応募ステータスを更新する",
+    "en": "Update profile, resume, ratings and application status"
   },
   "只在你要求时修改履历摘要、履历记录或公司个人星级。仅保存研究不需要这项权限。": {
     "ja": "あなたが求めたときだけプロフィール要約・履歴情報・企業の個人評価を変更します。調査の保存だけなら不要です。",
@@ -5790,5 +5790,6 @@
   },
   "详细说明": { "ja": "詳しい説明", "en": "Details" },
   "复制失败": { "ja": "コピーできませんでした", "en": "Copy failed" },
-  "打开公开页面（可分享）": { "ja": "公開ページを開く（共有用）", "en": "Open the public page (shareable)" }
+  "打开公开页面（可分享）": { "ja": "公開ページを開く（共有用）", "en": "Open the public page (shareable)" },
+  "状态更新日期": { "ja": "ステータス更新日", "en": "Status date" }
 }

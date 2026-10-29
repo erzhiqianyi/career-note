@@ -3,16 +3,13 @@ import { freshAuthToken } from './career-auth';
 import type { CompanyProfile } from './company-profile';
 import type { PreferenceGroup } from './job-preferences';
 export { preferenceGroups } from './job-preferences';
-export const statuses = [
-  '关注中',
-  '准备投递',
-  '已投递',
-  '书类选考',
-  '面试中',
-  '内定',
-  '未通过',
-  '已撤回',
-];
+import { jobStatuses } from './job-status';
+// Plain string[] so existing callers can index it with any stored value.
+export const statuses: string[] = [...jobStatuses];
+/** Day (YYYY-MM-DD) the job entered its current status, from the latest matching history entry. */
+export function statusSince(job: { status?: string; history?: { status: string; at: string }[] }): string {
+  return [...(job.history || [])].reverse().find((entry) => entry.status === job.status)?.at.slice(0, 10) || '';
+}
 export const matchLevels = ['优先准备', '先确认条件', '暂不匹配'];
 export const sourceChannels = ['主动发现', 'AI 搜索', 'Agent 推荐'] as const;
 export const materialKinds = [

@@ -18,7 +18,7 @@ import {
 const SCOPE_TEXT: Record<string, { label: string; detail: string }> = {
   'career:read': { label: '读取你的工作区', detail: '履历、求人、资料、任务和练习记录。' },
   'agent:write': { label: '保存研究与资料', detail: '保存研究报告、资料版本、问题集和点评，排队准备任务。' },
-  'career:write': { label: '更新履历与个人评分', detail: '只在你要求时修改履历摘要、履历记录、公司个人星级或志望群。仅保存研究不需要这项权限。' },
+  'career:write': { label: '更新履历、评分与投递状态', detail: '只在你要求时修改履历摘要、履历记录、公司个人星级、志望群或投递状态。仅保存研究不需要这项权限。' },
 };
 
 export default function OauthConsent() {

@@ -31,7 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import StatusMark from '@/components/status-mark';
-import { api, apiBlob, apiUpload, materialKinds, statuses, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
+import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { buildHints, type Hints } from '@/lib/interview-hints';
 import { resumeSections } from '@/lib/resume';
@@ -516,7 +516,7 @@ export default function InterviewPractice({
             {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
             <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{job.preferenceGroup && <> · {tr(job.preferenceGroup)}</>}</>} onClick={() => setCompany(job.id)} />
             <DataCell label={tr('个人评分')} className="prep-rating"><span aria-label={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')} title={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')}>{job.rating ? <>{'★'.repeat(job.rating)}<span className="rating-empty">{'☆'.repeat(5 - job.rating)}</span></> : <span className="muted">{tr('未评分')}</span>}</span></DataCell>
-            <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label /></DataCell>
+            <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label />{statusSince(job) && <small className="muted prep-status-date" title={tr('状态更新日期')}>{day(statusSince(job))}</small>}</DataCell>
             <DataCell label={tr('面试 / 跟进')} className="prep-schedule">
               {job.nextDate ? <>
                 <b className={'prep-when' + (overdue ? ' prep-overdue' : interview ? ' prep-interview' : '')} title={tr(overdue ? '已逾期' : interview ? '面试日' : '待跟进')}>

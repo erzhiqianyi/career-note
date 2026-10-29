@@ -104,6 +104,32 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.equal((await ok(a, 'state')).jobs[0].preferenceGroup, '第二志望群');
   assert.deepEqual((await ok(b, 'state')).jobs[0], bobJobBefore);
   assert.equal((await send(issued.token, 'jobs/preference', { id: currentAliceJob.id, revision: currentAliceJob.revision, preferenceGroup: '第一志望群' })).status, 403);
+  // Application status: only through the dedicated tool, keeping the user's follow-ups and dating the change.
+  const beforeStatus=(await ok(a,'state')).jobs[0];
+  await ok(a,'jobs',{...beforeStatus,nextAction:'面接日程を返信',nextDate:'2026-11-05',notes:'自分のメモ'});
+  const tracked=(await ok(a,'state')).jobs[0];
+  assert.equal((await send(issued.token,'jobs/status',{id:tracked.id,revision:tracked.revision,status:'书类选考'})).status,403);
+  const statusWrite=await rpc(writer.token,'tools/call',{name:'career_update_job_status',arguments:{id:tracked.id,revision:tracked.revision,status:'书类选考',statusDate:'2026-10-25'}});
+  assert.equal(statusWrite.result.isError,false,JSON.stringify(statusWrite));
+  const moved=(await ok(a,'state')).jobs[0];
+  assert.equal(moved.status,'书类选考');
+  assert.equal(moved.revision,tracked.revision+1);
+  assert.deepEqual(moved.history.at(-1),{status:'书类选考',at:'2026-10-25T00:00:00.000Z'});
+  assert.equal(moved.nextAction,'面接日程を返信');assert.equal(moved.nextDate,'2026-11-05');assert.equal(moved.notes,'自分のメモ');
+  assert.equal(moved.rating,tracked.rating);assert.equal(moved.priority,tracked.priority);assert.equal(moved.preferenceGroup,tracked.preferenceGroup);
+  assert.deepEqual((await ok(b,'state')).jobs[0],bobJobBefore);
+  // Same status and date: nothing changes. Same status, new date: only the latest entry's date is corrected.
+  assert.equal((await ok(writer.token,'jobs/status',{id:moved.id,revision:moved.revision,status:'书类选考',statusDate:'2026-10-25'})).revision,moved.revision);
+  const corrected=await ok(writer.token,'jobs/status',{id:moved.id,revision:moved.revision,status:'书类选考',statusDate:'2026-10-24'});
+  assert.equal(corrected.history.length,moved.history.length);
+  assert.equal(corrected.history.at(-1).at,'2026-10-24T00:00:00.000Z');
+  assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:moved.revision,status:'面试中'})).status,409);
+  assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'通过'})).status,400);
+  assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'面试中',statusDate:'2999-01-01'})).status,400);
+  assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'面试中',nextAction:'x'})).status,400);
+  // The web editor dates a status change the same way.
+  const edited=await ok(a,'jobs',{...corrected,status:'面试中',statusDate:'2026-10-27'});
+  assert.deepEqual(edited.history.at(-1),{status:'面试中',at:'2026-10-27T00:00:00.000Z'});
   const pay={id:'current-pay',revision:0,kind:'compensation',language:'ja',parentId:'',sourceNotes:'源泉徴収票',verification:'confirmed',archived:false,data:{annualIncome:'4800000',monthlyIncome:'350000',annualBonus:'600000',incomeSource:'estimate'}};
   const payWrite=await rpc(writer.token,'tools/call',{name:'career_save_resume_entry',arguments:pay});
   assert.equal(payWrite.result.isError,false,JSON.stringify(payWrite));

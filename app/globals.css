@@ -4184,3 +4184,4 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .agent-article-prompt {margin:0;padding:16px 18px;border-radius:10px;background:#f0f5fa;color:var(--ink);font:inherit;font-size:.9rem;line-height:1.75;white-space:pre-wrap;}
 .agent-article-reader-actions {display:flex;gap:12px;align-items:center;margin-top:12px;color:var(--ink-3);font-size:.85rem;}
 .agent-article-reader footer a {display:inline-flex;gap:6px;align-items:center;font-size:.85rem;}
+.prep-status-date {display:block;margin-top:4px;font-size:.75rem;font-variant-numeric:tabular-nums;}
