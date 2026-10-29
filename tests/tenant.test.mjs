@@ -104,6 +104,13 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.equal((await ok(a, 'state')).jobs[0].preferenceGroup, '第二志望群');
   assert.deepEqual((await ok(b, 'state')).jobs[0], bobJobBefore);
   assert.equal((await send(issued.token, 'jobs/preference', { id: currentAliceJob.id, revision: currentAliceJob.revision, preferenceGroup: '第一志望群' })).status, 403);
+  const pay={id:'current-pay',revision:0,kind:'compensation',language:'ja',parentId:'',sourceNotes:'源泉徴収票',verification:'confirmed',archived:false,data:{annualIncome:'4800000',monthlyIncome:'350000',annualBonus:'600000',incomeSource:'estimate'}};
+  const payWrite=await rpc(writer.token,'tools/call',{name:'career_save_resume_entry',arguments:pay});
+  assert.equal(payWrite.result.isError,false,JSON.stringify(payWrite));
+  const payUpdate=await rpc(writer.token,'tools/call',{name:'career_save_resume_entry',arguments:{...pay,revision:1,data:{...pay.data,annualBonus:'500000'}}});
+  assert.equal(payUpdate.result.isError,true);
+  assert.equal((await ok(a,'resume')).entries.find(e=>e.id==='current-pay').data.annualBonus,'600000');
+  assert.ok(!(await ok(b,'resume')).entries.some(e=>e.id==='current-pay'));
   const draft={id:'private-draft',revision:0,title:'Private management title',targetRole:'Backend',targetCompany:'Private target',language:'en',content:{name:'Public candidate',headline:'Engineer',summary:'Public summary',location:'',links:[],sections:[]},sourceRefs:[],privateNotes:'Secret evidence'};
   const draftWrite=await rpc(writer.token,'tools/call',{name:'career_save_personalized_resume',arguments:draft});
   assert.equal(draftWrite.result.isError,false);

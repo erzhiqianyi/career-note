@@ -9,6 +9,7 @@ export const resumeKinds = [
   'achievement',
   'language',
   'preferences',
+  'compensation',
   'document',
 ] as const;
 export type ResumeKind = (typeof resumeKinds)[number];
@@ -26,12 +27,25 @@ export type ResumeField = {
   required?: boolean;
   multiline?: boolean;
   date?: boolean;
+  /** Whole yen (or hours for `hours`); stored as plain digits. */
+  amount?: 'yen' | 'hours';
+  options?: readonly { value: string; label: string }[];
 };
 const field = (
   key: string,
   label: string,
   options: Omit<ResumeField, 'key' | 'label'> = {},
 ): ResumeField => ({ key, label, ...options });
+export const incomeSources = [
+  { value: 'withholding', label: '最新的源泉徴収票或住民税決定通知' },
+  { value: 'estimate', label: '根据最近的月收和奖金估算' },
+  { value: 'other', label: '其他' },
+] as const;
+/** 月收×12＋奖金; null until the monthly figure is known. Forms reject a 现年收 that does not match it. */
+export function annualFromMonthly(data: Record<string, string>): number | null {
+  if (!data.monthlyIncome) return null;
+  return Number(data.monthlyIncome) * 12 + Number(data.annualBonus || 0);
+}
 export const resumeSections: Record<
   ResumeKind,
   { label: string; fields: ResumeField[] }
@@ -136,6 +150,25 @@ export const resumeSections: Record<
       field('conditions', '其他条件', { multiline: true }),
     ],
   },
+  // 応募フォームの「現在の状況・職歴 › 年収詳細・諸手当 / 年収参照先」。税込額で、源泉徴収票や給与明細に合わせて記入する。
+  compensation: {
+    label: '现年收明细',
+    fields: [
+      field('annualIncome', '现年收（税前）', { amount: 'yen' }),
+      field('monthlyIncome', '月收（含各种津贴的税前总额）', { amount: 'yen' }),
+      field('overtimeHours', '每月加班时间', { amount: 'hours' }),
+      field('overtimePay', '加班费（每月）', { amount: 'yen' }),
+      field('housingAllowance', '住房补贴（每月）', { amount: 'yen' }),
+      field('companyHousing', '寮・社宅的公司负担（每月）', { amount: 'yen' }),
+      field('allowance1Name', '其他津贴 1 名称'),
+      field('allowance1Amount', '其他津贴 1 金额（每月）', { amount: 'yen' }),
+      field('allowance2Name', '其他津贴 2 名称'),
+      field('allowance2Amount', '其他津贴 2 金额（每月）', { amount: 'yen' }),
+      field('annualBonus', '年间奖金', { amount: 'yen' }),
+      field('incomeSource', '年收参照先', { options: incomeSources }),
+      field('incomeSourceNote', '参照先说明（选择「其他」时必填）', { multiline: true }),
+    ],
+  },
   document: {
     label: '文档版本',
     fields: [
@@ -178,6 +211,15 @@ export function validateResume(input: unknown): ResumeWrite {
     }
     if (value && f.date && !/^\d{4}-(0[1-9]|1[0-2])$/.test(value))
       throw new Error(f.label + '请使用 YYYY-MM');
+    if (value && f.amount) {
+      const plain = value.replace(/[,，\s]/g, '').replace(/円$/, '');
+      if (!(f.amount === 'hours' ? /^\d{1,3}(\.\d{1,2})?$/ : /^\d{1,12}$/).test(plain))
+        throw new Error(f.label + (f.amount === 'hours' ? '请填写小时数' : '请填写以日元为单位的整数'));
+      entry.data[f.key] = plain;
+      continue;
+    }
+    if (value && f.options && !f.options.some((option) => option.value === value))
+      throw new Error(f.label + '的选项不正确');
     if (value && ['url', 'website', 'github'].includes(f.key)) {
       const u = new URL(value);
       if (!['http:', 'https:'].includes(u.protocol))
@@ -187,6 +229,15 @@ export function validateResume(input: unknown): ResumeWrite {
   }
   if (entry.kind === 'preferences' && !entry.data.role && !entry.data.roles)
     throw new Error('目标岗位不能为空');
+  if (entry.kind === 'compensation') {
+    // One record for every interface language; the application forms it feeds are Japanese.
+    entry.language = 'ja';
+    if (entry.data.incomeSource === 'other' && !entry.data.incomeSourceNote)
+      throw new Error('选择「其他」时请填写参照先说明');
+    const computed = annualFromMonthly(entry.data);
+    if (computed !== null && entry.data.annualIncome && computed !== Number(entry.data.annualIncome))
+      throw new Error(`月收×12＋奖金（${computed.toLocaleString('ja-JP')} 円）与现年收（${Number(entry.data.annualIncome).toLocaleString('ja-JP')} 円）不一致`);
+  }
   const { startDate, endDate } = entry.data;
   if (startDate && endDate && endDate < startDate)
     throw new Error('结束年月不能早于开始年月');

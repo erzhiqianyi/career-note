@@ -191,7 +191,7 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
     {
       name: 'career_save_resume_entry',
       scope: 'career:write',
-      description: 'Create or update one structured resume record only when requested. Read career_get_resume first. Use revision 0 and a new id to create; pass all data fields and latest revision to update. Set archived to archive or restore; original documents require a new id for a new version. Never invent facts or use this to alter applications.',
+      description: 'Create or update one structured resume record only when requested. Read career_get_resume first. Use revision 0 and a new id to create; pass all data fields and latest revision to update. Set archived to archive or restore; original documents require a new id for a new version. Never invent facts or use this to alter applications. kind compensation is the single current-pay record (現年収・年収詳細・年収参照先) shared by all languages: update the existing one instead of creating another. Amounts are pre-tax whole yen as plain digits (overtimeHours in hours); monthlyIncome × 12 + annualBonus must equal annualIncome; incomeSource is withholding, estimate or other, and other needs incomeSourceNote. Take figures only from the user or their 源泉徴収票 / payslips.',
       inputSchema: resumeWriteSchema.shape,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       handler: (payload, ctx) => api(ctx, 'resume', payload),

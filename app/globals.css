@@ -4120,3 +4120,9 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .agent-article-text {display:grid;gap:14px;}
 .prep-list .list-pagination {padding-inline:16px;}
 @media(max-width:650px){.agent-article-shared{grid-template-columns:1fr}}
+
+/* 现年收明细: the forms reject a 现年收 that differs from monthly × 12 + bonus, so show the sum. */
+.resume-income-check {display:block;margin:12px 0 0;padding:10px 14px;border-radius:8px;background:var(--accent-soft, #eef3fa);color:var(--ink-2);font-size:.85rem;}
+.resume-income-check.is-ok {background:#e8f3ea;color:#2f6b45;}
+.resume-income-check.is-off {background:#fdf0e3;color:#8a4b12;}
+.resume-income-note {margin:0 0 18px;}
