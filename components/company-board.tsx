@@ -23,6 +23,11 @@ export function CompanyBoard({ job }: { job: Job }) {
       <p className="muted">{tr('让 Agent 按 career-job-research 流程调研这家公司，写入 companyProfile 后会在这里显示业务、优势、沿革和发展预期。')}</p>
     </section>;
   }
+  // Headcount is one of the first things a reader checks; fall back to the job's 员工人数 when the research left it out.
+  const hasHeadcount = profile.facts.some((fact) => /従業員|社員数|人数/.test(fact.label));
+  const facts = job.employeeCount?.trim() && !hasHeadcount
+    ? [{ label: '従業員数', value: job.employeeCount.trim() }, ...profile.facts]
+    : profile.facts;
   const print = () => {
     document.documentElement.classList.add('print-company-board');
     window.print();
@@ -41,8 +46,8 @@ export function CompanyBoard({ job }: { job: Job }) {
           </div>
         </div>
         {profile.tagline && <p className="cb-tagline"><Ja text={profile.tagline} /></p>}
-        {profile.facts.length > 0 && <dl className="cb-facts">
-          {profile.facts.map((fact, i) => <div key={i}><dt>{fact.label}</dt><dd><Ja text={fact.value} /></dd></div>)}
+        {facts.length > 0 && <dl className="cb-facts">
+          {facts.map((fact, i) => <div key={i}><dt>{fact.label}</dt><dd><Ja text={fact.value} /></dd></div>)}
         </dl>}
       </header>
       <section className="cb-block cb-overview">

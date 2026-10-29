@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { ArrowRight, BriefcaseBusiness, FileText, Link2, Sparkles } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, Copy, ExternalLink, FileText, Link2, Sparkles } from 'lucide-react';
 import { api } from '@/lib/career';
 import { apiUrl } from '@/lib/api-base';
 import { articleLanguage, articleLocales, articleText, type Article, type ArticleCategory, type ArticleLanguage, type ArticleText } from '@/lib/articles';
 import { useLocale } from '@/components/locale-provider';
+import { RecordBack, useRecordPage } from '@/components/record-page';
 
 type Category = 'all' | ArticleCategory;
 const categories: { id: Category; label: string }[] = [
@@ -16,18 +17,46 @@ const icons = { start: Sparkles, prepare: FileText, connect: Link2 };
 const languageNames: Record<ArticleLanguage, string> = { 'zh-CN': '中文', ja: '日本語', en: 'English' };
 const viewUrl = (slug: string, lang: ArticleLanguage) => apiUrl(`articles/view/${slug}`) + (lang === 'zh-CN' ? '' : `?lang=${lang}`);
 
+/** Reads an article inside the app, so the header's back arrow returns to the list without reloading the page. */
+function ArticleReader({ article, onBack }: { article: Article; onBack: () => void }) {
+  const { t, locale } = useLocale();
+  const [copied, setCopied] = useState('');
+  const lang = articleLanguage(article, locale);
+  const content = articleText(article, lang);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(content.prompt); setCopied('已复制提问'); }
+    catch { setCopied('复制失败'); }
+  };
+  return <article className="panel agent-article-reader" lang={lang}>
+    <RecordBack onBack={onBack} title={t('AI 求职技巧')} />
+    <header>
+      <span className="agent-tips-kicker">{t(categories.find(item => item.id === article.category)?.label || '')}{lang !== locale && <span className="agent-tip-lang">{t('仅有中文版')}</span>}</span>
+      <h2>{content.title}</h2>
+      <p>{content.summary}</p>
+    </header>
+    <section><h3>{t('操作步骤')}</h3><ol>{content.steps.map((step, index) => <li key={index}>{step}</li>)}</ol></section>
+    {content.body && <section><h3>{t('详细说明')}</h3>{content.body.split(/\n\s*\n/).filter(Boolean).map((part, index) => <p key={index} className="prewrap">{part}</p>)}</section>}
+    {content.prompt && <section><h3>{t('可以这样问 AI')}</h3><pre className="agent-article-prompt">{content.prompt}</pre>
+      <div className="agent-article-reader-actions"><button type="button" className="primary" onClick={() => void copy()}><Copy size={16} aria-hidden="true" />{t('复制提问')}</button>{copied && <output>{t(copied)}</output>}</div>
+    </section>}
+    <footer><a href={viewUrl(article.slug, lang)} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} aria-hidden="true" />{t('打开公开页面（可分享）')}</a></footer>
+  </article>;
+}
+
 /** Public tips: each card shows the reader's language when the article has that translation, Chinese otherwise. */
 export function AgentTips() {
   const { t, locale } = useLocale();
   const [category, setCategory] = useState<Category>('all');
   const [articles, setArticles] = useState<Article[]>([]);
   const [notice, setNotice] = useState('');
+  const [reading, setReading] = useRecordPage<Article>('#tips', 'article', slug => articles.find(article => article.slug === slug) || null, article => article.slug);
   useEffect(() => {
     api<{ articles: Article[] }>('articles')
       .then(result => setArticles(result.articles))
       .catch(error => setNotice(error instanceof Error ? error.message : '文章读取失败'));
   }, []);
   const visible = category === 'all' ? articles : articles.filter(article => article.category === category);
+  if (reading) return <ArticleReader article={articles.find(article => article.slug === reading.slug) || reading} onBack={() => setReading(null)} />;
   return <section className="agent-tips" aria-labelledby="agent-tips-title">
     <header className="agent-tips-intro"><div><span className="agent-tips-kicker">{t('AI 求职技巧')}</span><h2 id="agent-tips-title">{t('一起探索 AI 求职的好方法')}</h2><p>{t('从一条问题、一次练习开始。这里收录可直接尝试的方法；即使不连接 Career Note，也能用你常用的 AI 助手试一试。')}</p></div><div className="agent-tips-hero-icon" aria-hidden="true"><Sparkles size={30} /><BriefcaseBusiness size={22} /></div></header>
     <div className="agent-tips-toolbar"><fieldset className="agent-tips-filters" aria-label={t('按主题筛选技巧')}>{categories.map(item => <button key={item.id} type="button" aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{t(item.label)}</button>)}</fieldset><span>{t('手帖精选 · {0} 篇', [visible.length])}</span></div>
@@ -35,7 +64,12 @@ export function AgentTips() {
       const Icon = icons[article.category];
       const lang = articleLanguage(article, locale);
       const content = articleText(article, lang);
-      return <a className="agent-tip-card" href={viewUrl(article.slug, lang)} key={article.slug} lang={lang}>
+      // A plain click reads in place; modified clicks still open the shareable public page.
+      return <a className="agent-tip-card" href={viewUrl(article.slug, lang)} key={article.slug} lang={lang} onClick={event => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault();
+        setReading(article);
+      }}>
         <span className="agent-tip-card-top"><span className="agent-tip-icon"><Icon size={23} aria-hidden="true" /></span><span className="agent-tip-topic">{t(categories.find(item => item.id === article.category)?.label || '')}</span></span>
         <strong>{content.title}</strong><span className="agent-tip-summary">{content.summary}</span>
         <span className="agent-tip-meta"><span className="agent-tip-author">{t('就')}</span>{t('就职手帖')}{lang !== locale && <span className="agent-tip-lang">{t('仅有中文版')}</span>}<ArrowRight size={16} aria-hidden="true" /></span>

@@ -130,7 +130,7 @@ node scripts/career-data.mjs state
 "companyProfile": {
   "tagline": "一文で会社を説明する（160字以内）",
   "overview": "事業概要。何を・誰に・どう提供して収益を得ているか（必須）",
-  "facts": [{ "label": "設立", "value": "2010年4月" }, { "label": "売上高", "value": "約120億円（2025年3月期）" }],
+  "facts": [{ "label": "設立", "value": "2010年4月" }, { "label": "従業員数", "value": "約350名（2025年4月時点）" }, { "label": "売上高", "value": "約120億円（2025年3月期）" }],
   "segments": [{ "name": "事業名", "detail": "内容と主要顧客", "share": "売上の約60%（2025年3月期）" }],
   "strengths": [{ "title": "強み", "detail": "根拠となる事実" }],
   "history": [{ "year": "2010年", "event": "出来事" }],
@@ -141,7 +141,7 @@ node scripts/career-data.mjs state
 }
 ```
 
-`overview`、`verifiedAt`（YYYY-MM-DD）和至少一个 http(s) `sources` 必填；facts 最多 12 条，segments、strengths、outlook、concerns 各最多 8 条，history 最多 30 条，sources 最多 20 条。优先使用公司官网、IR 资料、有価証券報告書、中期経営計画、公开新闻稿。数字保留年度和「約」；没有来源的数字不写。`outlook` 先写公司公开的计划，自己的推断在 detail 中以「分析：」开头，不能写成事实。`concerns` 写风险和面试中要确认的点（如客先常驻比例、业绩波动），不写无根据的负面评价。未上市或信息少的公司可少写条目，不补造沿革或业绩。
+`overview`、`verifiedAt`（YYYY-MM-DD）和至少一个 http(s) `sources` 必填；facts 最多 12 条，segments、strengths、outlook、concerns 各最多 8 条，history 最多 30 条，sources 最多 20 条。优先使用公司官网、IR 资料、有価証券報告書、中期経営計画、公开新闻稿。数字保留年度和「約」；没有来源的数字不写。facts 尽量包含「従業員数」（注明基准日，连结/单体有区别时写明）；未写时看板会改用职位的 `employeeCount`。`outlook` 先写公司公开的计划，自己的推断在 detail 中以「分析：」开头，不能写成事实。`concerns` 写风险和面试中要确认的点（如客先常驻比例、业绩波动），不写无根据的负面评价。未上市或信息少的公司可少写条目，不补造沿革或业绩。
 
 职位 `id` 是内部关联键，材料和题组仍用它关联公司。Worker 保存前为每个账号分配并持久化递增的 `companyNumber`，导入包不要指定或修改此字段；公司页面使用 `#jobs/company/<companyNumber>`，旧的 `id` 页面地址仍可打开。
 
