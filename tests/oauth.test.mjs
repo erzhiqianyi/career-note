@@ -80,6 +80,55 @@ void test('refresh rotates the pair, replaying a rotated refresh token revokes t
   assert.equal((await mf.dispatchFetch(origin + '/api/career/mcp/tokens', { headers: { Authorization: 'Bearer ' + again.issued.access_token } })).status, 401);
 });
 
+void test('MCP job deletion requires career:write, current revisions and explicit targets', async t => {
+  const mf = await worker(t);
+  await json(await post(mf, '/api/career/import', {
+    schemaVersion: 1,
+    jobs: ['delete-a', 'delete-b', 'keep'].map(id => ({ id, company: 'Example ' + id, role: 'Engineer' })),
+    materials: [], completeTaskIds: [],
+  }));
+  await json(await post(mf, '/api/career/tasks', { kind: '公司准备', jobId: 'delete-a' }));
+  const state = async () => json(await mf.dispatchFetch(origin + '/api/career/state'));
+  const before = await state();
+  const jobs = before.jobs.filter(job => job.id !== 'keep').map(({ id, revision }) => ({ id, revision }));
+  const rpc = async (token, method, params = {}) => json(await mf.dispatchFetch(origin + '/api/career/mcp', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+  }));
+  const reader = (await authorizeAgent(mf, { scopes: ['career:read', 'agent:write'] })).issued.access_token;
+  assert.ok(!(await rpc(reader, 'tools/list')).result.tools.some(tool => tool.name === 'career_delete_jobs'));
+  assert.equal((await post(mf, '/api/career/jobs/delete', { jobs }, { Authorization: 'Bearer ' + reader })).status, 403);
+  const denied = await rpc(reader, 'tools/call', { name: 'career_delete_jobs', arguments: { jobs } });
+  assert.ok(denied.error || denied.result?.isError);
+  const writer = (await authorizeAgent(mf, { scopes: ['career:read', 'career:write'] })).issued.access_token;
+  const tool = (await rpc(writer, 'tools/list')).result.tools.find(tool => tool.name === 'career_delete_jobs');
+  assert.ok(tool);
+  assert.equal(tool.annotations.destructiveHint, true);
+  assert.equal(tool.annotations.readOnlyHint, false);
+  assert.deepEqual(tool.inputSchema.required, ['jobs']);
+  const call = targets => rpc(writer, 'tools/call', { name: 'career_delete_jobs', arguments: { jobs: targets } });
+  for (const targets of [[], Array(201).fill(jobs[0]), [{ id: '', revision: 1 }], [{ ...jobs[0], revision: 0 }], [{ ...jobs[0], revision: '1' }], [{ ...jobs[0], owner_uid: 'other' }], [jobs[0], jobs[0]]]) {
+    const result = await call(targets);
+    assert.ok(result.error || result.result?.isError);
+  }
+  for (const targets of [[jobs[0], { ...jobs[1], revision: jobs[1].revision + 1 }], [jobs[0], { id: 'missing', revision: 1 }]]) {
+    assert.equal((await call(targets)).result.isError, true);
+    assert.deepEqual((await state()).jobs, before.jobs);
+    assert.deepEqual((await state()).tasks, before.tasks);
+  }
+  const result = (await call(jobs)).result;
+  assert.equal(result.isError, false);
+  assert.equal(result.structuredContent.deleted, 2);
+  const after = await state();
+  assert.deepEqual(after.jobs, before.jobs.filter(job => job.id === 'keep'));
+  assert.equal(after.tasks.length, 0);
+  assert.equal((await call(jobs)).result.isError, true);
+  assert.deepEqual((await state()).jobs, after.jobs);
+  const events = (await json(await mf.dispatchFetch(origin + '/api/career/mcp/activity'))).activity;
+  const audit = events.find(row => row.event === 'tool:jobs/delete' && row.ok);
+  assert.deepEqual(audit?.detail, { requested: 2, deleted: 2 });
+});
+
 void test('MCP personal ratings require career:write and patch only the current job revision', async t => {
   const mf = await worker(t);
   const source = { id: 'rating-job', company: 'Example', role: 'Engineer', matchNotes: 'Evidence', unknowns: 'Language' };

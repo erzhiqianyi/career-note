@@ -1736,7 +1736,6 @@ const handler = async (
       break;
     case '/api/career/jobs/delete':
       ensureScopes(context, ['career:write']);
-      if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中确认删除职位');
       result = await deleteJobs(db, env, context.uid, payload);
       break;
     case '/api/career/tasks':

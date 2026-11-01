@@ -89,6 +89,7 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.ok(listed.result.tools.some(t=>t.name==='career_get_resume'));
   assert.ok(!listed.result.tools.some(t=>t.name==='career_save_resume_entry'));
   assert.ok(!listed.result.tools.some(t=>t.name==='career_delete_resume_document'));
+  assert.ok(!listed.result.tools.some(t=>t.name==='career_delete_jobs'));
   const read=await rpc(issued.token,'tools/call',{name:'career_get_context',arguments:{}});
   assert.equal(JSON.parse(read.result.content[0].text).profile.summary,'Alice only');
   const writer={token:(await authorizeAgent(mf,{name:'Writer',scopes:['career:read','agent:write','career:write'],approveHeaders:{Authorization:'Bearer '+a}})).issued.access_token};
@@ -131,6 +132,17 @@ void test('Google users and their agents have isolated workspaces, including leg
   const edited=await ok(a,'jobs',{...corrected,status:'面试中',statusDate:'2026-10-27'});
   assert.deepEqual(edited.history.at(-1),{status:'面试中',at:'2026-10-27T00:00:00.000Z'});
   const pay={id:'current-pay',revision:0,kind:'compensation',language:'ja',parentId:'',sourceNotes:'源泉徴収票',verification:'confirmed',archived:false,data:{annualIncome:'4800000',monthlyIncome:'350000',annualBonus:'600000',incomeSource:'estimate'}};
+  const deletable = { id: 'delete-shared-id', company: 'Deletion fixture', role: 'Engineer', status: '关注中', priority: '普通' };
+  await ok(a, 'jobs', deletable);
+  await ok(b, 'jobs', deletable);
+  await ok(b, 'jobs', { ...deletable, revision: 1, notes: 'Bob newer revision' });
+  const bobBeforeDelete = await ok(b, 'state');
+  const failedDelete = await rpc(writer.token, 'tools/call', { name: 'career_delete_jobs', arguments: { jobs: [{ id: deletable.id, revision: 2 }] } });
+  assert.equal(failedDelete.result.isError, true);
+  const deleted = await rpc(writer.token, 'tools/call', { name: 'career_delete_jobs', arguments: { jobs: [{ id: deletable.id, revision: 1 }] } });
+  assert.equal(deleted.result.isError, false);
+  assert.ok(!(await ok(a, 'state')).jobs.some(job => job.id === deletable.id));
+  assert.deepEqual((await ok(b, 'state')).jobs, bobBeforeDelete.jobs);
   const payWrite=await rpc(writer.token,'tools/call',{name:'career_save_resume_entry',arguments:pay});
   assert.equal(payWrite.result.isError,false,JSON.stringify(payWrite));
   const payUpdate=await rpc(writer.token,'tools/call',{name:'career_save_resume_entry',arguments:{...pay,revision:1,data:{...pay.data,annualBonus:'500000'}}});

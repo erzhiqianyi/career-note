@@ -11,7 +11,7 @@ import { jobStatuses } from '../lib/job-status';
 export const CAREER_SCOPES = {
   'career:read': { description: 'Read profile, resume, jobs, materials, tasks and practice records', required: true },
   'agent:write': { description: 'Save research reports, material versions, question sets and reviews; queue preparation tasks', default: true },
-  'career:write': { description: 'Update the profile summary, resume records, personal company ratings and applicant preference groups only when asked', default: false },
+  'career:write': { description: 'Update the profile summary, resume records, personal company ratings and applicant preference groups; permanently delete jobs and related data only when explicitly asked', default: false },
 } as const;
 
 export const CAREER_CONTRACT: string = protocol.workflow;
@@ -265,6 +265,16 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       handler: (payload, ctx) => api(ctx, 'tasks', payload),
+    },
+    {
+      name: 'career_delete_jobs',
+      scope: 'career:write',
+      description: 'Permanently delete 1–200 jobs and their associated materials, question sets, original answers, recordings, reviews and tasks only when the owner explicitly requests deletion. Read career_get_context first and pass each selected job’s current id and revision. Check status and history when selecting unapplied jobs; preserve any job with application evidence. Stale revisions reject the batch. This cannot be undone. Read back the context after success or failure; never retry blindly.',
+      inputSchema: {
+        jobs: z.array(z.object({ id: z.string().min(1).max(120), revision: z.number().int().positive() }).strict()).min(1).max(200),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+      handler: (payload, ctx) => api(ctx, 'jobs/delete', payload),
     },
     {
       name: 'career_update_job_rating',
