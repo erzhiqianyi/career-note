@@ -107,7 +107,16 @@ export function build(root) {
   const shots = existsSync(guides) ? readdirSync(guides).filter(name => /\.(png|jpe?g|webp)$/i.test(name)).sort() : [];
   const shotsText = JSON.stringify(shots) + '\n';
   if (!existsSync(join(root, 'lib/mcp-guides.generated.json')) || readFileSync(join(root, 'lib/mcp-guides.generated.json'), 'utf8') !== shotsText) writeFileSync(join(root, 'lib/mcp-guides.generated.json'), shotsText);
-  writeFileSync(join(root, 'lib/career-protocol.generated.json'), JSON.stringify({workflow: readFileSync(join(root,'docs/agent-workflow.md'),'utf8')},null,2)+'\n');
+  const applicationDocuments = skills.find(skill => skill.name === 'career-japanese-job-documents')?.content || '';
+  const researchSkill = skills.find(skill => skill.name === 'career-job-research');
+  const jobResearch = {
+    instructions: researchSkill?.content || '',
+    references: (researchSkill?.references || []).map(reference => ({
+      path: reference.path.replace('.agents/skills/career-job-research/', ''),
+      content: reference.content,
+    })),
+  };
+  writeFileSync(join(root, 'lib/career-protocol.generated.json'), JSON.stringify({workflow: readFileSync(join(root,'docs/agent-workflow.md'),'utf8'), applicationDocuments, jobResearch},null,2)+'\n');
   const result = {schemaVersion: 1, generatedAt: createdAt, revision, archiveUrl: `/skill-archive/${archive.split('/').at(-1)}`, skills, history};
   const output = join(root, 'lib/skill-archive.generated.json');
   mkdirSync(dirname(output), {recursive: true});

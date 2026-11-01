@@ -92,6 +92,49 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       handler: async () => ({ content: [{ type: 'text', text: CAREER_CONTRACT }] }),
     },
     {
+      name: 'career_get_job_research_guide',
+      description: 'Get the reusable job-research skill and its complete references: collect jobs from an authorized recruitment site, research companies, match verified resume evidence, evaluate fit, and save/read back results. Returns instructions only; the calling agent performs research. Does not fetch sites, generate with a backend model, save data or submit applications.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: async () => {
+        const guide = {
+          skill: 'career-job-research',
+          ...protocol.jobResearch,
+          stages: ['collect', 'research', 'match', 'evaluate', 'sync'],
+          prerequisites: { contractTool: 'career_get_contract', contextTool: 'career_get_context', externalSources: 'Use authorized connectors or browser access supplied by the calling agent environment.' },
+          saveRoutes: {
+            research: { collection: 'jobs', previewTool: 'career_preview_import', saveTool: 'career_import', readBackTool: 'career_get_context', scope: 'agent:write' },
+            materials: { collection: 'materials', previewTool: 'career_preview_import', saveTool: 'career_import', readBackTool: 'career_get_context', scope: 'agent:write', requiresExistingJobId: true },
+            reports: { collection: 'reports', previewTool: 'career_preview_import', saveTool: 'career_import', readBackTool: 'career_get_context', scope: 'agent:write' },
+            rating: { saveTool: 'career_update_job_rating', readBackTool: 'career_get_context', scope: 'career:write', requiresUserRequest: true },
+            preference: { saveTool: 'career_update_job_preference', readBackTool: 'career_get_context', scope: 'career:write', requiresUserRequest: true },
+          },
+        };
+        return { content: [{ type: 'text', text: JSON.stringify(guide) }], structuredContent: guide };
+      },
+    },
+    {
+      name: 'career_get_application_document_guide',
+      description: 'Get the reusable Japanese job-document skill: inventory evidence, tailor 履歴書/職務経歴書, review drafts, and save/read back results. Returns instructions and existing save-tool routes only; no backend generation, saving, publishing or application submission.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: async () => {
+        const guide = {
+          skill: 'career-japanese-job-documents',
+          instructions: protocol.applicationDocuments,
+          stages: ['inventory', 'tailor', 'review'],
+          saveRoutes: {
+            inventory: { collection: 'reports', previewTool: 'career_preview_import', saveTool: 'career_import', readBackTool: 'career_get_context', scope: 'agent:write' },
+            tailor: { collection: 'materials', previewTool: 'career_preview_import', saveTool: 'career_import', readBackTool: 'career_get_context', scope: 'agent:write', requiresExistingJobId: true },
+            review: { collection: 'reports', previewTool: 'career_preview_import', saveTool: 'career_import', readBackTool: 'career_get_context', scope: 'agent:write' },
+            generalResume: { collection: 'personalized-resumes', saveTool: 'career_save_personalized_resume', readBackTool: 'career_get_personalized_resumes', scope: 'career:write' },
+            sourceFacts: { collection: 'resume', saveTool: 'career_save_resume_entry', readBackTool: 'career_get_resume_details', scope: 'career:write', requiresUserRequest: true },
+          },
+        };
+        return { content: [{ type: 'text', text: JSON.stringify(guide) }], structuredContent: guide };
+      },
+    },
+    {
       name: 'career_get_experience_generation_guide',
       description: 'Get the evidence-first operation for turning work emails and existing resume records into draft employment or project experience. Returns instructions only; it does not read emails, generate with a backend model, or save data.',
       inputSchema: {},

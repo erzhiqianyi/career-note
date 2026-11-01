@@ -9,6 +9,7 @@ import {
   BriefcaseBusiness,
   Building2,
   Check,
+  ChevronDown,
   Clock3,
   Compass,
   Copy,
@@ -31,6 +32,7 @@ import {
   X,
 } from 'lucide-react';
 import StatusMark from '@/components/status-mark';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { buildHints, type Hints } from '@/lib/interview-hints';
@@ -163,7 +165,7 @@ export default function InterviewPractice({
   const [help, setHelp] = useRecordPage<string>('#jobs', 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('进行中');
+  const [statusFilter, setStatusFilter] = useState<string[]>(['进行中']);
   const [managing, setManaging] = useState(false);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
   const [deletingJobs, setDeletingJobs] = useState(false);
@@ -265,7 +267,7 @@ export default function InterviewPractice({
     return () => window.removeEventListener('beforeunload', warn);
   }, [drafts]);
   const packs = isBank
-    ? [...(data.questionSets || []).filter((p) => p.jobId === BANK_JOB_ID), ...builtinQuestionSets]
+    ? (data.questionSets || []).filter((p) => p.jobId === BANK_JOB_ID)
     : (data.questionSets || [])
         .filter((p) => p.jobId === jobId)
         .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
@@ -439,7 +441,7 @@ export default function InterviewPractice({
     };
     const jobs = data.jobs
       .filter(j => (j.company + ' ' + j.role + ' ' + (j.companyNumber || '')).toLowerCase().includes(search.toLowerCase()))
-      .filter(j => statusFilter === '全部' ? true : statusFilter === '进行中' ? !closed.includes(j.status) : statusFilter === '有面试' ? isInterview(j) : j.status === statusFilter)
+      .filter(j => !statusFilter.length || statusFilter.some(status => status === '进行中' ? !closed.includes(j.status) : status === '有面试' ? isInterview(j) : j.status === status))
       .sort((a, b) => {
         const x = keyOf(a), y = keyOf(b);
         const c = x < y ? -1 : x > y ? 1 : 0;
@@ -458,23 +460,37 @@ export default function InterviewPractice({
       return next;
     });
     const toggleSort = (key: PrepColumn) => setSort(s => ({ key, desc: s.key === key ? !s.desc : false }));
-    const bankPacks = [...data.questionSets.filter(p => p.jobId === BANK_JOB_ID), ...builtinQuestionSets];
+    const bankPacks = data.questionSets.filter(p => p.jobId === BANK_JOB_ID);
     const bankAnswered = new Set(data.attempts.filter(a => bankPacks.some(p => p.id === a.questionSetId)).map(a => a.questionSetId + '|' + a.questionId)).size;
     const bankTotal = bankPacks.reduce((n, p) => n + p.questions.length, 0);
     // 一家公司一行：状态与日程、资料齐全度、练习进度都在同一行里，细节点进公司再看。
-    // 通用题库模板只在右上角留一个图标入口。
+    // 通用练习只列出本人工作区的题组。
     return <div className="practice-workspace">
       <div className="page-actions list-toolbar">
         <label className="search"><Search size={17} /><input aria-label={tr('搜索公司或职位')} placeholder={tr('搜索公司或职位')} value={search} onChange={e => setSearch(e.target.value)} /></label>
-        <select aria-label={tr('筛选投递状态')} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          {['进行中', '有面试', '全部', ...statuses].map(s => <option key={s} value={s}>{s === '全部' ? tr('全部状态') : tr(s)}</option>)}
-        </select>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="secondary job-status-filter" aria-label={tr('筛选投递状态')}>
+            <span>{statusFilter.length ? statusFilter.map(status => tr(status)).join('、') : tr('全部状态')}</span>
+            <ChevronDown size={15} aria-hidden="true" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="job-status-filter-menu" aria-label={tr('筛选投递状态')}>
+            {['进行中', '有面试', '全部'].map(preset => <DropdownMenuItem key={preset} onClick={() => setStatusFilter(preset === '全部' ? [] : [preset])}>
+              {tr(preset === '全部' ? '全部状态' : preset)}
+              {(preset === '全部' ? !statusFilter.length : statusFilter.includes(preset)) && <Check size={15} aria-hidden="true" />}
+            </DropdownMenuItem>)}
+            <DropdownMenuSeparator />
+            {statuses.map(status => <DropdownMenuCheckboxItem key={status} checked={statusFilter.includes(status)} closeOnClick={false} onCheckedChange={checked => setStatusFilter(current => {
+              const selected = current.filter(value => statuses.includes(value));
+              return checked ? [...selected, status] : selected.filter(value => value !== status);
+            })}>{tr(status)}</DropdownMenuCheckboxItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <button type="button" className={'secondary rating-sort-button' + (sort.key === 'rating' && !sort.desc ? ' is-active' : '')} aria-pressed={sort.key === 'rating' && !sort.desc} onClick={() => setSort(s => s.key === 'rating' && !s.desc ? { key: 'schedule', desc: false } : { key: 'rating', desc: false })}>{tr('评分优先')}</button>
         <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span>
         {data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
           <ListChecks size={20} aria-hidden="true" />
         </button>}
-        <button className="secondary icon-only" onClick={() => setCompany(BANK_JOB_ID)} title={tr('通用题库（模板）') + ' · ' + tr('练习 {0} / {1} 题', [String(bankAnswered), String(bankTotal)])} aria-label={tr('通用题库（模板）')}><BookOpen size={21} /></button>
+        <button className="secondary icon-only" onClick={() => setCompany(BANK_JOB_ID)} title={tr('通用练习') + ' · ' + tr('练习 {0} / {1} 题', [String(bankAnswered), String(bankTotal)])} aria-label={tr('通用练习')}><BookOpen size={21} /></button>
         {onImport && <button className="secondary phone-hidden" onClick={onImport}><Upload size={16} />{tr('导入')}</button>}
         {onAddJob && <button className="primary" onClick={onAddJob}><Plus size={18} />{tr('添加职位')}</button>}
       </div>

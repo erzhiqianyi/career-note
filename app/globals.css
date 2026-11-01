@@ -3088,6 +3088,12 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .list-toolbar .search { flex: 1 1 240px; max-width: 420px; padding: 7px 12px; background: var(--surface); }
 .list-toolbar select { padding: 8px 10px; border: 1px solid #e1e7ef; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-size: 0.8125rem; }
 .list-toolbar .list-count { font-size: 0.75rem; margin-left: auto; white-space: nowrap; }
+.job-status-filter { display: inline-flex; align-items: center; gap: 8px; max-width: min(300px, 100%); }
+.job-status-filter > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-status-filter > svg { flex-shrink: 0; }
+.job-status-filter-menu { width: max-content; min-width: 180px; max-width: calc(100vw - 24px); }
+.job-status-filter-menu [role^="menuitem"] { min-height: 36px; cursor: pointer; }
+.job-status-filter-menu [role="menuitem"] { justify-content: space-between; }
 .list-toolbar .page-note { flex-basis: 100%; margin: 0; }
 .panel.dt-panel { padding: 6px 25px 8px; }
 .dt { display: block; width: 100%; }

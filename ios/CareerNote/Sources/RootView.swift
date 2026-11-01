@@ -391,16 +391,9 @@ private struct PracticeList: View {
 
     private var generalQuestions: [GeneralQuestion] {
         let personal = model.state.questionSets.filter { $0.jobId == "builtin:general" }
-        let hasPersonalLeavingReason = personal.flatMap(\.questions).contains { question in
-            let text = CareerRichText.plain(question.title + " " + question.questionJa)
-            return text.contains("転職理由") || text.contains("退職理由")
-        }
-        return (personal + BuiltinBank.packs).flatMap { pack in
-            pack.questions.compactMap { question -> GeneralQuestion? in
-                if hasPersonalLeavingReason && pack.id == "builtin-conditions" && question.id == "leaving-reason" {
-                    return nil
-                }
-                return GeneralQuestion(pack: pack, question: question)
+        return personal.flatMap { pack in
+            pack.questions.map { question in
+                GeneralQuestion(pack: pack, question: question)
             }
         }
     }

@@ -35,6 +35,8 @@ MCP・OAuth・Agent トークンの実装は npm パッケージ [`@ninomae/mcp-
 
 `GET /api/career/mcp/schema` は認証なしで読める公開スキーマ。サーバー名、エンドポイント、OAuth の resource metadata と scope 一覧、全ツールの名前・必要 scope・説明・入力 JSON Schema・annotations、データ契約本文を返す（ユーザーデータは含まない）。また `/api/career/mcp` への Authorization なしの `initialize`・`ping`・`tools/list` は全 scope 分のツール一覧を返し（レジストリーやクライアントが認可前に確認できる）、`tools/call` を含む要求は 401 チャレンジになる。
 
+`career_get_job_research_guide` は読み取り専用の技能入口。求人収集・企業調査・履歴との照合・評価・同期の説明と参照文書全文、既存保存ツールへの経路を返す。個人データの読取、外部サイトの取得、AI 生成、保存は行わず、呼出元 Agent が実行する。
+
 ## 入出力例
 
 ```json

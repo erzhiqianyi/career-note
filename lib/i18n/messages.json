@@ -5801,5 +5801,9 @@
   "学校日语名称": { "ja": "学校名（日本語表記）", "en": "School (Japanese name)" },
   "英文名称": { "ja": "英語名", "en": "English name" },
   "日语名称": { "ja": "日本語表記", "en": "Japanese name" },
-  "复制「{0}」": { "ja": "「{0}」をコピー", "en": "Copy “{0}”" }
+  "复制「{0}」": { "ja": "「{0}」をコピー", "en": "Copy “{0}”" },
+  "通用练习": {
+    "ja": "共通面接練習",
+    "en": "General interview practice"
+  }
 }

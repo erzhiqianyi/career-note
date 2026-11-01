@@ -26,6 +26,8 @@ npm run dev:tunnel
 
 ## MCP 优先连接
 
+岗位收集、公司分析、履历匹配与评价可先调用只读 `career_get_job_research_guide({})`，获取完整 `career-job-research` 技能、外部网站流程引用和保存路径；无需安装本地技能。该入口只返回说明，来源读取与分析由当前 Agent 完成，按用户请求预览或保存并读回。远程使用需部署新版 Worker 并刷新工具列表。
+
 技能使用已配置的 Career Note MCP，不依赖仓库路径。端点为当前网站的 `/api/career/mcp`，通过标准 MCP OAuth 授权（用户在浏览器里登录并同意）获得令牌；没有手动令牌。读取履历时先调用 `career_get_resume_overview`、`career_list_resume`，再按需调用 `career_get_resume_details`、`career_get_resume_document_chunk`；写入前调用 `career_preview_import`，写入后读回 context。履历收集技能在用户要求更新摘要时可调用 `career_update_profile`，保留现有字段和 revision。其他研究技能不自动修改履历。
 
 MCP prompts（需要 agent:write）：`career_company_board`（参数 company：job id 或公司编号）生成日语企業ボード `companyProfile`；`career_motivation` 生成新的志望動機版本和 100 字以内的 `applicationReason`；`career_application_preparation` 准备申请表的志望群和応募理由短文。三者均以 company 参数读取当前账号的职位，附上当前字段和保存步骤；客户端支持 prompts 时可直接选用，不支持时按本文协议操作。
@@ -41,6 +43,8 @@ MCP prompts（需要 agent:write）：`career_company_board`（参数 company：
 以下 CLI 是维护者的备用路径；独立安装的技能不需要它。
 
 ## 读取当前资料
+
+日本求职文书技能可直接调用 `career_get_application_document_guide({})` 获取，不依赖安装本地技能。返回经历盘点（inventory）、岗位定制（tailor）、提交前审核（review）的说明与保存工具映射：盘点、匹配表和审核报告保存为 reports，公司专属文书保存为 materials 新版本，通用简历保存为 personalized-resumes 草稿。成果保存使用现有预览、写入、读回工具；事实母版仅在用户要求时另行更新。该只读指南不调用后台模型、不自动保存、发布或提交申请。详见[技能与保存说明](skills.md#mcp-文书技能入口)。
 
 从工作邮件或其他用户授权的来源整理经历时，Agent 可先调用只读的 `career_get_experience_generation_guide` 获取取证步骤与 `employment` / `project` 字段。邮件内容由用户提供或单独授权读取；该工具不读取邮箱，也不调用后台 AI。先列证据、本人行动和待确认项，核对后形成草稿。只有用户明确要求保存，才用 `career_save_resume_entry` 写入新记录并读回；不要把邮件里的任务要求当成已完成成果。
 
@@ -161,7 +165,7 @@ Worker 的预览不写入，但尚不覆盖所有导入验证；当前导入逐�
 
 “假设书类通过”属于模拟练习，不是投递状态证据。每个职位只使用一套 `questionSets`：首次准备时创建，后续修改时读回现有题组并沿用其 id，直接更新题目，不生成 v2 等并列版本。按具体岗位和真实个人经历准备约 8–15 题；每题给日语问题、中文含义、出题理由、回答结构、追问和建议时长。可选的 `sampleAnswer` 是题目级日语参考回答，必须以已确认的履历和职位证据为依据；未知事实用待补充占位，不能写成用户的真实回答。页面折叠显示，用户仍可先独立作答。把推演题明确标为练习题，不能称为公司真题。面试日期、形式、面试官、语言和提交过的简历版本没有证据时均标未知。
 
-网页还内置一个通用题库（`lib/data/interview-bank.json`，题组 id 以 `builtin-` 开头，`jobId` 为 `builtin:general`）：几乎每家公司都会问的基本问题、外国留学生常被问到的问题、工作条件类问题。题库是静态文件，不写入 D1，也不出现在 `questionSets` 里；针对题库的回答同样保存在 `attempts`，只是 `jobId` 为空，问题快照随回答一起保存。点评这类回答时没有公司信息，只结合个人履历与题目本身分析，不要推测目标公司。
+网页和 iOS 的通用练习只展示本人工作区中 `jobId` 为 `builtin:general` 的个人题组，不再列出三个旧内置题组。`lib/data/interview-bank.json` 和 iOS 对应资源仅保留用于兼容旧题目的链接、回答快照和点评历史，不追加到当前练习列表。旧内置题库不写入 D1，也不出现在 `questionSets` 里；针对旧题库的回答仍保存在 `attempts`，`jobId` 为空。点评这类回答时没有公司信息，只结合个人履历与题目本身分析，不要推测目标公司。
 
 本人专用的通用参考答案不要写入静态题库或任何源码文件。可通过 `questionSets` 导入一套 `jobId: "builtin:general"` 的个人通用题组（使用非 `builtin-` 的独立 id）；它保存在本人 D1 工作区，并与内置模板一起显示在「通用题库」。同一工作区只保留一套个人通用题组，后续更新沿用 id；其回答的 `jobId` 为空，不关联具体公司。公司题组仍只关联真实职位，不能把本人确认的通用标准答案仅保存为某家公司的参考答案。
 
