@@ -1018,7 +1018,7 @@ export default function ResumeManager({
           }
           return <div key={k} className="resume-record-group">
             {grouped && <div className="resume-record-group-head">
-              <h3>{t(resumeSections[k].label)}<span>{rows.length}</span></h3>
+              <h3>{t(resumeSections[k].label)}<span>{listed.filter(e => e.kind === k).length}</span></h3>
               <button className="text-button" disabled={busy} onClick={() => start(k)}><Plus size={16} />{t('添加{0}', [t(resumeSections[k].label)])}</button>
             </div>}
             {tableGroups.size > 0 && <div className="resume-skill-table-wrap"><table className="resume-skill-table">

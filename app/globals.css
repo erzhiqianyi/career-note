@@ -3455,6 +3455,9 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 .resume-skill-table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
 .resume-skill-table th, .resume-skill-table td { padding: 8px 12px; border: 1px solid var(--line); text-align: left; vertical-align: middle; }
 .resume-skill-table thead th { background: var(--surface); font-weight: 600; white-space: nowrap; }
+.resume-skill-table thead th:nth-child(1) { width: 18%; }
+.resume-skill-table thead th:nth-child(2) { width: 24%; }
+.resume-skill-table thead th:nth-child(3) { width: 12%; }
 .resume-skill-table tbody th { vertical-align: top; font-weight: 600; white-space: nowrap; }
 .resume-skill-table .resume-record-title { font-size: 0.9375rem; }
 .resume-skill-table .resume-skill-years { white-space: nowrap; }
