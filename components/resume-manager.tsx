@@ -41,6 +41,7 @@ import {
   resumeLanguages,
   resumeSections,
   resumeTitle,
+  sortTechSkills,
   type ResumeEntry,
   type ResumeKind,
   type ResumeLanguage,
@@ -1005,14 +1006,35 @@ export default function ResumeManager({
         {error && <p role="alert" className="resume-error">{error}</p>}
         {!listed.length && kindsOf(kind).length === 1 && <div className="empty"><Icon size={26} /><h3>{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</h3></div>}
         {kindsOf(kind).map(k => {
-          const rows = listed.filter(e => e.kind === k);
+          // 技术技能和语学按职务经历书「PCスキル/テクニカルスキル」表展示：カテゴリ／種別／経験年数／スキルレベル・備考。
+          const techTable = sortTechSkills(listed.filter(e => e.kind === 'skill'));
+          const tableLanguages = techTable.length ? listed.filter(e => e.kind === 'language') : [];
+          const rows = listed.filter(e => e.kind === k && !(k === 'skill' && e.data.skillType === 'tech') && !(k === 'language' && tableLanguages.length));
           const grouped = kindsOf(kind).length > 1;
+          const tableGroups = new Map<string, ResumeEntry[]>();
+          if (k === 'skill') {
+            for (const e of techTable) tableGroups.set(e.data.category || t('其他'), [...(tableGroups.get(e.data.category || t('其他')) || []), e]);
+            if (tableLanguages.length) tableGroups.set('語学', tableLanguages);
+          }
           return <div key={k} className="resume-record-group">
             {grouped && <div className="resume-record-group-head">
               <h3>{t(resumeSections[k].label)}<span>{rows.length}</span></h3>
               <button className="text-button" disabled={busy} onClick={() => start(k)}><Plus size={16} />{t('添加{0}', [t(resumeSections[k].label)])}</button>
             </div>}
-            {grouped && !rows.length && <p className="resume-record-group-empty">{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</p>}
+            {tableGroups.size > 0 && <div className="resume-skill-table-wrap"><table className="resume-skill-table">
+              <thead><tr><th>{t('类别')}</th><th>{t('种别')}</th><th>{t('经验年数')}</th><th>{t('技能水平・备注')}</th><th><span className="sr-only">{t('编辑')}</span></th></tr></thead>
+              <tbody>{[...tableGroups].flatMap(([category, items]) => items.map((entry, i) => {
+                const years = entry.kind === 'language' ? entry.data.experience || entry.data.qualification || entry.data.level || '' : formatYears(entry.data.years, ' ' + t('年'));
+                return <tr key={entry.id}>
+                  {i === 0 && <th scope="rowgroup" rowSpan={items.length}><Ja text={category} /></th>}
+                  <td><button className="resume-record-open" onClick={() => setSelected(entry)}><span className="resume-record-title"><Ja text={entry.data.name} /></span></button>{entry.verification === 'pending' && <span className="resume-record-pending">{t('待确认')}</span>}</td>
+                  <td className="resume-skill-years"><Ja text={years} /></td>
+                  <td><Ja text={entry.data.skillLevel || ''} /></td>
+                  <td><button className="icon-button resume-record-edit" title={t('编辑')} aria-label={t('编辑') + ' ' + plainJapanese(entry.data.name)} disabled={busy} onClick={() => start(entry.kind, entry)}><Pencil size={17} /></button></td>
+                </tr>;
+              }))}</tbody>
+            </table></div>}
+            {grouped && !rows.length && !tableGroups.size && !(k === 'language' && tableLanguages.length) && <p className="resume-record-group-empty">{view === 'all' ? t('这里还没有记录') : t('没有符合筛选条件的记录')}</p>}
             <ul className={'resume-record-list' + (k === 'preferences' ? ' resume-preference-list' : '')}>
               {rows.flatMap(entry => k === 'preferences' && (entry.data.role || chips(entry.data.roles)).length > 1
                 ? (entry.data.role ? [entry.data.role] : chips(entry.data.roles)).map((role, index) => ({ entry, role, key: entry.id + '-role-' + index }))

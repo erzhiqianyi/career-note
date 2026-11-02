@@ -3451,6 +3451,15 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 .resume-record-edit { flex-shrink: 0; min-width: 44px; min-height: 44px; color: var(--ink-3); }
 .resume-record-pending { font-size: 0.8125rem; color: #8a5b25; }
 .resume-record-group + .resume-record-group { margin-top: 28px; }
+.resume-skill-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+.resume-skill-table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+.resume-skill-table th, .resume-skill-table td { padding: 8px 12px; border: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.resume-skill-table thead th { background: var(--surface); font-weight: 600; white-space: nowrap; }
+.resume-skill-table tbody th { vertical-align: top; font-weight: 600; white-space: nowrap; }
+.resume-skill-table .resume-record-title { font-size: 0.9375rem; }
+.resume-skill-table .resume-skill-years { white-space: nowrap; }
+.resume-skill-table td:last-child { width: 44px; padding: 0; text-align: center; }
+.resume-skill-table .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .resume-record-group-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 0 12px; }
 .resume-record-group-head h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
 .resume-record-group-head h3 span { font-size: 0.8125rem; font-weight: 500; color: var(--ink-3); }

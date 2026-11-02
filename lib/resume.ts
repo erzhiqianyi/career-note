@@ -52,6 +52,27 @@ export const formatYears = (years = '', unit = '年') => {
   const v = years.trim();
   return /^\d+(\.\d+)?$/.test(v) ? v + unit : v;
 };
+// 技术技能按常见分类顺序排列，同一分类内经验长的在前（「約半年」「8ヶ月」也换算成年）。
+const techCategoryOrder = ['言語', 'フレームワーク・ライブラリ', 'データベース', 'クラウド・インフラ', 'ツール・その他'];
+const yearsValue = (v = '') => {
+  const n = Number((v.match(/\d+(\.\d+)?/) || [''])[0]) || 0;
+  return /ヶ月|か月|カ月|个月|months?/.test(v) ? n / 12 : /半年/.test(v) ? n + 0.5 : n;
+};
+const categoryRank = (c = '') => {
+  const i = techCategoryOrder.indexOf(c);
+  return i < 0 ? techCategoryOrder.length : i;
+};
+export function sortTechSkills<T extends { data: Record<string, string> }>(skills: T[]) {
+  return skills
+    .filter((s) => s.data.skillType === 'tech')
+    .sort((a, b) =>
+      categoryRank(a.data.category) - categoryRank(b.data.category) ||
+      (a.data.category || '').localeCompare(b.data.category || '') ||
+      yearsValue(b.data.years) - yearsValue(a.data.years) ||
+      (a.data.name || '').localeCompare(b.data.name || ''),
+    );
+}
+
 export function annualFromMonthly(data: Record<string, string>): number | null {
   if (!data.monthlyIncome) return null;
   return Number(data.monthlyIncome) * 12 + Number(data.annualBonus || 0);

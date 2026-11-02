@@ -1,4 +1,4 @@
-import { formatYears, resumeTitle, type ResumeEntry } from './resume';
+import { formatYears, resumeTitle, sortTechSkills, type ResumeEntry } from './resume';
 import { plainJapanese } from './japanese-readings';
 
 /**
@@ -58,27 +58,6 @@ export function printableEntries(entries: ResumeEntry[], language: string, inclu
   return entries.filter(
     (e) => !e.archived && (e.language || 'ja') === language && (includePending || e.verification !== 'pending'),
   );
-}
-
-// 技术技能按常见分类顺序排列，同一分类内经验长的在前（「約半年」「8ヶ月」也换算成年）。
-const techCategoryOrder = ['言語', 'フレームワーク・ライブラリ', 'データベース', 'クラウド・インフラ', 'ツール・その他'];
-const yearsValue = (v = '') => {
-  const n = Number((v.match(/\d+(\.\d+)?/) || [''])[0]) || 0;
-  return /ヶ月|か月|カ月|个月|months?/.test(v) ? n / 12 : /半年/.test(v) ? n + 0.5 : n;
-};
-const categoryRank = (c = '') => {
-  const i = techCategoryOrder.indexOf(c);
-  return i < 0 ? techCategoryOrder.length : i;
-};
-function techSkills(skills: ResumeEntry[]) {
-  return skills
-    .filter((s) => s.data.skillType === 'tech')
-    .sort((a, b) =>
-      categoryRank(a.data.category) - categoryRank(b.data.category) ||
-      (a.data.category || '').localeCompare(b.data.category || '') ||
-      yearsValue(b.data.years) - yearsValue(a.data.years) ||
-      (a.data.name || '').localeCompare(b.data.name || ''),
-    );
 }
 
 type Model = ReturnType<typeof buildModel>;
@@ -214,7 +193,7 @@ function shokumu(m: Model, o: PrintOptions) {
     .join('');
   // 「PCスキル/テクニカルスキル」表：カテゴリ／種別／経験年数／スキルレベル・備考，同一カテゴリ合并单元格，语学放在最后。
   const groups = new Map<string, { name: string; years: string; level: string }[]>();
-  for (const s of techSkills(m.skills)) {
+  for (const s of sortTechSkills(m.skills)) {
     const category = s.data.category || 'その他';
     groups.set(category, [...(groups.get(category) || []), { name: s.data.name, years: formatYears(s.data.years), level: s.data.skillLevel || '' }]);
   }

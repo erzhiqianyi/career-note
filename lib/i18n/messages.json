@@ -2608,6 +2608,14 @@
     "ja": "スキル表の「経験年数」欄（例：「母語」「4年間の業務使用」）",
     "en": "Skill table \"experience\" column (e.g. native, 4 years at work)"
   },
+  "种别": {
+    "ja": "種別",
+    "en": "Type"
+  },
+  "经验年数": {
+    "ja": "経験年数",
+    "en": "Experience"
+  },
   "成果案例": {
     "ja": "成果事例",
     "en": "Achievements"
