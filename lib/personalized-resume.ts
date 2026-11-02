@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { inlineRubyHTML, plainJapanese } from './japanese-readings';
+import { formatYears } from './resume';
 const text = z.string().trim().max(6000);
 const link = z
   .object({
@@ -194,7 +195,7 @@ export function resumeFromEntries(
     sections.push({
       heading: labels.skills,
       items: [
-        ...skills.map((s) => ({ title: s.data.category || s.data.name, subtitle: s.data.category ? s.data.name : '', period: s.data.years ? s.data.years + (language === 'en' ? ' yrs' : '年') : '', bullets: [] })),
+        ...skills.map((s) => ({ title: s.data.category || s.data.name, subtitle: [s.data.category ? s.data.name : '', s.data.skillLevel].filter(Boolean).join(' · '), period: formatYears(s.data.years, language === 'en' ? ' yrs' : '年'), bullets: [] })),
         ...languages.map((l) => ({ title: l.data.name, subtitle: [l.data.level, l.data.qualification].filter(Boolean).join(' · '), period: l.data.date || '', bullets: [] })),
       ],
     });

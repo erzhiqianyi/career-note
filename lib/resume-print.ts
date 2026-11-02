@@ -1,4 +1,4 @@
-import { resumeTitle, type ResumeEntry } from './resume';
+import { formatYears, resumeTitle, type ResumeEntry } from './resume';
 import { plainJapanese } from './japanese-readings';
 
 /**
@@ -58,6 +58,27 @@ export function printableEntries(entries: ResumeEntry[], language: string, inclu
   return entries.filter(
     (e) => !e.archived && (e.language || 'ja') === language && (includePending || e.verification !== 'pending'),
   );
+}
+
+// 技术技能按常见分类顺序排列，同一分类内经验长的在前（「約半年」「8ヶ月」也换算成年）。
+const techCategoryOrder = ['言語', 'フレームワーク・ライブラリ', 'データベース', 'クラウド・インフラ', 'ツール・その他'];
+const yearsValue = (v = '') => {
+  const n = Number((v.match(/\d+(\.\d+)?/) || [''])[0]) || 0;
+  return /ヶ月|か月|カ月|个月|months?/.test(v) ? n / 12 : /半年/.test(v) ? n + 0.5 : n;
+};
+const categoryRank = (c = '') => {
+  const i = techCategoryOrder.indexOf(c);
+  return i < 0 ? techCategoryOrder.length : i;
+};
+function techSkills(skills: ResumeEntry[]) {
+  return skills
+    .filter((s) => s.data.skillType === 'tech')
+    .sort((a, b) =>
+      categoryRank(a.data.category) - categoryRank(b.data.category) ||
+      (a.data.category || '').localeCompare(b.data.category || '') ||
+      yearsValue(b.data.years) - yearsValue(a.data.years) ||
+      (a.data.name || '').localeCompare(b.data.name || ''),
+    );
 }
 
 type Model = ReturnType<typeof buildModel>;
@@ -185,12 +206,28 @@ function rirekisho(m: Model, o: PrintOptions) {
 function shokumu(m: Model, o: PrintOptions) {
   const b = m.basics;
   const skillRows = m.skills
+    .filter((s) => s.data.skillType !== 'tech')
     .map(
       (s) =>
-        `<tr><th>${escape(s.data.category || '')}</th><td>${escape(s.data.name)}</td><td class="num">${escape(s.data.years ? s.data.years + '年' : '')}</td></tr>`,
+        `<tr><th>${escape(s.data.category || '')}</th><td>${escape(s.data.name)}</td><td class="num">${escape(formatYears(s.data.years))}</td></tr>`,
     )
     .join('');
-  const langRows = m.languages
+  // 「PCスキル/テクニカルスキル」表：カテゴリ／種別／経験年数／スキルレベル・備考，同一カテゴリ合并单元格，语学放在最后。
+  const groups = new Map<string, { name: string; years: string; level: string }[]>();
+  for (const s of techSkills(m.skills)) {
+    const category = s.data.category || 'その他';
+    groups.set(category, [...(groups.get(category) || []), { name: s.data.name, years: formatYears(s.data.years), level: s.data.skillLevel || '' }]);
+  }
+  if (groups.size && m.languages.length)
+    groups.set('語学', m.languages.map((l) => ({ name: l.data.name, years: l.data.experience || l.data.qualification || l.data.level || '', level: l.data.skillLevel || '' })));
+  const techRows = [...groups]
+    .map(([category, items]) =>
+      items
+        .map((s, i) => `<tr>${i ? '' : `<th rowspan="${items.length}">${escape(category)}</th>`}<td>${escape(s.name)}</td><td class="yrs">${escape(s.years)}</td><td>${escape(s.level)}</td></tr>`)
+        .join(''),
+    )
+    .join('');
+  const langRows = groups.has('語学') ? '' : m.languages
     .map((l) => `<tr><th>${escape(l.data.name)}</th><td>${escape([l.data.level, l.data.qualification && l.data.date ? `${l.data.qualification}（${jaDate(l.data.date)}）` : l.data.qualification].filter(Boolean).join('、'))}</td></tr>`)
     .join('');
   const employment = m.employment
@@ -229,6 +266,8 @@ ${p.data.problem ? `<p>${escape(p.data.problem)}</p>` : ''}${p.data.contribution
 .lbl { margin: 2.5mm 0 1mm; font-weight: 700; font-size: 10pt; }
 .num { width: 14mm; text-align: right; white-space: nowrap; }
 .skills th { width: 32mm; }
+.yrs { width: 24mm; white-space: nowrap; }
+.tech th { vertical-align: top; }
 `;
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>職務経歴書 — ${escape(b.name)}</title><style>${baseCss}${css}</style></head><body>
 <div class="page shokumu">
@@ -237,6 +276,7 @@ ${b.headline ? `<p><b>${escape(b.headline)}</b></p>` : ''}
 <h2>職務要約</h2>
 <p>${escape(b.summary || '')}</p>
 ${skillRows ? `<h2>活かせる経験・知識・技術</h2><table class="skills"><thead><tr><th>分野</th><th style="width:auto">技術・経験</th><th class="num">経験年数</th></tr></thead><tbody>${skillRows}</tbody></table>` : ''}
+${techRows ? `<h2>PCスキル/テクニカルスキル</h2><table class="skills tech"><thead><tr><th>カテゴリ</th><th style="width:auto">種別</th><th class="yrs">経験年数</th><th style="width:auto">スキルレベル・備考</th></tr></thead><tbody>${techRows}</tbody></table>` : ''}
 ${langRows ? `<h3>語学</h3><table class="skills">${langRows}</table>` : ''}
 <h2>職務経歴</h2>
 ${employment}

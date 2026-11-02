@@ -34,6 +34,7 @@ import {
 import { api, download, type Profile } from '@/lib/career';
 import {
   annualFromMonthly,
+  formatYears,
   incomeSources,
   resumeKinds,
   resumeLanguageLabels,
@@ -685,6 +686,7 @@ export default function ResumeManager({
       entry.data.level,
       entry.data.qualification,
       entry.data.category,
+      entry.data.skillLevel,
       entry.data.status,
     ]
       .filter(Boolean)
@@ -700,7 +702,7 @@ export default function ResumeManager({
           {period && <span className="resume-period">{period}</span>}
           {entry.data.years && (
             <span className="resume-period">
-              {entry.data.years} {t('年')}
+              {formatYears(entry.data.years, ' ' + t('年'))}
             </span>
           )}
         </div>
@@ -810,7 +812,7 @@ export default function ResumeManager({
           period: '',
         };
       case 'skill':
-        return { title: d.category || d.name || '', subtitle: d.category ? d.name : '', period: d.years ? d.years + ' ' + t('年') : '' };
+        return { title: d.category || d.name || '', subtitle: d.category ? d.name : '', period: formatYears(d.years, ' ' + t('年')) };
       case 'language':
         return { title: d.name || '', subtitle: [d.level, d.qualification].filter(Boolean).join(' · '), period: d.date || '' };
       case 'document':

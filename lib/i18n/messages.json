@@ -2584,6 +2584,30 @@
     "ja": "使用年数（確認済み）",
     "en": "Years used (confirmed)"
   },
+  "记录类型": {
+    "ja": "記録の種類",
+    "en": "Record type"
+  },
+  "擅长领域（按领域归纳）": {
+    "ja": "得意分野（分野ごとにまとめる）",
+    "en": "Area of strength (grouped by area)"
+  },
+  "技术技能（一项技术一行，含年数与水平）": {
+    "ja": "技術スキル（1技術1行、年数とレベル付き）",
+    "en": "Technical skill (one per row, with years and level)"
+  },
+  "经验年数（数字按年显示，也可写「約半年」「8ヶ月」）": {
+    "ja": "経験年数（数字は年として表示。「約半年」「8ヶ月」も可）",
+    "en": "Experience (numbers shown as years; text such as \"about half a year\" also allowed)"
+  },
+  "技能水平・备注": {
+    "ja": "スキルレベル・備考",
+    "en": "Skill level / notes"
+  },
+  "技能表「经验年数」栏（如「母語」「4年間の業務使用」）": {
+    "ja": "スキル表の「経験年数」欄（例：「母語」「4年間の業務使用」）",
+    "en": "Skill table \"experience\" column (e.g. native, 4 years at work)"
+  },
   "成果案例": {
     "ja": "成果事例",
     "en": "Achievements"

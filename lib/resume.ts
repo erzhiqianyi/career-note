@@ -42,6 +42,16 @@ export const incomeSources = [
   { value: 'other', label: '其他' },
 ] as const;
 /** 月收×12＋奖金; null until the monthly figure is known. Forms reject a 现年收 that does not match it. */
+// 职务经历书有两张技能表：按领域归纳的「得意とする分野」，和一项技术一行的「PCスキル/テクニカルスキル」。旧记录没有该字段，按领域处理。
+export const skillTypes = [
+  { value: 'area', label: '擅长领域（按领域归纳）' },
+  { value: 'tech', label: '技术技能（一项技术一行，含年数与水平）' },
+] as const;
+// 纯数字按年显示；「約半年」「8ヶ月」「母語」等原样显示。
+export const formatYears = (years = '', unit = '年') => {
+  const v = years.trim();
+  return /^\d+(\.\d+)?$/.test(v) ? v + unit : v;
+};
 export function annualFromMonthly(data: Record<string, string>): number | null {
   if (!data.monthlyIncome) return null;
   return Number(data.monthlyIncome) * 12 + Number(data.annualBonus || 0);
@@ -117,8 +127,10 @@ export const resumeSections: Record<
     fields: [
       field('name', '技能名称', { required: true }),
       field('category', '技能分类'),
+      field('skillType', '记录类型', { options: skillTypes }),
       field('usage', '应用场景', { multiline: true }),
-      field('years', '使用年数（已确认）'),
+      field('years', '经验年数（数字按年显示，也可写「約半年」「8ヶ月」）'),
+      field('skillLevel', '技能水平・备注'),
     ],
   },
   achievement: {
@@ -140,6 +152,8 @@ export const resumeSections: Record<
       field('qualification', '证书或资格'),
       field('date', '取得年月', { date: true }),
       field('usage', '实际使用场景', { multiline: true }),
+      field('experience', '技能表「经验年数」栏（如「母語」「4年間の業務使用」）'),
+      field('skillLevel', '技能水平・备注'),
     ],
   },
   preferences: {

@@ -81,3 +81,25 @@ test('personalized drafts are prefilled from records with source references', ()
   assert.match(customized, /Selected revision only/); assert.match(customized, /<h1>職務経歴書<\/h1>/);
   assert.doesNotMatch(customized, /<ruby>/);
 });
+
+test('technical skills print as a category / type / years / level table with languages last', () => {
+  const tech = (id, name, category, years, skillLevel) => entry(id, 'skill', { name, category, years, skillLevel, skillType: 'tech' });
+  const used = [
+    ...entries.filter((e) => e.kind !== 'language'),
+    tech('t1', 'Swift', '言語', '約半年', '個人開発で実装'),
+    tech('t2', 'Git', 'ツール・その他', '9', '通常業務で対応可能'),
+    tech('t3', 'Java', '言語', '9', '設計・技術指導が可能'),
+    tech('t4', 'Scala', '言語', '4', '設計・実装が可能'),
+    entry('l1', 'language', { name: '日本語', experience: 'JLPT N2', skillLevel: '通常業務で対応可能' }),
+  ];
+  const html = resumePrintHTML(printableEntries(used, 'ja'), { template: 'shokumu' });
+  assert.match(html, /PCスキル\/テクニカルスキル/);
+  assert.match(html, /<th rowspan="3">言語<\/th><td>Java<\/td><td class="yrs">9年<\/td><td>設計・技術指導が可能<\/td>/);
+  assert.ok(html.indexOf('>Scala<') < html.indexOf('>Swift<'));
+  assert.match(html, /<td>Swift<\/td><td class="yrs">約半年<\/td>/);
+  assert.ok(html.indexOf('>Git<') < html.indexOf('>語学<'));
+  assert.match(html, /<th rowspan="1">語学<\/th><td>日本語<\/td><td class="yrs">JLPT N2<\/td><td>通常業務で対応可能<\/td>/);
+  // Area records stay in the summary table, not in the technical one.
+  assert.match(html, /<th>バックエンド<\/th><td>Java、Spring Boot<\/td><td class="num">9年<\/td>/);
+  assert.doesNotMatch(html, /<h3>語学<\/h3>/);
+});
