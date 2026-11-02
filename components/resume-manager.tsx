@@ -119,6 +119,19 @@ function lines(text = '') {
     .map((l) => l.trim().replace(/^(\d+[.、)]|[-•・*])\s*/, ''))
     .filter(Boolean);
 }
+// 职务内容按「見出し：本文」拆开；「担当」「組織／体制」单独放，和职务经历书的【担当】【組織】一致。
+function dutyItems(text = '') {
+  const items = lines(text).map((line) => {
+    const m = line.match(/^([^：:。]{1,30})[：:]\s*(.+)$/);
+    return m ? { heading: m[1].trim(), text: m[2].trim() } : { heading: '', text: line };
+  });
+  const take = (names: string[]) => items.filter((i) => names.includes(i.heading));
+  return {
+    scope: take(['担当', '担当範囲']),
+    org: take(['組織', '体制', 'チーム']),
+    duties: items.filter((i) => !['担当', '担当範囲', '組織', '体制', 'チーム'].includes(i.heading)),
+  };
+}
 function chips(text = '') {
   const parts: string[] = [];
   let start = 0;
@@ -639,6 +652,32 @@ export default function ResumeManager({
         </dl>
       ) : null;
     }
+    if (entry.kind === 'employment' && entry.data.responsibilities) {
+      const { scope, org, duties } = dutyItems(entry.data.responsibilities);
+      const others = fields.filter((f) => f.key !== 'responsibilities');
+      body = (
+        <>
+          <div className="resume-duty-table-wrap"><table className="resume-duty-table">
+            <thead><tr><th>{t('期间')}</th><th>{t('业务内容')}</th><th>{t('组织／角色')}</th></tr></thead>
+            <tbody><tr>
+              <td className="resume-duty-period">{entry.data.startDate || ''}<span>〜</span>{entry.data.endDate || t('至今')}</td>
+              <td className="resume-duty-main">
+                {scope.map((s, i) => <p key={'s' + i}><strong>【{t('担当')}】</strong><Ja text={s.text} /></p>)}
+                {duties.map((d, i) => d.heading
+                  ? <section key={i}><h4><Ja text={d.heading} /></h4><p><Ja text={d.text} /></p></section>
+                  : <p key={i}><Ja text={d.text} /></p>)}
+                {!!tech.length && <div className="resume-duty-tech"><strong>【{t('使用技术')}】</strong><div className="resume-chips">{tech.map((x) => <span key={x} className="tag"><Ja text={x} /></span>)}</div></div>}
+              </td>
+              <td className="resume-duty-side">
+                {org.length > 0 && <><strong>【{t('组织')}】</strong>{org.map((o, i) => <p key={i}><Ja text={o.text} /></p>)}</>}
+                {entry.data.role && <><strong>【{t('角色')}】</strong><p><Ja text={entry.data.role} /></p></>}
+              </td>
+            </tr></tbody>
+          </table></div>
+          {others.length > 0 && <dl className="resume-details">{others.map((f) => <div key={f.key}><dt>{t(f.label)}</dt><dd><Ja text={entry.data[f.key]} /></dd></div>)}</dl>}
+        </>
+      );
+    }
     if (entry.kind === 'achievement') {
       const starFields = [
         ['S', 'context', 'S｜背景与状况'],
@@ -740,7 +779,7 @@ export default function ResumeManager({
           </div>
           <div className="resume-record-details">
           {body}
-          {!!tech.length && (
+          {!!tech.length && !(entry.kind === 'employment' && entry.data.responsibilities) && (
             <div className="resume-chips">
               {tech.map((x) => (
                 <span key={x} className="tag">
