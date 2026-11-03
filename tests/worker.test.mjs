@@ -343,6 +343,27 @@ void test('question set patches change one question and keep the rest of the set
  assert.equal(state.questionSets[0].questions[1].sampleAnswer,'新しい回答です。');
  assert.equal(state.questionSets[0].questions[1].title,'Question');
  assert.equal(state.questionSets[0].title,'Practice');
+
+ const flow={version:1,nodes:[{id:'background',title:'背景',cue:'短い要点',detail:'説明',cautions:'注意'}],followUps:[{id:'detail',question:'詳しく？',nodeId:'background',questionId:'q3'}]};
+ const beforeFlow=structuredClone(state.attempts);
+ assert.equal((await send('import/preview',{schemaVersion:1,questionSetPatches:[{id:pack.id,questions:[{id:'q1',answerFlow:flow}]}],completeTaskIds:[]})).status,200);
+ assert.equal((await (await send('state')).json()).questionSets[0].questions[0].answerFlow,undefined);
+ assert.equal((await patch({id:pack.id,questions:[{id:'q1',answerFlow:flow}]})).status,200);
+ state=await (await send('state')).json();
+ assert.deepEqual(state.questionSets[0].questions[0].answerFlow,flow);
+ assert.deepEqual(state.attempts,beforeFlow);
+ assert.equal(state.questionSets[0].questions[0].outline,base.outline);
+ assert.equal((await patch({id:pack.id,questions:[{id:'q1',title:'Updated'}]})).status,200);
+ assert.deepEqual((await (await send('state')).json()).questionSets[0].questions[0].answerFlow,flow);
+ assert.equal((await patch({id:pack.id,questions:[{id:'q1',answerFlow:{...flow,followUps:[{id:'x',question:'?',nodeId:'missing'}]}}]})).status,400);
+ assert.equal((await patch({id:pack.id,removeQuestionIds:['q3']})).status,400);
+ const missingQuestion={...flow,followUps:[{id:'x',question:'?',questionId:'missing'}]};
+ assert.equal((await patch({id:pack.id,questions:[{id:'q1',answerFlow:missingQuestion}]})).status,400);
+ const legacyFull={...pack,questions:state.questionSets[0].questions.map(({answerFlow,...q})=>q)};
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[legacyFull],completeTaskIds:[]})).status,200);
+ assert.deepEqual((await (await send('state')).json()).questionSets[0].questions[0].answerFlow,flow);
+ // Explicitly remove the link before deleting its target.
+ assert.equal((await patch({id:pack.id,questions:[{id:'q1',answerFlow:{...flow,followUps:[]}}]})).status,200);
  // answered question cannot be removed; an unanswered one can, and a new id appends with full fields
  const answered=await patch({id:pack.id,removeQuestionIds:['q1']});
  assert.equal(answered.status,400);assert.match((await answered.json()).error,/已有回答的问题 id/);

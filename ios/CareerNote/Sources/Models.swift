@@ -166,12 +166,32 @@ struct QuestionSet: Codable, Identifiable {
     let sourceNotes: String?
 }
 
+struct AnswerFlow: Codable {
+    struct Node: Codable, Identifiable {
+        let id: String
+        let title: String
+        let cue: String?
+        let detail: String?
+        let cautions: String?
+    }
+    struct FollowUp: Codable, Identifiable {
+        let id: String
+        let question: String
+        let nodeId: String?
+        let questionId: String?
+    }
+    let version: Int
+    let nodes: [Node]
+    let followUps: [FollowUp]
+}
+
 struct CareerQuestion: Codable, Identifiable {
     let id: String
     let title: String
     let questionJa: String
     let meaning: String?
     let outline: String?
+    var answerFlow: AnswerFlow? = nil
     let sampleAnswer: String?
     let targetSeconds: Int?
     let category: String?

@@ -558,6 +558,92 @@ struct PracticeQuestionLink: View {
     }
 }
 
+private struct AnswerFollowUpsView: View {
+    let items: [AnswerFlow.FollowUp]
+    let packID: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(items) { item in
+                if let questionID = item.questionId {
+                    NavigationLink(value: AppRoute.answer(packID: packID, questionID: questionID)) {
+                        Label(CareerRichText.plain(item.question), systemImage: "arrow.right.circle")
+                    }
+                } else {
+                    RichContent(text: item.question)
+                }
+            }
+        }
+    }
+}
+
+private struct AnswerFlowView: View {
+    let flow: AnswerFlow
+    let packID: String
+    @State private var expandedStep: String?
+
+    var body: some View {
+        let steps = flow.nodes
+        VStack(alignment: .leading, spacing: 0) {
+            Text("回答の流れ")
+                .font(.headline)
+                .padding(.bottom, 12)
+            ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
+                HStack(alignment: .top, spacing: 12) {
+                    Text("\(index + 1)")
+                        .font(.subheadline.bold().monospacedDigit())
+                        .foregroundStyle(PhoneStyle.accent)
+                        .frame(width: 30, height: 30)
+                        .background(PhoneStyle.accent.opacity(0.10), in: Circle())
+                        .accessibilityLabel("ステップ \(index + 1)")
+                    VStack(alignment: .leading, spacing: 8) {
+                        let related = flow.followUps.filter { $0.nodeId == step.id }
+                        if step.detail?.isEmpty == false || step.cautions?.isEmpty == false || !related.isEmpty {
+                            DisclosureGroup(isExpanded: Binding(
+                                get: { expandedStep == step.id },
+                                set: { expandedStep = $0 ? step.id : nil }
+                            )) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    if let detail = step.detail, !detail.isEmpty { RichContent(text: detail) }
+                                    if let cautions = step.cautions, !cautions.isEmpty {
+                                        Text("表現の注意点").font(.caption.bold())
+                                        RichContent(text: cautions)
+                                    }
+                                    if !related.isEmpty {
+                                        Text("関連する追加質問").font(.caption.bold())
+                                        AnswerFollowUpsView(items: related, packID: packID)
+                                    }
+                                }.padding(.top, 8)
+                            } label: {
+                                Text(step.title).font(.subheadline.weight(.medium))
+                            }
+                        } else {
+                            Text(step.title)
+                                .font(.subheadline.weight(.medium))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let cue = step.cue, !cue.isEmpty {
+                            Text(CareerRichText.plain(cue)).font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 5)
+                }
+                .padding(10)
+                .background(PhoneStyle.accent.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                if index < steps.count - 1 {
+                    Image(systemName: "arrow.down")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(PhoneStyle.accent.opacity(0.6))
+                        .frame(width: 50, height: 22)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+    }
+}
+
 struct AnswerView: View {
     @Bindable var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -566,7 +652,8 @@ struct AnswerView: View {
     @State private var speech = PracticeSpeechRecorder()
     @State private var referenceSpeech = ReferenceSpeechPlayer()
     @State private var recognitionLanguage = "ja-JP"
-    @State private var showOutline = true
+    @State private var showOutline = false
+    @State private var showFollowUps = false
     @State private var showSample = ProcessInfo.processInfo.arguments.contains("-careerDesignReverse")
     @State private var showMoreHints = false
     @State private var saved = false
@@ -711,10 +798,28 @@ struct AnswerView: View {
                         }
                     }
                 }
+                if let flow = question.answerFlow, flow.version == 1 {
+                    Divider()
+                    AnswerFlowView(flow: flow, packID: pack.id).id(question.id)
+                }
                 if let outline = question.outline, !outline.isEmpty {
                     Divider()
-                    DisclosureGroup("回答の組み立て方", isExpanded: $showOutline) {
+                    DisclosureGroup("詳しい説明・注意点", isExpanded: $showOutline) {
                         RichContent(text: outline).padding(.top, 8)
+                    }
+                }
+                if let flow = question.answerFlow, flow.version == 1 {
+                    let unlinked = flow.followUps.filter { $0.nodeId == nil }
+                    if !unlinked.isEmpty {
+                        Divider()
+                        DisclosureGroup("関連する追加質問", isExpanded: $showFollowUps) {
+                            AnswerFollowUpsView(items: unlinked, packID: pack.id).padding(.top, 8)
+                        }
+                    }
+                } else if let followUps = question.followUps, !followUps.isEmpty {
+                    Divider()
+                    DisclosureGroup("関連する追加質問", isExpanded: $showFollowUps) {
+                        RichContent(text: followUps).padding(.top, 8)
                     }
                 }
                 if let sample = question.sampleAnswer, !sample.isEmpty {
@@ -759,7 +864,7 @@ struct AnswerView: View {
                         .padding(.top, 8)
                     }
                 }
-                if question.why?.isEmpty == false || question.followUps?.isEmpty == false {
+                if question.why?.isEmpty == false {
                     Button("回答のヒントを詳しく見る") { showMoreHints = true }
                         .font(.subheadline.bold())
                 }

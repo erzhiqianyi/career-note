@@ -1,3 +1,4 @@
+import type { AnswerFlow } from './answer-flow';
 import { apiUrl } from './api-base';
 import { freshAuthToken } from './career-auth';
 import type { CompanyProfile } from './company-profile';
@@ -245,6 +246,7 @@ export type Question = {
   meaning: string;
   why: string;
   outline: string;
+  answerFlow?: AnswerFlow;
   /** Optional illustrative answer supplied with the question set; never the learner's answer. */
   sampleAnswer?: string;
   followUps: string;

@@ -290,3 +290,19 @@ career-event-v1:{"date":"2026-10-29","start":"10:05","end":"11:30","timeStatus":
 documentの本文は更新できないため、新しい版は新しいidを使う。旧母版を保持し、雇主・顧客・成果・個人開発・未実装の計画を分ける。大量のMarkdownをexperienceやskillsへ再投入しない。書込み後は対象id・各フィールド・revisionを読んで確認する。失敗時は読み戻してから未完了レコードのみ再開する。仕様は[構造化履歴管理](structured-resume.md)を参照。
 
 本人が文書版の完全削除を明示的に依頼した場合のみ、対象をアーカイブしてから `career_delete_resume_document({ id, revision })` を呼ぶ。現在のrevisionを使い、削除後は一覧と履歴の両方で消えたことを確認する。個別化履歴書から参照されている場合は削除が拒否される。構造化された職歴・学歴などの事実レコードは削除対象にしない。
+
+## 回答流程 answerFlow v1
+
+新生成或重整练习题时，保存可选的 `answerFlow`；旧题没有此字段仍可读取。MCP、REST、网页和 iOS 使用同一结构：
+
+```json
+{"version":1,"nodes":[{"id":"background","title":"项目背景","cue":"一句话概述","detail":"依据已保存资料整理的表达","cautions":"避免混淆雇主和客户"}],"followUps":[{"id":"responsibility","question":"具体负责哪些部分？","nodeId":"background","questionId":"existing-question-id"}]}
+```
+
+- nodes 为回答顺序，1–12 个；id 在题内唯一并在修订时保持稳定。title 最多 200 字，cue 最多 500 字，detail 最多 10000 字，cautions 最多 5000 字。后面三个字段可省略。默认只展示主线标题和简短 cue，详细表达、注意点和关联追问由用户展开。
+- followUps 最多 40 条，id 唯一，question 为 1–5000 字；nodeId 可省略，表示题目层级追问。questionId 可省略；提供时必须指向同题组内真实存在的题目。不能靠标题关键词猜测关联。删除目标题目前必须同时移除或改正引用。
+- 新字段缺失时保持旧内容；不要从前端通用模板伪造个人主流程。旧客户端整组提交未带 answerFlow 时保留已保存的流程。修改某一流程时提交完整 answerFlow 对象；不接受 null，不自动合并其中节点。
+- 迁移沿用题组和题目 id，通过 questionSetPatches 仅补 answerFlow，保留 outline、followUps、sampleAnswer、回答快照和点评。明确编号／箭头提纲可以机械转换；长篇修订说明须由 Agent 逐题结合原文与参考回答整理，不增加事实。不确定的追问留在题目层级，不强行绑定。
+- 写入前重新读取题目，确认来源没有变化，先 preview 再 import，最后读回比较 answerFlow 与旧字段。重复运行跳过已有 answerFlow；不把导入计数当作保存成功证据。
+
+本机辅助工具：`node scripts/prepare-answer-flow-migration.mjs EXTERNAL_STATE_JSON EXTERNAL_OUTPUT_DIR`。输入必须来自本账号的正式 context/state；输出目录在仓库外。它只生成 `answer-flow-import.json` 和 `answer-flow-review.json`，不访问数据库、不联网、不写入服务；混杂说明的题目列为待 Agent 整理。输出文件存在时拒绝覆盖。部署支持新字段的 Worker 后刷新 MCP 工具列表，用 MCP 的预览、导入、读回完成保存；旧 Worker 会丢弃未知字段，不能向旧服务执行迁移。

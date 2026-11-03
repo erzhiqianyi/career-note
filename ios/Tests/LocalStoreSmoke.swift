@@ -8,12 +8,17 @@ import Foundation
         let stateData = Data("""
         {"jobs":[{"id":"job-1","company":"Sample","role":"Engineer","status":"面试中","nextDate":"2026-10-24"}],"profile":null,"resume":[],"today":"2026-10-24","materials":[],"reports":[],"tasks":[],"questionSets":[],"attempts":[],"reviews":[]}
         """.utf8)
-        let state = try JSONDecoder().decode(CareerState.self, from: stateData)
+        var state = try JSONDecoder().decode(CareerState.self, from: stateData)
+        let flowPack = #"{"id":"flow-pack","title":"Practice","questions":[{"id":"q1","title":"Project","questionJa":"説明してください","outline":"Original notes","answerFlow":{"version":1,"nodes":[{"id":"background","title":"背景","cue":"要点","detail":"説明","cautions":"注意"}],"followUps":[{"id":"why","question":"なぜ？","nodeId":"background","questionId":"q2"}]}},{"id":"q2","title":"Why","questionJa":"なぜ？"}]}"#
+        state.questionSets = [try JSONDecoder().decode(QuestionSet.self, from: Data(flowPack.utf8))]
         let pending = PendingAttempt(id: "pending-1", questionSetId: "pack-1", questionId: "q-1", answer: "offline answer", language: "ja", durationSeconds: 32, requestReview: true, createdAt: Date(timeIntervalSince1970: 12345), hasRecording: true)
         let snapshot = LocalSnapshot(state: state, pending: [pending], lastUpdated: Date(timeIntervalSince1970: 45678), personalizedResumes: [])
         try LocalStore.save(snapshot, uid: "test-user", in: root)
         let read = try LocalStore.load(uid: "test-user", in: root)
         precondition(read?.state.jobs.first?.company == "Sample")
+        precondition(read?.state.questionSets.first?.questions.first?.answerFlow?.nodes.first?.id == "background")
+        precondition(read?.state.questionSets.first?.questions.first?.answerFlow?.followUps.first?.questionId == "q2")
+        precondition(read?.state.questionSets.first?.questions.last?.answerFlow == nil)
         precondition(read?.pending.first?.answer == "offline answer")
         precondition(read?.pending.first?.hasRecording == true)
         precondition(read?.lastUpdated == snapshot.lastUpdated)

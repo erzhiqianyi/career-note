@@ -264,6 +264,11 @@ void test('MCP schema is public and scope-annotated without exposing user data',
     const patch = input.properties.bundle.properties.questionSetPatches.items;
     assert.deepEqual(patch.required, ['id']);
     assert.deepEqual(patch.properties.questions.items.required, ['id']);
+    const flow = patch.properties.questions.items.properties.answerFlow;
+    assert.equal(flow.properties.version.const, 1);
+    assert.equal(flow.properties.nodes.maxItems, 12);
+    assert.equal(flow.properties.followUps.items.properties.nodeId.type, 'string');
+    assert.equal(flow.properties.followUps.items.properties.questionId.type, 'string');
   }
   assert.ok(typeof schema.contract === 'string' && schema.contract.length > 100);
   assert.ok(!JSON.stringify(schema).includes('mcp_'), 'schema must not carry tokens');

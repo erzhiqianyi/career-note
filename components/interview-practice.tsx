@@ -1,4 +1,5 @@
 'use client';
+import { AnswerFlowView } from './answer-flow';
 import { RecordBack, useRecordPage } from './record-page';
 import { DataTable, DataRow, DataTitle, DataCell } from './data-table';
 import { useLocale } from '@/components/locale-provider';
@@ -969,6 +970,7 @@ export default function InterviewPractice({
               </h2>
               <p className="practice-question-meaning">{bt(question.meaning)}</p>
               {hints && keywordChips(hints)}
+              {question.answerFlow?.version === 1 && <AnswerFlowView key={question.id} flow={question.answerFlow} onQuestion={id => setPracticeRecord(pack.id + '|' + id)} />}
               <details className="practice-reference">
                 <summary>{tr('回答思路')}</summary>
                 <p className="prewrap"><Ja text={bt(question.outline)} /></p>

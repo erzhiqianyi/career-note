@@ -17,7 +17,7 @@ enum DesignPreview {
           "reports": [{"id":"sample-report","title":"今天的准备重点","content":"先练 60 秒自我介绍，再准备一段项目经历。","date":"2026-10-24"}],
           "tasks": [{"id":"sample-task","kind":"回答点评","status":"待处理","instructions":"等待 Agent 点评最新回答"}],
           "questionSets": [{"id":"sample-pack","jobId":"sample-job-1","title":"示例科技 · 第一轮面试","scenario":"以下为模拟练习题，并非公司真题。","questions":[
-            {"id":"intro","title":"60 秒自我介绍","questionJa":"自己紹介をお願いします。","meaning":"请介绍自己。","outline":"当前方向 → 一个相关项目 → 想继续做的工作","sampleAnswer":"本人的事实请自行填写。","targetSeconds":60},
+            {"id":"intro","title":"60 秒自我介绍","questionJa":"自己紹介をお願いします。","meaning":"请介绍自己。","outline":"当前方向 → 一个相关项目 → 想继续做的工作","answerFlow":{"version":1,"nodes":[{"id":"direction","title":"現在の方向","cue":"モバイルアプリの開発","detail":"架空の設計プレビューです。","cautions":"実際の経験に合わせて話す。"},{"id":"project","title":"関連するプロジェクト"},{"id":"future","title":"今後取り組みたい仕事"}],"followUps":[{"id":"project-detail","nodeId":"project","questionId":"project","question":"担当したプロジェクトについて教えてください。"},{"id":"why","question":"なぜこの仕事を選びましたか。"}]},"sampleAnswer":"本人的事实请自行填写。","targetSeconds":60},
             {"id":"project","title":"介绍项目经历","questionJa":"担当したプロジェクトについて教えてください。","meaning":"请介绍你负责的项目。","outline":"背景 → 个人行动 → 结果","targetSeconds":90},
             {"id":"reverse","title":"逆質問","questionJa":"{何|なに}か{質問|しつもん}はありますか。","meaning":"あなたからの質問","outline":"一つずつ質問し、回答を聞いてから次を選ぶ。","sampleAnswer":"① JavaやSpring Bootの{開発案件|かいはつあんけん}はありますか。\n\n② {設計|せっけい}から{運用|うんよう}まで、どの{工程|こうてい}を{担当|たんとう}しますか。\n\n③ {日本語|にほんご}はどのような{場面|ばめん}で{使います|つかいます}か。\n\n④ {募集|ぼしゅう}の{背景|はいけい}を{教えて|おしえて}いただけますか。","targetSeconds":90,"category":"逆質問"}
           ]},

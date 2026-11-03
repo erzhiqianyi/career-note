@@ -1,3 +1,4 @@
+import { answerFlowSchema, type AnswerFlow } from '../lib/answer-flow';
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
 import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
 import { ensureMaterialFilesSchema, materialFileMeta, materialFileKey, saveMaterialFile, deleteMaterialFile, type MaterialFileKind } from './material-files';
@@ -626,6 +627,7 @@ type ParsedQuestion = {
   meaning: string;
   why: string;
   outline: string;
+  answerFlow?: AnswerFlow;
   sampleAnswer?: string;
   followUps: string;
   category: string;
@@ -643,7 +645,10 @@ function parseQuestionSetQuestions(questions: unknown[]) {
   for (const question of questions) {
     if (typeof question !== 'object' || question === null) throw new AppError(400, '问题必须是对象');
     const q = question as Record<string, unknown>;
+    const flow = q.answerFlow === undefined ? undefined : answerFlowSchema.safeParse(q.answerFlow);
+    if (flow && !flow.success) throw new AppError(400, 'answerFlow: ' + flow.error.issues.map(issue => issue.message).join('; '));
     const node: ParsedQuestion = {
+      ...(flow?.success ? { answerFlow: flow.data } : {}),
       id: validateString(q.id, 'id', { required: true, max: 120 }),
       title: validateString(q.title, 'title', { required: true, max: 200 }),
       questionJa: validateString(q.questionJa, 'questionJa', { required: true, max: 5000 }),
@@ -669,6 +674,11 @@ function parseQuestionSetQuestions(questions: unknown[]) {
     seen.add(node.id);
     parsed.push(node);
   }
+  for (const question of parsed) {
+    for (const item of question.answerFlow?.followUps ?? []) {
+      if (item.questionId && !seen.has(item.questionId)) throw new AppError(400, '追问引用的题目不在当前题组中');
+    }
+  }
   return parsed;
 }
 
@@ -681,7 +691,13 @@ async function importQuestionSet(db: Workspace, data: Record<string, unknown>) {
   if (existing && existing.jobId !== jobId) throw new AppError(400, '题组不能改关联职位');
   if (!existing && (await records(db, 'questionSets')).some((pack) => pack.jobId === jobId))
     throw new AppError(400, '该职位已有练习题组，请沿用现有题组 id 更新题目');
-  const questions = parseQuestionSetQuestions((data.questions as unknown[]) || []);
+  const oldQuestions = (existing?.questions ?? []) as ParsedQuestion[];
+  const inputQuestions = Array.isArray(data.questions) ? data.questions : [];
+  const questions = parseQuestionSetQuestions(inputQuestions.map(q => {
+    if (!q || typeof q !== 'object') return q;
+    const old = oldQuestions.find(item => item.id === q.id);
+    return q.answerFlow === undefined && old?.answerFlow ? { ...q, answerFlow: old.answerFlow } : q;
+  }));
   if (existing) {
     const answeredIds = new Set((await records(db, 'attempts'))
       .filter((attempt) => attempt.questionSetId === key)

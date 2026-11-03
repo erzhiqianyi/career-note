@@ -34,4 +34,6 @@ Run `sh ios/test-rich-content.sh` to check Markdown headings and lists, ruby on/
 
 ## Design preview
 
+Practice questions with `answerFlow` v1 show saved nodes and short cues as a vertical flow. Expanding a node reveals its details, cautions, and linked follow-ups; a follow-up can navigate to another question in the same pack. Full notes, question-level follow-ups, and reference answers are collapsed initially. Legacy questions retain their original notes without a fabricated flow. The optional structure round-trips through the offline cache; migration uses the MCP workflow in `docs/agent-workflow.md`.
+
 Debug builds accept `-careerDesignPreview` to show fictional offline data without Firebase. Add `-careerDesignCompany`, `-careerDesignCompanyDetail`, `-careerDesignResume`, `-careerDesignRichMaterial`, or `-careerDesignApplication` to open those views; the default is today's practice. `-careerDesignAnswer` opens a question; add `-careerDesignReverse` to preview individually displayed reverse questions. `-careerDesignLogin` shows the login layout. These arguments are only for screenshots and do not authenticate or sync. Simulator screenshots are in `outputs/design-preview/` (ignored by Git).

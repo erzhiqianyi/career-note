@@ -1,3 +1,4 @@
+import { answerFlowSchema } from '../lib/answer-flow';
 // Career Note's MCP tool table. Every tool is a thin wrapper over the authenticated REST API,
 // so scope checks, tenancy and validation stay in one place; the gateway only routes and audits.
 import { z } from 'zod';
@@ -25,6 +26,7 @@ const question = z.object({
   meaning: z.string(),
   why: z.string(),
   outline: z.string(),
+  answerFlow: answerFlowSchema.optional().describe('Versioned answer nodes and linked follow-ups. Omit to preserve existing flow; keep node IDs stable.'),
   sampleAnswer: z.string().max(30000).optional().describe('Optional Japanese sample answer based only on confirmed facts; never the learner’s submitted answer.'),
   followUps: z.string(),
   category: z.string(),
