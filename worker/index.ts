@@ -471,7 +471,19 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
   return base;
 }
 
-async function updateJobPersonalField(db: Workspace, data: Record<string, unknown>, field: 'rating' | 'preferenceGroup') {
+function validateApplicationDoc(value: unknown) {
+  if (typeof value !== 'object' || value === null || Array.isArray(value) || Object.keys(value).some(key => !['motivation', 'wishes', 'email'].includes(key))) {
+    throw new AppError(400, 'applicationDoc 只接受 motivation、wishes 和 email');
+  }
+  const doc = value as Record<string, unknown>;
+  return {
+    motivation: validateString(doc.motivation, 'motivation', { max: 5000 }),
+    wishes: validateString(doc.wishes, 'wishes', { max: 3000 }),
+    email: validateString(doc.email, 'email', { max: 200 }),
+  };
+}
+
+async function updateJobPersonalField(db: Workspace, data: Record<string, unknown>, field: 'rating' | 'preferenceGroup' | 'applicationDoc') {
   if (Array.isArray(data) || Object.keys(data).some(key => !['id', 'revision', field].includes(key))) {
     throw new AppError(400, `更新只接受 id、revision 和 ${field}`);
   }
@@ -487,10 +499,11 @@ async function updateJobPersonalField(db: Workspace, data: Record<string, unknow
   if (field === 'preferenceGroup' && (typeof value !== 'string' || (value !== '' && !preferenceGroups.includes(value as typeof preferenceGroups[number])))) {
     throw new AppError(400, '志望群必须是第一志望群、第二志望群、第三志望群或空字符串');
   }
+  const stored = field === 'applicationDoc' ? JSON.stringify(validateApplicationDoc(value)) : value;
   // Patch the stored JSON in one conditional statement, preserving concurrent research writes.
   const saved = await db.connection.prepare(
-    "UPDATE records SET body=json_set(body, ?3, ?4, '$.revision', ?5, '$.updatedAt', ?6) WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?7 RETURNING body",
-  ).bind(workspaceKey(db, 'jobs'), id, '$.' + field, value as string | number, revision + 1, now(), revision).first<{ body: string }>();
+    `UPDATE records SET body=json_set(body, ?3, ${field === 'applicationDoc' ? 'json(?4)' : '?4'}, '$.revision', ?5, '$.updatedAt', ?6) WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?7 RETURNING body`,
+  ).bind(workspaceKey(db, 'jobs'), id, '$.' + field, stored as string | number, revision + 1, now(), revision).first<{ body: string }>();
   if (!saved) {
     if (!(await getRecord(db, 'jobs', id))) throw new AppError(404, '职位不存在');
     throw new AppError(409, '职位已更新，请读取最新 revision 后重试');
@@ -1148,6 +1161,9 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         if (Object.prototype.hasOwnProperty.call(obj, 'preferenceGroup')) {
           throw new AppError(400, '志望群请使用 career_update_job_preference，不能通过研究导入修改');
         }
+        if (Object.prototype.hasOwnProperty.call(obj, 'applicationDoc')) {
+          throw new AppError(400, 'applicationDoc 只能由本人在导出页面保存');
+        }
         if (
           ['status', 'history', 'notes', 'nextDate', 'nextAction', 'priority', 'revision'].some(
             (field) => Object.prototype.hasOwnProperty.call(obj, field),
@@ -1483,11 +1499,13 @@ const handler = async (
   const db: Workspace = { connection: rawDb, namespace: context.mode === 'off' ? '' : JSON.stringify([env.FIREBASE_PROJECT_ID, context.uid]) };
 
   if (pathname === '/api/career/material-files' || pathname === '/api/career/material-files/content') {
-    const id = validateString(url.searchParams.get('id'), 'id', { required: true, max: 120 });
-    const material = await getRecord(db, 'materials', id) as Material | null;
-    if (!material || !material.jobId || !['履歴書', '職務経歴書'].includes(material.kind)) throw new AppError(404, '申请文稿不存在');
     const requestedKind = url.searchParams.get('kind');
-    if (pathname.endsWith('/content') || method !== 'GET') {
+    // The ID photo belongs to the account, so exporting from records needs no saved material.
+    const accountPhoto = requestedKind === 'photo' && !url.searchParams.get('id');
+    const id = accountPhoto ? '' : validateString(url.searchParams.get('id'), 'id', { required: true, max: 120 });
+    const material = accountPhoto ? null : await getRecord(db, 'materials', id) as Material | null;
+    if (!accountPhoto && (!material || !material.jobId || !['履歴書', '職務経歴書'].includes(material.kind))) throw new AppError(404, '申请文稿不存在');
+    if (pathname.endsWith('/content') || method !== 'GET' || accountPhoto) {
       if (requestedKind !== 'pdf' && requestedKind !== 'photo') throw new AppError(400, '文件类型不支持');
       const kind = requestedKind as MaterialFileKind;
       if (method === 'GET') {
@@ -1745,6 +1763,11 @@ const handler = async (
     case '/api/career/jobs/preference':
       ensureScopes(context, ['career:write']);
       result = await updateJobPersonalField(db, payload, 'preferenceGroup');
+      break;
+    case '/api/career/jobs/application-doc':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '应募文书内容只能由本人在应用中保存');
+      result = await updateJobPersonalField(db, payload, 'applicationDoc');
       break;
     case '/api/career/jobs/status':
       ensureScopes(context, ['career:write']);

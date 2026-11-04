@@ -31,6 +31,7 @@ import {
   Search,
   Sparkles,
   X,
+  FileOutput,
 } from 'lucide-react';
 import StatusMark from '@/components/status-mark';
 import { postingSource } from '@/lib/job-platforms';
@@ -121,6 +122,7 @@ export default function InterviewPractice({
   openMaterial,
   openReport,
   requestPreparation,
+  exportDocuments,
   pendingJobIds = [],
   requesting = false,
   onAddJob,
@@ -133,6 +135,7 @@ export default function InterviewPractice({
   openMaterial: (material: Material) => void;
   openReport?: (report: Report) => void;
   requestPreparation?: (jobId: string) => void;
+  exportDocuments?: (job: Job) => void;
   pendingJobIds?: string[];
   requesting?: boolean;
   /** List and company-page actions that belong to the job records themselves (owned by the page). */
@@ -708,6 +711,7 @@ export default function InterviewPractice({
       </div>}
       {activeTab === 'board' && currentJob && <CompanyBoard job={currentJob} />}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
+        {!isBank && currentJob && exportDocuments && <div className="application-export-entry"><button type="button" className="secondary" onClick={() => exportDocuments(currentJob)}><FileOutput size={17} />{tr('从资料导出履歴書・職務経歴書')}</button></div>}
         {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p></div>}
         {archivedMaterials.length > 0 && <>
           <button type="button" className="text-button" aria-expanded={showArchived} onClick={() => setShowArchived(v => !v)}>

@@ -14,6 +14,7 @@
 | POST `/jobs/delete` | 求人と関連データの完全削除（`{jobs:[{id, revision}]}`、1–200件、競合は409）。MCP: `career_delete_jobs`。本人の明示的な削除依頼が必要 | career:write |
 | POST `/jobs/rating` | 個人評価のみ更新（`{id, revision, rating}`、0–5整数、競合は409）。MCP: `career_update_job_rating` | career:write |
 | POST `/jobs/preference` | 志望群のみ更新（`{id, revision, preferenceGroup}`、第一・第二・第三志望群または空文字、競合は409）。MCP: `career_update_job_preference` | career:write |
+| POST `/jobs/application-doc` | 出力用の志望動機・本人希望・応募用メールのみ更新（`{id, revision, applicationDoc}`、競合は409、本人のみ） | career:write |
 | POST `/platforms` | 求人サービス設定 | career:write |
 | POST `/tasks` | 作業依頼 | agent:write |
 | POST `/attempts` | 面接の元回答保存 | career:write |

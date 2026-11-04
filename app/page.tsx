@@ -27,6 +27,7 @@ import StatusMark from '@/components/status-mark';
 import DailyBrief, { collectBrief, briefSize } from '@/components/daily-brief';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { MaterialPrint } from '@/components/material-print';
+import { ApplicationExport } from '@/components/application-export';
 import { prepareMaterialPrint, type ApplicationKind } from '@/lib/material-print-content';
 import { MaterialPublications } from '@/components/material-publications';
 import { ApplicationReason } from '@/components/application-reason';
@@ -320,6 +321,7 @@ export default function Home() {
   const [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
     [doc, setDoc] = useRecordPage<Material | Report>('#documents', 'view', id => [...(data?.materials || []), ...(data?.reports || [])].find(item => item.id === id) || null, item => item.id);
   const [printMaterial, setPrintMaterial] = useRecordPage<Material>('#documents', 'print', id => data?.materials.find(m => m.id === id && !!m.jobId && ['履歴書', '職務経歴書'].includes(m.kind)) || null, m => m.id);
+  const [exportJob, setExportJob] = useRecordPage<Job>('#documents', 'export', id => data?.jobs.find(j => j.id === id) || null, j => j.id);
   // Only the id is routed; the event itself is read from the latest data so saved edits show at once.
   const [eventId, setEventId] = useRecordPage<string>('#calendar', 'event', id => id, id => id);
   const [taskPage, setTaskPage] = useRecordPage<State['tasks'][number]>('#agents', 'task', id => data?.tasks.find(t => t.id === id) || null, t => t.id);
@@ -802,6 +804,11 @@ export default function Home() {
       />
     );
   }
+  if (exportJob && data) {
+    return <main className="material-print-layout">
+      <ApplicationExport key={exportJob.id} job={data.jobs.find(j => j.id === exportJob.id) || exportJob} data={data} reload={reload} onBack={() => setExportJob(null)} />
+    </main>;
+  }
   if (printMaterial) {
     return <main className="material-print-layout">
       <MaterialPrint key={printMaterial.id} material={printMaterial} companyName={data?.jobs.find(job => job.id === printMaterial.jobId)?.company || printMaterial.title.split(/[｜|]/)[0].trim()} onBack={() => { window.location.hash = '#documents/view/' + encodeURIComponent(printMaterial.id); }} />
@@ -1186,6 +1193,7 @@ export default function Home() {
                   openMaterial={(m) => setDoc(m)}
                   openReport={(r) => setDoc(r)}
                   requestPreparation={(jobId) => void request('公司准备', jobId)}
+                  exportDocuments={(j) => setExportJob(j)}
                   pendingJobIds={pending.filter((t) => t.kind === '公司准备').map((t) => t.jobId)}
                   requesting={busy}
                   onAddJob={() => openJobEditor({})}

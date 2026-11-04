@@ -22,6 +22,7 @@ export const materialKinds = [
   '面试准备',
   '公司研究',
 ];
+export type ApplicationDoc = { motivation: string; wishes: string; email: string };
 export type Job = {
   id: string;
   /** Per-account, server-assigned number used for display and company URLs. */
@@ -60,6 +61,8 @@ export type Job = {
   rating?: number;
   /** Applicant's stated preference; missing or empty means not selected. */
   preferenceGroup?: PreferenceGroup;
+  /** Text that differs per company when exporting 履歴書 from the resume records. */
+  applicationDoc?: ApplicationDoc;
   nextAction: string;
   nextDate: string;
   notes: string;

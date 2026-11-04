@@ -114,6 +114,7 @@ export const resumeSections: Record<
       field('location', '工作地点'),
       field('responsibilities', '职责', { multiline: true }),
       field('technologies', '使用技术'),
+      field('historyNote', '履歴書职历栏的一行说明'),
     ],
   },
   education: {
@@ -136,6 +137,7 @@ export const resumeSections: Record<
       field('role', '本人角色'),
       field('problem', '解决的问题', { multiline: true }),
       field('contribution', '本人贡献', { multiline: true }),
+      field('brief', '简历简介（填写后进入職務経歴書的個人開発）', { multiline: true }),
       field('technologies', '使用技术'),
       field('status', '项目状态'),
       field('url', '项目链接'),
@@ -182,6 +184,7 @@ export const resumeSections: Record<
     fields: [
       field('role', '目标岗位'),
       field('rationale', '投递理由与匹配依据', { multiline: true }),
+      field('selfPr', '自己PR（「・」开头的行是小标题）', { multiline: true }),
       field('roles', '旧版目标岗位（兼容）', { multiline: true }),
       field('locations', '希望地点'),
       field('availability', '入职时间'),

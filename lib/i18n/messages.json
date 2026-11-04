@@ -5872,5 +5872,19 @@
   "通用练习": {
     "ja": "共通面接練習",
     "en": "General interview practice"
-  }
+  },
+  "从资料导出履歴書・職務経歴書": { "ja": "資料から履歴書・職務経歴書を出力", "en": "Export 履歴書 / 職務経歴書 from records" },
+  "从资料导出": { "ja": "資料から出力", "en": "Export from records" },
+  "返回公司": { "ja": "企業に戻る", "en": "Back to company" },
+  "文书类型": { "ja": "書類の種類", "en": "Document type" },
+  "文书日期": { "ja": "書類の日付", "en": "Document date" },
+  "投递邮箱": { "ja": "応募用メール", "en": "Application email" },
+  "已保存这次导出的版本。": { "ja": "今回出力した版を保存しました。", "en": "Saved this exported version." },
+  "内容与最新版本相同，没有新增版本。": { "ja": "最新の版と同じ内容のため、新しい版は追加していません。", "en": "Same as the latest version, so no new version was added." },
+  "导出失败": { "ja": "出力に失敗しました", "en": "Export failed" },
+  "内容来自当前履历资料。A4 · 缩放 100% · 关闭页眉页脚": { "ja": "内容は現在の履歴資料から作成します。A4・倍率 100%・ヘッダーとフッターはオフ", "en": "Built from your current records. A4 · 100% scale · headers and footers off" },
+  "证件照": { "ja": "証明写真", "en": "ID photo" },
+  "履歴書职历栏的一行说明": { "ja": "履歴書の職歴欄に書く一行説明", "en": "One-line note for the 履歴書 work history" },
+  "简历简介（填写后进入職務経歴書的個人開発）": { "ja": "履歴書用の紹介文（入力すると職務経歴書の個人開発に載ります）", "en": "Resume blurb (shown under 個人開発 when filled in)" },
+  "自己PR（「・」开头的行是小标题）": { "ja": "自己PR（「・」で始まる行は小見出し）", "en": "Self-PR (lines starting with ・ are subheadings)" }
 }

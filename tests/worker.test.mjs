@@ -152,6 +152,14 @@ void test('preference groups stay separate from ratings and survive research and
  assert.equal((await send('jobs/preference',{id:'missing',revision:1,preferenceGroup:''})).status,404);
  assert.equal((await send('jobs/preference',{id:job.id,revision:job.revision,preferenceGroup:'第二志望群',rating:5})).status,400);
  assert.equal((await send('import',{...bundle,jobs:[{...source,preferenceGroup:'第一志望群'}]})).status,400);
+ job=await read();
+ const applicationDoc={motivation:'志望',wishes:'希望年収：550万円。',email:'a@example.com'};
+ assert.equal((await send('jobs/application-doc',{id:job.id,revision:job.revision,applicationDoc})).status,200);
+ const documented=await read();assert.deepEqual(documented.applicationDoc,applicationDoc);assert.equal(documented.revision,job.revision+1);assert.equal(documented.status,job.status);
+ assert.equal((await send('jobs/application-doc',{id:job.id,revision:job.revision,applicationDoc})).status,409);
+ assert.equal((await send('jobs/application-doc',{id:job.id,revision:documented.revision,applicationDoc:{...applicationDoc,extra:'x'}})).status,400);
+ assert.equal((await send('jobs',{...documented,applicationDoc:undefined})).status,200);assert.deepEqual((await read()).applicationDoc,applicationDoc);
+ assert.equal((await send('import',{...bundle,jobs:[{...source,applicationDoc}]})).status,400);
 });
 void test('志望動機 keeps a short application reason counted without readings',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
