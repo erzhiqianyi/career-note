@@ -31,6 +31,8 @@
   "状态优先": { "ja": "ステータス順", "en": "Status first" },
   "编号优先": { "ja": "番号順", "en": "Number first" },
   "排序方式": { "ja": "並び替え", "en": "Sort by" },
+  "全部平台": { "ja": "すべての媒体", "en": "All platforms" },
+  "筛选来源平台": { "ja": "掲載媒体で絞り込む", "en": "Filter by source platform" },
   "正在加载…": { "ja": "読み込み中…", "en": "Loading…" },
   "未评分": { "ja": "未評価", "en": "Not rated" },
   "{0} 星": { "ja": "{0} つ星", "en": "{0} stars" },

@@ -174,6 +174,7 @@ export default function InterviewPractice({
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>(['进行中']);
+  const [platformFilter, setPlatformFilter] = useState<string[]>([]);
   const [managing, setManaging] = useState(false);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
   const [deletingJobs, setDeletingJobs] = useState(false);
@@ -186,7 +187,7 @@ export default function InterviewPractice({
   const [sort, setSort] = useState<{ key: PrepSortKey; desc: boolean }>({ key: 'schedule', desc: false });
   const [listPage, setListPage] = useState(1);
   // A new search, filter or sort starts from the first page again.
-  useEffect(() => setListPage(1), [search, statusFilter, sort]);
+  useEffect(() => setListPage(1), [search, statusFilter, platformFilter, sort]);
   const [practiceRecord, setPracticeRecord] = useRecordPage<string>('#jobs', 'question', id => {
     const [p, q] = id.split('|');
     return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null;
@@ -448,9 +449,12 @@ export default function InterviewPractice({
         case 'number': return job.companyNumber ?? (sort.desc ? 0 : Infinity);
       }
     };
+    const platformOf = (job: Job) => postingSource(job, data.platforms) || '未记录';
+    const platformOptions = [...new Set(data.jobs.map(platformOf))].sort((a, b) => a.localeCompare(b));
     const jobs = data.jobs
       .filter(j => (j.company + ' ' + j.role + ' ' + (j.companyNumber || '')).toLowerCase().includes(search.toLowerCase()))
       .filter(j => !statusFilter.length || statusFilter.some(status => status === '进行中' ? !closed.includes(j.status) : status === '有面试' ? isInterview(j) : j.status === status))
+      .filter(j => !platformFilter.length || platformFilter.includes(platformOf(j)))
       .sort((a, b) => {
         const x = keyOf(a), y = keyOf(b);
         const c = x < y ? -1 : x > y ? 1 : 0;
@@ -493,6 +497,20 @@ export default function InterviewPractice({
               const selected = current.filter(value => statuses.includes(value));
               return checked ? [...selected, status] : selected.filter(value => value !== status);
             })}>{tr(status)}</DropdownMenuCheckboxItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="secondary job-status-filter" aria-label={tr('筛选来源平台')}>
+            <span>{platformFilter.length ? platformFilter.map(platform => tr(platform)).join('、') : tr('全部平台')}</span>
+            <ChevronDown size={15} aria-hidden="true" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="job-status-filter-menu" aria-label={tr('筛选来源平台')}>
+            <DropdownMenuItem onClick={() => setPlatformFilter([])}>
+              {tr('全部平台')}
+              {!platformFilter.length && <Check size={15} aria-hidden="true" />}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {platformOptions.map(platform => <DropdownMenuCheckboxItem key={platform} checked={platformFilter.includes(platform)} closeOnClick={false} onCheckedChange={checked => setPlatformFilter(current => checked ? [...current, platform] : current.filter(value => value !== platform))}>{tr(platform)}</DropdownMenuCheckboxItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
         <DropdownMenu>
