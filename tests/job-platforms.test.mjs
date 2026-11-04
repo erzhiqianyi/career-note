@@ -13,7 +13,7 @@ const result = await build({
 });
 const compiled = { exports: {} };
 runInNewContext(result.outputFiles[0].text, { module: compiled, exports: compiled.exports, crypto, URL });
-const { builtinPlatforms, validatePlatform } = compiled.exports;
+const { builtinPlatforms, postingSource, validatePlatform } = compiled.exports;
 
 void test('platform account status keeps registration flag and login email', () => {
   const base = { ...builtinPlatforms[0] };
@@ -34,4 +34,12 @@ void test('platform account status keeps registration flag and login email', () 
     () => validatePlatform({ ...base, accountEmail: 'not-an-email' }, base),
     /登录邮箱格式不正确/,
   );
+});
+
+void test('posting source prefers the recorded platform, then a known site, then the host', () => {
+  const platforms = [{ name: 'Green', url: 'https://www.green-japan.com/' }];
+  assert.equal(postingSource({ url: 'https://www.green-japan.com/company/1', sourcePlatform: 'LinkedIn' }, platforms), 'LinkedIn');
+  assert.equal(postingSource({ url: 'https://jobs.green-japan.com/company/1' }, platforms), 'Green');
+  assert.equal(postingSource({ url: 'https://www.acme.example/careers' }, platforms), 'acme.example');
+  assert.equal(postingSource({ url: 'not a url' }, platforms), '');
 });

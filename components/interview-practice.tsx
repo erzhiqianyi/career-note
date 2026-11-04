@@ -33,6 +33,7 @@ import {
   X,
 } from 'lucide-react';
 import StatusMark from '@/components/status-mark';
+import { postingSource } from '@/lib/job-platforms';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
@@ -64,7 +65,13 @@ const emptyDraft: Draft = {
   seconds: '',
   dirty: false,
 };
-type PrepSortKey = 'company' | 'rating' | 'status' | 'schedule' | 'prep';
+type PrepSortKey = 'company' | 'rating' | 'status' | 'schedule' | 'prep' | 'number';
+const sortOptions: { key: PrepSortKey; label: string }[] = [
+  { key: 'schedule', label: '时间优先' },
+  { key: 'status', label: '状态优先' },
+  { key: 'number', label: '编号优先' },
+  { key: 'rating', label: '评分优先' },
+];
 type PrepColumn = PrepSortKey;
 /** Sections of one company's preparation page. */
 type PrepTab = 'info' | 'progress' | 'board' | 'materials' | 'practice' | 'summary';
@@ -438,6 +445,7 @@ export default function InterviewPractice({
         case 'status': return statuses.indexOf(job.status);
         case 'schedule': return job.nextDate || (sort.desc ? '' : '9999');
         case 'prep': return prepRank(prepOf(job));
+        case 'number': return job.companyNumber ?? (sort.desc ? 0 : Infinity);
       }
     };
     const jobs = data.jobs
@@ -487,7 +495,18 @@ export default function InterviewPractice({
             })}>{tr(status)}</DropdownMenuCheckboxItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
-        <button type="button" className={'secondary rating-sort-button' + (sort.key === 'rating' && !sort.desc ? ' is-active' : '')} aria-pressed={sort.key === 'rating' && !sort.desc} onClick={() => setSort(s => s.key === 'rating' && !s.desc ? { key: 'schedule', desc: false } : { key: 'rating', desc: false })}>{tr('评分优先')}</button>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="secondary job-status-filter" aria-label={tr('排序方式')}>
+            <span>{tr(sortOptions.find(option => option.key === sort.key)?.label || '排序方式')}</span>
+            <ChevronDown size={15} aria-hidden="true" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="job-status-filter-menu" aria-label={tr('排序方式')}>
+            {sortOptions.map(option => <DropdownMenuItem key={option.key} onClick={() => setSort({ key: option.key, desc: false })}>
+              {tr(option.label)}
+              {sort.key === option.key && <Check size={15} aria-hidden="true" />}
+            </DropdownMenuItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span>
         {data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
           <ListChecks size={20} aria-hidden="true" />
@@ -530,7 +549,7 @@ export default function InterviewPractice({
           { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', sortable: true },
           { key: 'schedule', label: tr('面试 / 跟进'), width: 'minmax(0,1.2fr)', sortable: true },
           { key: 'prep', label: tr('准备阶段'), width: 'minmax(120px,1.2fr)', sortable: true },
-          { key: 'posting' as PrepColumn, label: tr('招聘原文'), width: '72px' },
+          { key: 'posting' as PrepColumn, label: tr('招聘原文'), width: '112px' },
         ]}>{pageJobs.map(job => {
           const prep = prepOf(job);
           const stage = prepStage(prep);
@@ -556,7 +575,7 @@ export default function InterviewPractice({
                 {prep.questions ? ' · ' + tr('练习 {0} / {1} 题', [String(prep.answered), String(prep.questions)]) : ''}
               </small>
             </DataCell>
-            <DataCell label={tr('招聘原文')} className="prep-posting">{job.url ? <a className="text-button" href={job.url} target="_blank" rel="noreferrer" title={job.url} aria-label={tr('招聘原文') + ' · ' + job.company}>{tr('打开')}<ExternalLink size={14} aria-hidden="true" /></a> : <span className="muted">—</span>}</DataCell>
+            <DataCell label={tr('招聘原文')} className="prep-posting">{job.url ? <a className="text-button" href={job.url} target="_blank" rel="noreferrer" title={job.url} aria-label={tr('招聘原文') + ' · ' + job.company}><span>{tr(postingSource(job, data.platforms)) || tr('打开')}</span><ExternalLink size={14} aria-hidden="true" /></a> : <span className="muted">—</span>}</DataCell>
           </DataRow>;
         })}</DataTable> : <div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div>}
         {pageCount > 1 && <nav className="list-pagination" aria-label={tr('分页')}>
@@ -646,7 +665,7 @@ export default function InterviewPractice({
         </details>
         <details className="panel prep-info-section" open>
           <summary className="prep-info-heading"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><BriefcaseBusiness size={18} /></span>{tr('招聘信息')}</h2></summary>
-          {currentJob.url && <div className="prep-posting-link"><a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}<ExternalLink size={15} /></a></div>}
+          {currentJob.url && <div className="prep-posting-link"><a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}{postingSource(currentJob, data.platforms) && ' · ' + tr(postingSource(currentJob, data.platforms))}<ExternalLink size={15} /></a></div>}
           <div className="prep-source-row">
             <span className="prep-source-chip"><Globe2 size={15} aria-hidden="true" /><span>{tr('来源平台')}</span><b>{currentJob.sourcePlatform ? tr(currentJob.sourcePlatform) : tr('未记录')}</b></span>
             <span className="prep-source-chip" data-source-channel={currentJob.sourceChannel || ''}>

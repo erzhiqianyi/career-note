@@ -16,6 +16,25 @@ export function mergePlatforms(overrides: JobPlatform[]): JobPlatform[] {
   return [...rows.values()];
 }
 
+const siteOf = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+/** Where a posting lives: the recorded platform, else a saved platform on the same site, else the site itself. */
+export function postingSource(job: { url: string; sourcePlatform?: string }, platforms: JobPlatform[]): string {
+  if (job.sourcePlatform) return job.sourcePlatform;
+  const site = siteOf(job.url);
+  const platform = site && platforms.find((p) => {
+    const own = siteOf(p.url);
+    return own && (site === own || site.endsWith('.' + own));
+  });
+  return platform ? platform.name : site;
+}
+
 export function validatePlatform(
   data: Record<string, unknown>,
   old?: JobPlatform,

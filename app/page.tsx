@@ -386,6 +386,7 @@ export default function Home() {
   const sessionEpoch = useRef(0);
   const lastUid = useRef<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [authResolved, setAuthResolved] = useState(false);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [mcpTokens, setMcpTokens] = useState<MpcTokenRecord[]>([]);
@@ -471,10 +472,13 @@ export default function Home() {
             if (!user && config.mode !== 'off') {
               setAuth(null);
               setData(null);
+              setAuthResolved(true);
               return;
             }
             void refreshAuth().then((ok) => {
-              if (ok && !disposed) void reload();
+              if (disposed) return;
+              setAuthResolved(true);
+              if (ok) void reload();
             });
           },
           (error) => {
@@ -781,6 +785,10 @@ export default function Home() {
     if (!todayReport) steps.push(['整理每日分析', '从匹配点和准备缺口中，确定下一步行动。', '今日简报']);
     return steps.slice(0, 3).map((step, i) => [String(i + 1).padStart(2, '0'), ...step] as [string, string, string, string, string?]);
   })();
+  // A saved session is only known once the auth listener answers; until then, never flash the login page.
+  if (!error && (!authConfig || (authConfig.mode !== 'off' && !authResolved))) {
+    return <main className="app-boot" aria-busy="true"><p>{tr('正在加载…')}</p></main>;
+  }
   if (!authConfig || (authConfig.mode !== 'off' && !loggedIn)) {
     return (
       <CareerWelcome
