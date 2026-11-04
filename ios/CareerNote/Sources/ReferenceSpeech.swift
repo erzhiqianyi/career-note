@@ -2,6 +2,7 @@ import AVFoundation
 import CryptoKit
 import Foundation
 import Observation
+import MediaPlayer
 import Security
 
 enum AudioPlaybackSettings {
@@ -146,7 +147,12 @@ actor ReferenceSpeechCache {
 }
 
 @MainActor @Observable
-final class ReferenceSpeechPlayer {
+final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
+    private(set) var currentTime: TimeInterval = 0
+    private(set) var duration: TimeInterval = 0
+    private(set) var rate = AudioPlaybackSettings.rate
+    @ObservationIgnored private var timer: Timer?
+    @ObservationIgnored private var remoteTargets: [MPRemoteCommand] = []
     private(set) var isLoading = false
     private(set) var isPlaying = false
     private(set) var activeSource: String?
@@ -178,28 +184,149 @@ final class ReferenceSpeechPlayer {
             try session.setCategory(.playback)
             try session.setActive(true)
             let audio = try AVAudioPlayer(data: data)
-            let playbackRate = AudioPlaybackSettings.apply(to: audio)
+            AudioPlaybackSettings.apply(to: audio)
+            rate = audio.rate
+            audio.delegate = self
             guard audio.play() else { throw SpeechError.invalidAudio }
             player = audio
             isPlaying = true
             isLoading = false
+            duration = audio.duration
+            installControls()
+            timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, let player = self.player, player.isPlaying else { return }
+                    self.currentTime = player.currentTime
+                    self.isPlaying = player.isPlaying
+                }
+            }
+            updateNowPlaying()
             if cached == nil {
                 await ReferenceSpeechCache.shared.save(data, text: text, voice: voice, userID: userID)
             }
-            try? await Task.sleep(nanoseconds: UInt64(audio.duration / Double(playbackRate) * 1_000_000_000))
-            if current == generation { stop() }
+
         } catch {
             guard current == generation else { return }
-            isLoading = false
-            isPlaying = false
-            activeSource = nil
+            stop()
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func pause() {
+        player?.pause()
+        isPlaying = false
+        currentTime = player?.currentTime ?? currentTime
+        updateNowPlaying()
+    }
+
+    func resume() {
+        guard let player else { return }
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+            try AVAudioSession.sharedInstance().setActive(true)
+            if currentTime >= duration { player.currentTime = 0 }
+            currentTime = player.currentTime
+            guard player.play() else { throw SpeechError.invalidAudio }
+            isPlaying = true
+            updateNowPlaying()
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func seek(to time: TimeInterval) {
+        guard let player, time.isFinite else { return }
+        player.currentTime = min(max(0, time), duration)
+        currentTime = player.currentTime
+        updateNowPlaying()
+    }
+
+    func setRate(_ value: Float) {
+        guard value.isFinite else { return }
+        rate = min(2, max(0.5, value))
+        UserDefaults.standard.set(Double(rate), forKey: "audioPlaybackRate")
+        player?.rate = rate
+        updateNowPlaying()
+    }
+
+    private func updateNowPlaying() {
+        guard player != nil else { return }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: "参考回答",
+            MPMediaItemPropertyArtist: "Career Note",
+            MPMediaItemPropertyPlaybackDuration: duration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? rate : 0
+        ]
+    }
+
+    private func installControls() {
+        let center = MPRemoteCommandCenter.shared()
+        let actions: [(MPRemoteCommand, Selector)] = [
+            (center.playCommand, #selector(remotePlay)),
+            (center.pauseCommand, #selector(remotePause)),
+            (center.togglePlayPauseCommand, #selector(remoteToggle)),
+            (center.changePlaybackPositionCommand, #selector(remoteSeek(_:)))
+        ]
+        for (command, selector) in actions {
+            command.isEnabled = true
+            command.addTarget(self, action: selector)
+            remoteTargets.append(command)
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(interrupted(_:)),
+            name: AVAudioSession.interruptionNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(routeChanged(_:)),
+            name: AVAudioSession.routeChangeNotification, object: nil)
+    }
+
+    @objc private func remotePlay() -> MPRemoteCommandHandlerStatus { resume(); return .success }
+    @objc private func remotePause() -> MPRemoteCommandHandlerStatus { pause(); return .success }
+    @objc private func remoteToggle() -> MPRemoteCommandHandlerStatus {
+        if isPlaying { pause() } else { resume() }
+        return .success
+    }
+    @objc private func remoteSeek(_ event: MPChangePlaybackPositionCommandEvent) -> MPRemoteCommandHandlerStatus {
+        seek(to: event.positionTime)
+        return .success
+    }
+    @objc private func interrupted(_ notification: Notification) {
+        if let type = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+           type == AVAudioSession.InterruptionType.began.rawValue { pause() }
+    }
+    @objc private func routeChanged(_ notification: Notification) {
+        if let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+           reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue { pause() }
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor [weak self] in
+            guard let self, self.player === player else { return }
+            self.isPlaying = false
+            self.currentTime = self.duration
+            self.updateNowPlaying()
+        }
+    }
+
+    nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        Task { @MainActor [weak self] in
+            guard let self, self.player === player else { return }
+            self.stop()
+            self.errorMessage = error?.localizedDescription ?? SpeechError.invalidAudio.localizedDescription
         }
     }
 
     func stop() {
         generation = UUID()
+        timer?.invalidate()
+        timer = nil
+        for command in remoteTargets { command.removeTarget(self) }
+        remoteTargets.removeAll()
+        NotificationCenter.default.removeObserver(self)
         player?.stop()
+        if player != nil {
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
+        currentTime = 0
+        duration = 0
         player = nil
         isLoading = false
         isPlaying = false

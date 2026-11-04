@@ -695,32 +695,73 @@ struct AnswerView: View {
 
     private func speechButton(for source: String, title: String) -> some View {
         let active = referenceSpeech.activeSource == source
-        return Button {
-            if active && (referenceSpeech.isPlaying || referenceSpeech.isLoading) {
-                referenceSpeech.stop()
-            } else {
-                let voice = ReferenceSpeechSettings.voice
-                Task {
-                    await referenceSpeech.play(source, userID: model.userID ?? "local", voice: voice) {
-                        try await model.referenceSpeech(questionSetID: pack.id, questionID: question.id,
-                                                        source: source, voice: voice)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Button {
+                    if active && referenceSpeech.isLoading {
+                        referenceSpeech.stop()
+                    } else if active {
+                        if referenceSpeech.isPlaying { referenceSpeech.pause() }
+                        else { referenceSpeech.resume() }
+                    } else {
+                        let voice = ReferenceSpeechSettings.voice
+                        Task {
+                            await referenceSpeech.play(source, userID: model.userID ?? "local", voice: voice) {
+                                try await model.referenceSpeech(questionSetID: pack.id, questionID: question.id,
+                                                                source: source, voice: voice)
+                            }
+                        }
                     }
+                } label: {
+                    HStack(spacing: 7) {
+                        if active && referenceSpeech.isLoading {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: active && referenceSpeech.isPlaying ? "pause.fill" : "play.fill")
+                        }
+                        Text(active && referenceSpeech.isLoading ? "キャンセル" :
+                             active && referenceSpeech.isPlaying ? "一時停止" : active ? "再生" : title)
+                    }
+                    .font(.subheadline.weight(.medium))
                 }
-            }
-        } label: {
-            HStack(spacing: 7) {
-                if active && referenceSpeech.isLoading {
-                    ProgressView().controlSize(.mini)
-                } else {
-                    Image(systemName: active && referenceSpeech.isPlaying ? "stop.fill" : "speaker.wave.2.fill")
+                .buttonStyle(.bordered)
+                Spacer()
+                Menu {
+                    ForEach([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2], id: \.self) { speed in
+                        Button {
+                            referenceSpeech.setRate(Float(speed))
+                        } label: {
+                            if Float(speed) == referenceSpeech.rate {
+                                Label("\(speed.formatted())×", systemImage: "checkmark")
+                            } else { Text("\(speed.formatted())×") }
+                        }
+                    }
+                } label: {
+                    Text("\(Double(referenceSpeech.rate).formatted())×")
+                        .font(.subheadline.monospacedDigit())
                 }
-                Text(active && referenceSpeech.isLoading ? "準備中…" :
-                     active && referenceSpeech.isPlaying ? "停止" : title)
+                .accessibilityLabel("再生速度")
             }
-            .font(.subheadline.weight(.medium))
+            if active && referenceSpeech.duration > 0 {
+                Slider(value: Binding(get: { referenceSpeech.currentTime },
+                                      set: { referenceSpeech.seek(to: $0) }),
+                       in: 0...referenceSpeech.duration)
+                    .accessibilityLabel("再生位置")
+                HStack {
+                    Text(playbackTime(referenceSpeech.currentTime))
+                    Spacer()
+                    Text(playbackTime(referenceSpeech.duration))
+                }
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+            }
         }
-        .buttonStyle(.bordered)
         .disabled(speech.phase == .recording || speech.phase == .recognizing)
+    }
+
+    private func playbackTime(_ seconds: TimeInterval) -> String {
+        let total = Int(max(0, seconds))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     var body: some View {
