@@ -460,6 +460,7 @@ export default function InterviewPractice({
       else visibleIds.forEach(id => next.add(id));
       return next;
     });
+    const companyHref = (job: Job) => '#jobs/company/' + encodeURIComponent(String(job.companyNumber || job.id));
     const toggleSort = (key: PrepColumn) => setSort(s => ({ key, desc: s.key === key ? !s.desc : false }));
     const bankPacks = data.questionSets.filter(p => p.jobId === BANK_JOB_ID);
     const bankAnswered = new Set(data.attempts.filter(a => bankPacks.some(p => p.id === a.questionSetId)).map(a => a.questionSetId + '|' + a.questionId)).size;
@@ -529,14 +530,15 @@ export default function InterviewPractice({
           { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', sortable: true },
           { key: 'schedule', label: tr('面试 / 跟进'), width: 'minmax(0,1.2fr)', sortable: true },
           { key: 'prep', label: tr('准备阶段'), width: 'minmax(120px,1.2fr)', sortable: true },
+          { key: 'posting' as PrepColumn, label: tr('招聘原文'), width: '72px' },
         ]}>{pageJobs.map(job => {
           const prep = prepOf(job);
           const stage = prepStage(prep);
           const interview = isInterview(job);
           const overdue = !!job.nextDate && job.nextDate < data.today;
-          return <DataRow key={job.id} className={(closed.includes(job.status) ? 'is-closed ' : '') + (managing ? 'is-managing' : '')} onOpen={managing ? undefined : () => setCompany(job.id)}>
+          return <DataRow key={job.id} className={(closed.includes(job.status) ? 'is-closed ' : '') + (managing ? 'is-managing' : '')} onOpen={managing ? undefined : () => window.open(companyHref(job), '_blank', 'noopener')}>
             {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
-            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{job.preferenceGroup && <> · {tr(job.preferenceGroup)}</>}</>} onClick={() => setCompany(job.id)} />
+            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{job.preferenceGroup && <> · {tr(job.preferenceGroup)}</>}</>} href={companyHref(job)} />
             <DataCell label={tr('个人评分')} className="prep-rating"><span aria-label={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')} title={job.rating ? tr('{0} 星', [String(job.rating)]) : tr('未评分')}>{job.rating ? <>{'★'.repeat(job.rating)}<span className="rating-empty">{'☆'.repeat(5 - job.rating)}</span></> : <span className="muted">{tr('未评分')}</span>}</span></DataCell>
             <DataCell label={tr('投递状态')} className="prep-status"><StatusMark status={job.status} label />{statusSince(job) && <small className="muted prep-status-date" title={tr('状态更新日期')}>{day(statusSince(job))}</small>}</DataCell>
             <DataCell label={tr('面试 / 跟进')} className="prep-schedule">
@@ -554,6 +556,7 @@ export default function InterviewPractice({
                 {prep.questions ? ' · ' + tr('练习 {0} / {1} 题', [String(prep.answered), String(prep.questions)]) : ''}
               </small>
             </DataCell>
+            <DataCell label={tr('招聘原文')} className="prep-posting">{job.url ? <a className="text-button" href={job.url} target="_blank" rel="noreferrer" title={job.url} aria-label={tr('招聘原文') + ' · ' + job.company}>{tr('打开')}<ExternalLink size={14} aria-hidden="true" /></a> : <span className="muted">—</span>}</DataCell>
           </DataRow>;
         })}</DataTable> : <div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div>}
         {pageCount > 1 && <nav className="list-pagination" aria-label={tr('分页')}>

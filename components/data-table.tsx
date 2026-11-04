@@ -123,19 +123,25 @@ export function DataCell({
   );
 }
 
-/** First column: a clickable title with one line of secondary text. */
+/** First column: a clickable title with one line of secondary text. `href` opens the record in a new tab instead. */
 export function DataTitle({
   title,
   meta,
   onClick,
+  href,
 }: {
   title: ReactNode;
   meta?: ReactNode;
   onClick?: () => void;
+  href?: string;
 }) {
   return (
     <span className="dt-cell dt-main">
-      {onClick ? (
+      {href ? (
+        <a className="record-title-button" href={href} target="_blank" rel="noopener">
+          {title}
+        </a>
+      ) : onClick ? (
         <button className="record-title-button" onClick={onClick}>
           {title}
         </button>

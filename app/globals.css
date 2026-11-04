@@ -1,4 +1,10 @@
 @import 'tailwindcss';
+
+/* The ui/ components ask for popover tokens; without them their popups render transparent. */
+@theme inline {
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+}
 .skill-archive {
   margin-bottom: 24px;
 }
@@ -3113,8 +3119,9 @@ header .language-switcher select { min-width: 0; min-height: 32px; padding: 4px 
 .job-status-filter { display: inline-flex; align-items: center; gap: 8px; max-width: min(300px, 100%); }
 .job-status-filter > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .job-status-filter > svg { flex-shrink: 0; }
-.job-status-filter-menu { width: max-content; min-width: 180px; max-width: calc(100vw - 24px); }
+.job-status-filter-menu { width: max-content; min-width: 180px; max-width: calc(100vw - 24px); background-color: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 12px 28px rgba(15, 23, 42, .16); }
 .job-status-filter-menu [role^="menuitem"] { min-height: 36px; cursor: pointer; }
+.job-status-filter-menu [role^="menuitem"][data-highlighted] { background-color: var(--accent-soft); }
 .job-status-filter-menu [role="menuitem"] { justify-content: space-between; }
 .list-toolbar .page-note { flex-basis: 100%; margin: 0; }
 .panel.dt-panel { padding: 6px 25px 8px; }
@@ -3735,6 +3742,9 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .prep-list .dt-cell b.prep-overdue { color: #b42318; }
 .prep-list .record-title-button { display: inline-flex; align-items: center; gap: 8px; }
 .prep-list .record-title-button .status-mark { width: 22px; height: 22px; }
+.prep-list a.record-title-button { text-decoration: none; }
+.prep-list .prep-posting a { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+@media (max-width: 700px) { .prep-list .dt-row > .dt-cell.prep-posting[data-label]::before { content: attr(data-label); margin-right: 8px; color: var(--ink-3); font-size: 0.75rem; } }
 .job-summary .status-mark { margin-left: auto; }
 .prep-list .dt-cell .status-mark { width: auto; height: auto; padding: 3px 9px 3px 7px; border-radius: 999px; font-size: 0.75rem; white-space: nowrap; }
 /* Preparation stage: one labelled pill per row, same tones as the application status. */
