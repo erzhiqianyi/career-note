@@ -109,7 +109,7 @@ test('technical skills print as a category / type / years / level table with lan
 test('exported documents follow the application layout and pass the saved-body checks', () => {
   const used = [
     entry('b', 'basics', { name: 'テスト 花子', reading: 'てすと（通称：Hana）', birthDate: '1990-03-05', gender: '男', postalCode: '100-0001', address: '東京都', addressReading: 'とうきょうと', phone: '080', email: 'base@example.com', summary: '要約一。\n\n要約二。', github: 'https://github.com/example' }),
-    entry('e', 'employment', { employer: '株式会社例（正社員）', role: 'エンジニア', client: 'A案件', location: '東京', startDate: '2020-01', endDate: '2026-01', historyNote: 'エンジニアとして開発', technologies: 'Java', responsibilities: '- 担当：設計、実装。\n- 組織：5名。\n- 性能改善：45分に短縮しました。' }),
+    entry('e', 'employment', { employer: '株式会社例（正社員）', role: 'エンジニア', client: 'A案件', location: '東京', startDate: '2020-01', endDate: '2026-01', historyNote: 'エンジニアとして開発', technologies: 'Java', responsibilities: '- 担当：設計、実装。\n- 組織：5名。\n- 開発手法：アジャイル開発。\n- 性能改善：45分に短縮しました。' }),
     entry('ed', 'education', { school: '例大学', major: '工学', degree: '学士', startDate: '2012-09', endDate: '2016-07' }),
     entry('ed2', 'education', { school: '日本語学校', major: '日本語', startDate: '2026-04' }),
     entry('l', 'language', { name: '{英語|えいご}', experience: '4年間の業務使用' }),
@@ -134,6 +134,7 @@ test('exported documents follow the application layout and pass the saved-body c
   assert.match(shokumu, /雇用形態：正社員 ／ 職種：エンジニア ／ 勤務地：東京/);
   assert.match(shokumu, /【担当】設計、実装。/);
   assert.match(shokumu, /【担当案件】A案件/);
+  assert.match(shokumu, /【開発手法】アジャイル開発。/);
   assert.match(shokumu, /<h3>・性能改善<\/h3><p>45分に短縮しました。<\/p>/);
   assert.match(shokumu, /短い紹介。/);
   assert.doesNotMatch(shokumu, /非掲載|長い説明/);

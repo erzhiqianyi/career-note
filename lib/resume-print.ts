@@ -224,13 +224,13 @@ function rirekishoMarkdown(m: Model, o: PrintOptions) {
 }
 
 type Duty = { label: string; text: string } | { heading: string; text: string } | { text: string };
-/** 职责按「見出し：本文」写；「担当」「組織」归到表格顶部，其余是业务项目。 */
+/** 职责按「見出し：本文」写；「担当」「組織」「開発手法」归到表格顶部，其余是业务项目。 */
 function duties(text = ''): Duty[] {
   return lines(text).map((line) => {
     const i = line.indexOf('：');
     const key = i > 0 && i <= 40 ? line.slice(0, i) : '';
     const value = key ? line.slice(i + 1) : line;
-    if (key === '担当' || key === '組織') return { label: key, text: value };
+    if (key === '担当' || key === '組織' || key === '開発手法') return { label: key, text: value };
     return key ? { heading: key, text: value } : { text: line };
   });
 }
