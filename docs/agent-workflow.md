@@ -310,3 +310,9 @@ documentの本文は更新できないため、新しい版は新しいidを使�
 - 写入前重新读取题目，确认来源没有变化，先 preview 再 import，最后读回比较 answerFlow 与旧字段。重复运行跳过已有 answerFlow；不把导入计数当作保存成功证据。
 
 本机辅助工具：`node scripts/prepare-answer-flow-migration.mjs EXTERNAL_STATE_JSON EXTERNAL_OUTPUT_DIR`。输入必须来自本账号的正式 context/state；输出目录在仓库外。它只生成 `answer-flow-import.json` 和 `answer-flow-review.json`，不访问数据库、不联网、不写入服务；混杂说明的题目列为待 Agent 整理。输出文件存在时拒绝覆盖。部署支持新字段的 Worker 后刷新 MCP 工具列表，用 MCP 的预览、导入、读回完成保存；旧 Worker 会丢弃未知字段，不能向旧服务执行迁移。
+
+## 已上传的面试原资料登记
+
+MCP `career_preview_import` / `career_import` 的 `reports[]` 可带可选 `sourceInterview`，把独立报告关联到本账号已上传的私有原录音。该字段结构是 `{session:{id,title,jobId,date,durationSeconds},audio:{size,contentType,fileName},transcript?,flow?,review?}`。三个可选阶段使用面试专用 schema，按转写、全体流程、复盘顺序校验；原回答不创建为 attempts。来源文件先由用户在应用导入，或由明确获得上传授权的维护者上传到本账号 R2。服务按认证账号和 session.id 推导对象键，核对文件大小与 MIME 类型，不接受客户端指定桶、存储路径或账号。
+
+预览不创建面试记录。保存保留版本；同一来源可继续登记未完成阶段，已有转写和本人修正不一致时拒绝覆盖。报告保存 `interviewId`，报告本身独立于公司材料；面试的 `jobId` 仅用于注明对应公司。实际问题可单独保存为 reports，正文保留面试日期、公司、录音时刻与待核对项，不覆盖公司准备题组，也不把“尚无内定”写成“不通过”。录音上传、面试登记、报告读回分别核验，不能把其中一步当作全部完成。

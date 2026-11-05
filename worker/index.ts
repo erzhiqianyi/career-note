@@ -24,7 +24,7 @@ import { plainJapanese } from '../lib/japanese-readings';
 import { preferenceGroups } from '../lib/job-preferences';
 import { jobStatuses, type JobStatus } from '../lib/job-status';
 import { InterviewError, listInterviews, getInterview, getInterviewVersion, createInterview, updateInterview, requestInterviewAnalysis,
-  beginInterviewAudio, uploadInterviewPart, completeInterviewAudio, interviewAudioResponse, readInterviewBytes } from './interviews';
+  importInterviewSource, beginInterviewAudio, uploadInterviewPart, completeInterviewAudio, interviewAudioResponse, readInterviewBytes } from './interviews';
 import { interviewSummary } from '../lib/interview-session';
 import { PracticePlanError, createPracticePlan, editPracticePlan, getPracticePlan, listPracticePlans, practicePlanDetail,
   requestPracticePlanTask, savePracticePlan, savePracticePlanReview, setPracticePlanStatus, validatePracticeContext, type PracticePlanStore } from './practice-plans';
@@ -1142,7 +1142,7 @@ async function removeEvent(db: Workspace, payload: Record<string, unknown>) {
   return { id, archivedAt: report.archivedAt || null };
 }
 
-async function importBundle(db: Workspace, data: Record<string, unknown>, preview = false) {
+async function importBundle(db: Workspace, data: Record<string, unknown>, preview = false, media?: { bucket?: R2Bucket; uid: string }) {
   if (Number(data.schemaVersion) !== 1) throw new AppError(400, '需要 schemaVersion: 1 的 JSON 数据包');
 
   for (const key of Object.keys(data)) {
@@ -1272,6 +1272,11 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
           if (!replaced || !parseEventHeader(replaced.sourceNotes as string, replaced.date as string)) throw new AppError(400, `supersedes 指向的日程不存在：${old}`);
         }
 
+        let interviewId: string | undefined;
+        if (obj.sourceInterview !== undefined) {
+          if (!media) throw new AppError(503, '录音导入上下文不可用');
+          interviewId = await importInterviewSource(practicePlanStore(db), media.bucket, media.uid, obj.sourceInterview, preview);
+        }
         if (!preview) {
           await putRecord(db, 'reports', {
             id: key,
@@ -1279,6 +1284,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
             title,
             content,
             sourceNotes,
+            ...(interviewId ? { interviewId } : {}),
             createdAt: now(),
           });
         }
@@ -1995,11 +2001,11 @@ const handler = async (
       break;
     case '/api/career/import':
       ensureScopes(context, ['agent:write']);
-      result = await importBundle(db, payload, false);
+      result = await importBundle(db, payload, false, { bucket: env.CAREER_AUDIO, uid: context.uid });
       break;
     case '/api/career/import/preview':
       ensureScopes(context, ['agent:write']);
-      result = await importBundle(db, payload, true);
+      result = await importBundle(db, payload, true, { bucket: env.CAREER_AUDIO, uid: context.uid });
       break;
     default:
       return jsonResponse({ error: '接口不存在' }, { status: 404 });

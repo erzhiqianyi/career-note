@@ -164,4 +164,48 @@ test('interview source, transcript, history, upload receipts and audio remain is
   assert.equal((await alice('interviews/document?id=' + source.id)).title, source.title);
   assert.equal((await bob('interviews/document?id=' + source.id)).audio, undefined);
   await bob('interviews/audio-link', { id: source.id }, 404);
+  // An R2 object owned by Alice cannot be registered by Bob through a report.
+  const descriptor = { session: { ...source, id: 'private-import' },
+    audio: { size: 16, contentType: 'audio/mp4', fileName: 'synthetic.m4a' }, transcript };
+  const bucket = await mf.getR2Bucket('CAREER_AUDIO');
+  await bucket.put('alice/interviews/private-import/original', new Uint8Array(16), { httpMetadata: { contentType: 'audio/mp4' } });
+  const bundle = { schemaVersion: 1, reports: [{ id: 'private-source-report', date: source.date, title: 'Private source',
+    content: 'Synthetic', sourceNotes: 'Synthetic', sourceInterview: descriptor }], completeTaskIds: [] };
+  await bob('import/preview', bundle, 400);
+  await alice('import/preview', bundle);
+  assert.equal((await alice('state')).interviews.length, 1);
+
+});
+
+test('MCP report import registers an owner-uploaded source, previews all stages and keeps questions independent', async t => {
+  const mf = await host(t), send = api(mf), bucket = await mf.getR2Bucket('CAREER_AUDIO');
+  const token = (await authorizeAgent(mf, { scopes: ['career:read', 'agent:write'] })).issued.access_token;
+  const agent = api(mf, token);
+  const report = { id: 'independent-real-interview', date: source.date, title: 'Actual interview questions',
+    content: 'Source company and date; actual question list.', sourceNotes: 'Synthetic fixture; no application status inference.',
+    sourceInterview: { session: source, audio: { size: 16, contentType: 'audio/mp4', fileName: 'synthetic.m4a' }, transcript, flow, review } };
+  const bundle = { schemaVersion: 1, reports: [report], completeTaskIds: [] };
+  await agent('import/preview', bundle, 400);
+  await bucket.put(`local/interviews/${source.id}/original`, new Uint8Array(16), { httpMetadata: { contentType: 'audio/mp4' } });
+  await agent('import/preview', bundle);
+  assert.equal((await send('state')).interviews.length, 0);
+  const bad = structuredClone(bundle); bad.reports[0].sourceInterview.flow.exchanges[0].stageId = 'missing';
+  await agent('import', bad, 400);
+  assert.equal((await send('state')).interviews.length, 0);
+  await agent('import', bundle);
+  const state = await send('state');
+  assert.equal(state.interviews[0].status, 'review');
+  assert.equal(state.reports.find(r => r.id === report.id).interviewId, source.id);
+  assert.equal(state.questionSets.length, 0);
+  assert.equal(state.attempts.length, 0);
+  const saved = await send('interviews/document?id=' + source.id);
+  assert.equal(saved.transcript.originalText, transcript.originalText);
+  assert.equal(saved.flow.exchanges[0].question, flow.exchanges[0].question);
+  const replay = structuredClone(bundle); replay.reports[0].id = 'independent-copy';
+  await agent('import', replay);
+  assert.equal((await send('interviews/document?id=' + source.id)).revision, saved.revision);
+  const changed = structuredClone(replay); changed.reports[0].id = 'never-overwrite';
+  changed.reports[0].sourceInterview.transcript.segments[0].text = 'A conflicting correction';
+  await agent('import/preview', changed, 409);
+  assert.equal((await send('interviews/document?id=' + source.id)).transcript.segments[0].text, transcript.segments[0].text);
 });

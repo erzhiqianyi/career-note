@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { interviewSummary, interviewUpdateSchema, type InterviewSession } from '../lib/interview-session';
+import { interviewSummary, interviewUpdateSchema, interviewTranscriptSchema, interviewFlowSchema, interviewReviewSchema, type InterviewSession } from '../lib/interview-session';
 
 export class InterviewError extends Error {
   constructor(public code: number, message: string) { super(message); }
@@ -220,4 +220,55 @@ export async function interviewAudioResponse(bucket: R2Bucket, objectKey: string
     'accept-ranges': 'bytes', ...(range ? { 'content-range': `bytes ${start}-${end}/${meta.size}` } : {}),
     'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',
   } });
+}
+
+
+// MCP reports can register a source already uploaded by the owner to private R2.
+// Storage keys are derived from the authenticated owner, never supplied by clients.
+export async function importInterviewSource(store: Store, bucket: R2Bucket | undefined, uid: string,
+  input: unknown, preview: boolean) {
+  const data = parse(z.object({ session: createSchema, audio: uploadSchema.omit({ id: true }),
+    transcript: interviewTranscriptSchema.optional(), flow: interviewFlowSchema.optional(), review: interviewReviewSchema.optional(),
+  }).strict(), input);
+  if (!bucket) throw new InterviewError(503, '私有录音存储尚未配置');
+  const object = await bucket.head(`${uid}/interviews/${data.session.id}/original`);
+  if (!object || object.size !== data.audio.size || object.httpMetadata?.contentType !== data.audio.contentType)
+    throw new InterviewError(400, '请先上传当前账号的原录音，并核对文件大小和类型');
+  if (data.session.jobId && !await store.get('jobs', data.session.jobId)) throw new InterviewError(400, '对应公司不存在');
+  const saved = await store.get('interviews', data.session.id) as InterviewSession | null;
+  if (saved && Object.entries(data.session).some(([field, value]) => saved[field as keyof InterviewSession] !== value))
+    throw new InterviewError(409, '面试编号已用于其他来源');
+  if (saved?.audio && JSON.stringify(saved.audio) !== JSON.stringify({ size: data.audio.size, contentType: data.audio.contentType, fileName: data.audio.fileName }))
+    throw new InterviewError(409, '已保存的原录音信息不同，不覆盖');
+  const stamp = new Date().toISOString();
+  let virtual: InterviewSession = saved || { ...data.session, revision: 1, createdAt: stamp, updatedAt: stamp, status: 'imported' };
+  const audio = { size: data.audio.size, contentType: data.audio.contentType, fileName: data.audio.fileName };
+  if (!virtual.audio) virtual = { ...virtual, revision: virtual.revision + 1, audio };
+  // Validate every stage before creating any records. This also preserves existing corrections.
+  const stages = ['transcript', 'flow', 'review'] as const;
+  for (const stage of stages) {
+    const value = data[stage];
+    if (!value) continue;
+    if (virtual[stage]) {
+      if (JSON.stringify(virtual[stage]) !== JSON.stringify(value)) throw new InterviewError(409, '已有面试内容与导入不同，不覆盖本人修正');
+      continue;
+    }
+    await updateInterview({ ...store, get: (kind, id) => kind === 'interviews' && id === virtual.id ? Promise.resolve(virtual) : store.get(kind, id) },
+      { id: virtual.id, revision: virtual.revision, stage, data: value }, true);
+    virtual = { ...virtual, [stage]: value, revision: virtual.revision + 1, status: stage };
+  }
+  if (preview) return virtual.id;
+  let current = await createInterview(store, data.session) as InterviewSession;
+  if (!current.audio) current = await commit(store, current, { ...current, audio });
+  for (const stage of stages) {
+    const value = data[stage];
+    if (!value) continue;
+    if (current[stage]) {
+      if (JSON.stringify(current[stage]) !== JSON.stringify(value)) throw new InterviewError(409, '面试内容已更新，请重新读取');
+      continue;
+    }
+    await updateInterview(store, { id: current.id, revision: current.revision, stage, data: value }, false);
+    current = await getInterview(store, current.id);
+  }
+  return current.id;
 }
