@@ -1,5 +1,6 @@
 'use client';
 import { AnswerFlowView } from './answer-flow';
+import { reportInterviewId } from '@/lib/interview-review-navigation';
 import { RecordBack, useRecordPage } from './record-page';
 import { DataTable, DataRow, DataTitle, DataCell } from './data-table';
 import { useLocale } from '@/components/locale-provider';
@@ -621,7 +622,7 @@ export default function InterviewPractice({
     const reviewedAttemptIds = new Set(companyReviews.map(r => r.attemptId));
     const questionOf = (a: Attempt) => a.question || packs.find(p => p.id === a.questionSetId)?.questions.find(q => q.id === a.questionId);
     const openAttempt = (a: Attempt) => { setPicked(p => ({ ...p, [a.questionSetId + ':' + a.questionId]: a.id })); setQuestionId(a.questionId); setPracticeRecord(a.questionSetId + '|' + a.questionId); };
-    const mentions = !isBank && currentJob ? (data.reports || []).filter(r => (r.title + '\n' + r.content).includes(currentJob.company)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5) : [];
+    const mentions = !isBank && currentJob ? (data.reports || []).filter(r => !reportInterviewId(r) && (r.title + '\n' + r.content).includes(currentJob.company)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5) : [];
     const factList = (items: Array<[string, string, boolean?]>) => <div className="prep-facts">
       {items.map(([k, v, own]) => <details className="prep-fact" key={k}>
         <summary><span className="prep-fact-label">{tr(k)}</span><span className="prep-fact-preview">{v ? own ? <Ja text={v} /> : v : tr('待确认')}</span></summary>

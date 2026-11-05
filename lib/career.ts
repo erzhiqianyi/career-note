@@ -103,6 +103,7 @@ export type Material = {
   archivedAt?: string;
 };
 export type Report = {
+  interviewId?: string;
   id: string;
   title: string;
   content: string;
@@ -159,6 +160,7 @@ export type AgentActivity = {
 };
 
 export type State = {
+  interviews?: (Omit<import('./interview-session').InterviewSession, 'transcript' | 'flow' | 'review' | 'practice'> & { segmentCount: number; exchangeCount: number; practiceCount: number })[];
   resume: import('./resume').ResumeEntry[];
   platforms: import('./job-platforms').JobPlatform[];
   jobs: Job[];

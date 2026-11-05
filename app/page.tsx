@@ -23,6 +23,8 @@ import { Ja, JaChildren } from '@/components/japanese-text';
 import { markdownJapaneseReadings } from '@/lib/japanese-readings';
 import WorkspaceFooter from '@/components/workspace-footer';
 import InterviewPractice from '@/components/interview-practice';
+import InterviewReviewHub from '@/components/interview-review-hub';
+import { reportInterviewId } from '@/lib/interview-review-navigation';
 import StatusMark from '@/components/status-mark';
 import DailyBrief, { collectBrief, briefSize } from '@/components/daily-brief';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
@@ -118,6 +120,7 @@ const nav = [
   { label: '今日准备', icon: LayoutDashboard },
   { label: '日程', icon: CalendarDays },
   { label: '公司', icon: BriefcaseBusiness },
+  { label: '面试复盘', icon: ScrollText },
   { label: '我的履历', icon: UserRound },
   { label: '个性化简历', icon: FileText },
   { label: 'Agent 协作', icon: Workflow },
@@ -126,7 +129,7 @@ const nav = [
 ];
 // Phone layout: every page lives behind the brand drawer (no bottom tab bar).
 // Content pages come first; anything that configures the workspace is grouped as "settings".
-const drawerPages = ['今日准备', '日程', '公司', '我的履历', '个性化简历'];
+const drawerPages = ['今日准备', '日程', '公司', '面试复盘', '我的履历', '个性化简历'];
 const drawerSettings = ['Agent 协作', '求职平台', '系统设置'];
 // `parent` is the nav page that stays highlighted; `back` is where the header arrow goes when it is not the parent.
 const subPages: Record<string, { parent: string; hash: string; back?: string }> = {
@@ -148,6 +151,7 @@ const hashes: Record<string, string> = {
   '#today': '今日准备',
   '#calendar': '日程',
   '#jobs': '公司',
+  '#interview-review': '面试复盘',
   '#interview': '公司', // legacy links from before interview prep merged into the company page
   '#platforms': '求职平台',
   '#resume': '我的履历',
@@ -369,7 +373,8 @@ export default function Home() {
           window.location.replace('#jobs/company/' + encodeURIComponent(job?.companyNumber ? String(job.companyNumber) : job?.id || detailMatch[1]));
           return;
         } else {
-          const target = hash.startsWith('#documents/view/') && data?.reports.some(r => encodeURIComponent(r.id) === hash.slice('#documents/view/'.length)) ? '公司' : hashes[hash] || hashes[hash.split('/')[0]];
+          const linkedReport = hash.startsWith('#documents/view/') ? data?.reports.find(r => encodeURIComponent(r.id) === hash.slice('#documents/view/'.length)) : undefined;
+          const target = linkedReport && reportInterviewId(linkedReport) ? '面试复盘' : hashes[hash] || hashes[hash.split('/')[0]];
           if (target) setActive(target);
         }
       }
@@ -1186,6 +1191,7 @@ export default function Home() {
             </section>
           ) : (
             <>
+              {active === '面试复盘' && <InterviewReviewHub key={auth?.uid || 'local'} data={data} openReport={setDoc} />}
               <div hidden={active !== '公司'}>
                 <InterviewPractice
                   data={data}
@@ -1680,7 +1686,10 @@ export default function Home() {
         </RecordPage>
       )}
       {doc && (
-        <RecordPage title={doc.title} onClose={() => setDoc(null)} headingAction={printableDoc && <div className="document-heading-actions">
+        <RecordPage title={doc.title} onClose={() => {
+          if (!('kind' in doc) && reportInterviewId(doc)) { window.location.hash = '#interview-review'; }
+          else setDoc(null);
+        }} headingAction={printableDoc && <div className="document-heading-actions">
           <details className="document-review-alert">
             <summary><TriangleAlert size={16} aria-hidden="true" />{tr('待核对')}</summary>
             <div>
@@ -1693,7 +1702,7 @@ export default function Home() {
         </div>}>
           <div className="document-toolbar">
           <div className="document-meta">
-            <Badge>{'kind' in doc ? tr(doc.kind) : tr('每日分析')}</Badge>
+            <Badge>{'kind' in doc ? tr(doc.kind) : tr(reportInterviewId(doc) ? '面试复盘' : '每日分析')}</Badge>
             <span>
               {day(doc.createdAt)}
               {!printableDoc && tr('· AI 草稿，使用前请核对')}

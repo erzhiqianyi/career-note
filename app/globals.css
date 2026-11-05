@@ -4306,3 +4306,16 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .answer-flow > ol > li { padding: .75rem; margin-bottom: .75rem; border: 1px solid var(--border); border-radius: .75rem; }
 .answer-flow > ol > li::marker { font-weight: 700; }
 .answer-flow summary { cursor: pointer; min-height: 2.75rem; align-content: center; }
+
+.interview-review-hub { display: grid; gap: 20px; min-width: 0; }
+.interview-review-list, .interview-review-documents { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.interview-review-list h3 { margin: 14px 0 8px; }
+.interview-review-meta, .interview-review-meta span, .interview-review-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.interview-review-meta { color: var(--ink-3); font-size: .9rem; }
+.interview-review-actions { margin-top: 16px; }
+.interview-review-documents .text-button { display: flex; align-items: flex-start; gap: 8px; text-align: left; margin-top: 10px; }
+.interview-review-documents .text-button svg { flex-shrink: 0; margin-top: 2px; }
+.interview-review-hub audio { display: block; width: 100%; margin-top: 14px; }
+.interview-review-exchange { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.interview-review-exchange summary { cursor: pointer; line-height: 1.7; }
+.interview-review-exchange .secondary { margin: 4px 8px 4px 0; }
