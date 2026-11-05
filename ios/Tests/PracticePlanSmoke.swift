@@ -22,17 +22,24 @@ import Foundation
         precondition(plan.attempts(for: content.schedule[0], in: [first, unrelated]).count == 1)
         let pending = PendingAttempt(id: "offline", questionSetId: "builtin-basics", questionId: "self-intro", answer: "未同期の回答", language: "日语",
                                      durationSeconds: 30, requestReview: true, createdAt: Date(), hasRecording: true, practiceContext: context)
+        let written = PendingAttempt(id: "written", questionSetId: "builtin-basics", questionId: "self-intro", answer: "昨日、図書館で本を読みました。", language: "日语",
+                                     durationSeconds: 0, requestReview: true, createdAt: Date(), hasRecording: false, practiceContext: context)
         let review = PracticePlanReview(id: "review", planId: plan.id, planRevision: 2, checkpointId: "final", summary: "改善を確認", nextActions: "別の題で練習", sourceNotes: "Fixture",
                                        assessments: [.init(skillId: "clarity", outcome: "developing", evidenceAttemptIds: [first.id], notes: "練習を続ける")], createdAt: "2026-11-05T04:00:00Z")
         var state = CareerState()
         state.practicePlans = [plan]; state.practicePlanReviews = [review]; state.attempts = [first]
-        try LocalStore.save(LocalSnapshot(state: state, pending: [pending], lastUpdated: Date()), uid: "fixture-user", in: directory)
+        try LocalStore.save(LocalSnapshot(state: state, pending: [pending, written], lastUpdated: Date()), uid: "fixture-user", in: directory)
         let loaded = try LocalStore.load(uid: "fixture-user", in: directory)
         precondition(loaded?.state.practicePlans?.first?.endDate == "2027-02-01")
         precondition(loaded?.state.practicePlans?.first?.content?.skills[0].target == "一文で答える")
         precondition(loaded?.state.practicePlanReviews?.first?.assessments[0].evidenceAttemptIds == [first.id])
         precondition(loaded?.pending.first?.practiceContext?.planRevision == 2)
         precondition(loaded?.pending.first?.practiceContext?.keywords == "結論・理由・例")
+        precondition(loaded?.pending.count == 2)
+        precondition(loaded?.pending.last?.hasRecording == false)
+        precondition(loaded?.pending.last?.durationSeconds == 0)
+        precondition(loaded?.pending.last?.answer == written.answer)
+        precondition(loaded?.pending.last?.practiceContext?.scheduleId == "session")
         precondition(loaded?.state.attempts.first?.practiceContext?.planId == plan.id)
         let other = try LocalStore.load(uid: "other-user", in: directory)
         precondition(other == nil)

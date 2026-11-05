@@ -356,6 +356,21 @@ struct InterviewDetailView: View {
     }
 
     @ViewBuilder private func practiceContent(_ document: InterviewDocument) -> some View {
+        ForEach((model.state.practicePlans ?? []).filter { $0.interviewId == id }) { plan in
+            NavigationLink(value: AppRoute.practicePlan(plan.id)) {
+                PhoneCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("日程に沿って練習", systemImage: "calendar")
+                            .font(.caption).foregroundStyle(PhoneStyle.accent)
+                        Text(plan.title).font(.headline)
+                        Text("\(plan.startDate) – \(plan.endDate) · \(plan.dailyMinutes) 分 / 日")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("文法・文の組み立て・動詞の練習も、文字または録音で回答できます。")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }.buttonStyle(.plain)
+        }
         Button { editor = .plan } label: { Label("この面接から練習計画を作る", systemImage: "target") }
         if let links = document.practice, !links.isEmpty {
             ForEach(Array(links.enumerated()), id: \.offset) { _, link in

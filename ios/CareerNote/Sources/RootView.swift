@@ -710,6 +710,9 @@ struct AnswerView: View {
     let pack: QuestionSet
     let question: CareerQuestion
     var practiceContext: PracticeContext? = nil
+    @State private var answerMode = "voice"
+    @State private var typedAnswer = ""
+    @State private var initializedAnswerMode = false
     @State private var practiceKeywords = ""
     @State private var speech = PracticeSpeechRecorder()
     @State private var referenceSpeech = ReferenceSpeechPlayer()
@@ -743,8 +746,12 @@ struct AnswerView: View {
     }
 
     private var canSave: Bool {
-        speech.phase == .ready && speech.recordingURL != nil &&
-        !speech.transcript.isEmpty && speech.transcript.count <= 20_000
+        if answerMode == "text" {
+            let text = typedAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !text.isEmpty && text.count <= 20_000
+        }
+        return speech.phase == .ready && speech.recordingURL != nil &&
+            !speech.transcript.isEmpty && speech.transcript.count <= 20_000
     }
 
     private var targetSeconds: String? {
@@ -874,6 +881,11 @@ struct AnswerView: View {
         }
         .background(PhoneStyle.canvas)
         .scrollDismissesKeyboard(.interactively)
+        .onAppear {
+            guard !initializedAnswerMode else { return }
+            answerMode = question.category == "日语表达基础" ? "text" : "voice"
+            initializedAnswerMode = true
+        }
         .onDisappear {
             speech.discard()
             referenceSpeech.stop()
@@ -1044,6 +1056,12 @@ struct AnswerView: View {
         PhoneCard {
             VStack(alignment: .leading, spacing: 14) {
                 Text("あなたの回答").font(.headline)
+                Picker("回答方法", selection: $answerMode) {
+                    Text("文字で回答").tag("text")
+                    Text("録音で回答").tag("voice")
+                }
+                .pickerStyle(.segmented)
+                .disabled(speech.phase != .idle)
                 Text("回答言語").font(.caption).foregroundStyle(.secondary)
                 Picker("回答言語", selection: $recognitionLanguage) {
                     Text("日本語").tag("ja-JP")
@@ -1052,6 +1070,18 @@ struct AnswerView: View {
                 .pickerStyle(.segmented)
                 .disabled(speech.phase != .idle)
 
+                if answerMode == "text" {
+                    Text("自分で作った文を入力してください。一行に一文で構いません。保存後の答え直しは別の回答として残ります。")
+                        .font(.caption).foregroundStyle(.secondary)
+                    TextEditor(text: $typedAnswer)
+                        .frame(minHeight: 180)
+                        .padding(8)
+                        .scrollContentBackground(.hidden)
+                        .background(PhoneStyle.canvas, in: RoundedRectangle(cornerRadius: 10))
+                        .accessibilityLabel("文字の回答")
+                    Text("\(typedAnswer.count) / 20,000")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                } else {
                 Picker("音声認識", selection: $recognitionProvider) {
                     Text("端末内").tag("local")
                     Text("Cloudflare").tag("cloudflare")
@@ -1126,6 +1156,7 @@ struct AnswerView: View {
                 }
                 .padding(12)
                 .background(PhoneStyle.canvas, in: RoundedRectangle(cornerRadius: 10))
+                }
                 Button { save(requestReview: false) } label: {
                     Label("今回の回答を保存", systemImage: "square.and.arrow.down")
                         .frame(maxWidth: .infinity)
@@ -1210,13 +1241,13 @@ struct AnswerView: View {
         var context = practiceContext
         context?.keywords = String(practiceKeywords.prefix(1000))
         let queued = model.queue(questionSetId: pack.id, questionId: question.id,
-                                 answer: speech.transcript,
+                                 answer: answerMode == "text" ? typedAnswer.trimmingCharacters(in: .whitespacesAndNewlines) : speech.transcript,
                                  language: recognitionLanguage == "ja-JP" ? "日语" : "中文构思",
-                                 duration: speech.seconds, requestReview: requestReview,
-                                 recordingURL: speech.recordingURL, practiceContext: context)
+                                 duration: answerMode == "text" ? 0 : speech.seconds, requestReview: requestReview,
+                                 recordingURL: answerMode == "text" ? nil : speech.recordingURL, practiceContext: context)
         guard queued else { return }
         saved = true
-        speech.discard()
+        if answerMode == "text" { typedAnswer = "" } else { speech.discard() }
     }
 
     private static func clock(_ seconds: Int) -> String {
