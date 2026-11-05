@@ -160,6 +160,7 @@ export type AgentActivity = {
 };
 
 export type State = {
+  practicePlans?: import('./practice-plan').PracticePlan[];
   interviews?: (Omit<import('./interview-session').InterviewSession, 'transcript' | 'flow' | 'review' | 'practice'> & { segmentCount: number; exchangeCount: number; practiceCount: number })[];
   resume: import('./resume').ResumeEntry[];
   platforms: import('./job-platforms').JobPlatform[];
@@ -277,6 +278,7 @@ export type QuestionSet = {
   updatedAt?: string;
 };
 export type Attempt = {
+  practiceContext?: import('./practice-plan').PracticeContext;
   id: string;
   questionSetId: string;
   questionId: string;

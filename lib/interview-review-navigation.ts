@@ -15,3 +15,20 @@ export function interviewReportSection(report: Report): InterviewReportSection |
   return undefined;
 }
 export function interviewSessionHash(id: string) { return '#interview-review/session/' + encodeURIComponent(id); }
+
+export function reviewPracticeHash(packId: string, questionId: string, plan?: { id: string; revision: number }, scheduleId?: string) {
+  const parts = plan && scheduleId ? [packId, questionId, plan.id, scheduleId, String(plan.revision)] : [packId, questionId];
+  return '#interview-review/question/' + encodeURIComponent(parts.join('|'));
+}
+
+/** A scheduled answer must refer to exactly the question and plan version shown to the learner. */
+export function reviewPracticeContext(record: string | null, plans: import('./practice-plan').PracticePlan[] = []): import('./practice-plan').PracticeContext | undefined {
+  if (!record) return undefined;
+  const [packId, questionId, planId, scheduleId, version] = record.split('|');
+  if (!planId || !scheduleId || !/^\d+$/.test(version || '')) return undefined;
+  const plan = plans.find(p => p.id === planId && p.revision === Number(version));
+  const schedule = plan?.content?.schedule.find(s => s.id === scheduleId);
+  const exercise = plan?.content?.exercises.find(e => e.id === schedule?.exerciseId);
+  if (!plan || !schedule || !exercise || exercise.questionSetId !== packId || exercise.questionId !== questionId) return undefined;
+  return { planId, planRevision: plan.revision, scheduleId, exerciseId: exercise.id, keywords: '' };
+}

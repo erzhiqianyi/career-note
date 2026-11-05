@@ -4317,3 +4317,5 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .interview-review-exchange .secondary { margin: 4px 8px 4px 0; }
 
 .interview-review-table .dt-cell { font-variant-numeric: tabular-nums; }
+.interview-review-practice-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.interview-review-practice-links .secondary { display: inline-flex; text-decoration: none; }

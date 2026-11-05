@@ -1,6 +1,6 @@
 'use client';
 import { AnswerFlowView } from './answer-flow';
-import { reportInterviewId } from '@/lib/interview-review-navigation';
+import { interviewSessionHash, reportInterviewId, reviewPracticeContext } from '@/lib/interview-review-navigation';
 import { RecordBack, useRecordPage } from './record-page';
 import { DataTable, DataRow, DataTitle, DataCell } from './data-table';
 import { useLocale } from '@/components/locale-provider';
@@ -130,7 +130,9 @@ export default function InterviewPractice({
   onImport,
   onEditJob,
   onOpenEvent,
+  routeBase = '#jobs',
 }: {
+  routeBase?: string;
   data: State;
   reload: () => Promise<void>;
   openMaterial: (material: Material) => void;
@@ -166,7 +168,7 @@ export default function InterviewPractice({
     <DataCell label={tr('类型')}><span className="material-formats">{tr(m.kind)}{m.kind === '志望動機' && <small>{tr(plainJapanese(m.applicationReason || '').trim() ? '応募理由・100字版' : '応募理由・未准备')}</small>}</span></DataCell>
     <DataCell label={tr('状态')} corner>{m.archivedAt ? <span className="badge">{tr('已归档')}</span> : <span className="badge amber">{tr(m.reviewStatus || '待核对')}</span>}</DataCell>
   </DataRow>)}</DataTable>;
-  const [company, setCompany] = useRecordPage<string>('#jobs', 'company', id => id === BANK_JOB_ID ? id : (data.jobs.find(j => j.companyNumber && String(j.companyNumber) === id) || data.jobs.find(j => j.id === id))?.id || null, id => String(data.jobs.find(j => j.id === id)?.companyNumber || id));
+  const [company, setCompany] = useRecordPage<string>(routeBase, 'company', id => id === BANK_JOB_ID ? id : (data.jobs.find(j => j.companyNumber && String(j.companyNumber) === id) || data.jobs.find(j => j.id === id))?.id || null, id => String(data.jobs.find(j => j.id === id)?.companyNumber || id));
   useEffect(() => {
     if (!company || company === BANK_JOB_ID) return;
     const number = data.jobs.find(j => j.id === company)?.companyNumber;
@@ -174,7 +176,7 @@ export default function InterviewPractice({
     window.history.replaceState(null, '', '#jobs/company/' + number);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   }, [company, data.jobs]);
-  const [help, setHelp] = useRecordPage<string>('#jobs', 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
+  const [help, setHelp] = useRecordPage<string>(routeBase, 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>(['进行中']);
@@ -192,11 +194,11 @@ export default function InterviewPractice({
   const [listPage, setListPage] = useState(1);
   // A new search, filter or sort starts from the first page again.
   useEffect(() => setListPage(1), [search, statusFilter, platformFilter, sort]);
-  const [practiceRecord, setPracticeRecord] = useRecordPage<string>('#jobs', 'question', id => {
+  const [practiceRecord, setPracticeRecord] = useRecordPage<string>(routeBase, 'question', id => {
     const [p, q] = id.split('|');
     return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null;
   }, id => id);
-  const [guide, setGuide] = useRecordPage<string>('#jobs', 'guide', id => [...builtinQuestionSets, ...data.questionSets].some(p => p.id === id) ? id : null, id => id);
+  const [guide, setGuide] = useRecordPage<string>(routeBase, 'guide', id => [...builtinQuestionSets, ...data.questionSets].some(p => p.id === id) ? id : null, id => id);
   const routePack = help ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === help.split('|')[0]) : guide ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === guide) : practiceRecord ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === practiceRecord.split('|')[0]) : undefined;
   const jobId = routePack ? (routePack.jobId || BANK_JOB_ID) : company || BANK_JOB_ID;
   const isBank = jobId === BANK_JOB_ID;
@@ -292,7 +294,9 @@ export default function InterviewPractice({
     : [];
   const hasNumberedReverseSamples = reverseSampleLines.length > 1 &&
     reverseSampleLines.every((line) => /^[①-⑳]\s*/u.test(line));
-  const key = pack && question ? pack.id + ':' + question.id : '';
+  const plannedContext = reviewPracticeContext(practiceRecord, data.practicePlans);
+  const linkedPlan = plannedContext ? data.practicePlans?.find(plan => plan.id === plannedContext.planId) : undefined;
+  const key = pack && question ? pack.id + ':' + question.id + (plannedContext ? ':' + plannedContext.planId + ':' + plannedContext.scheduleId + ':' + plannedContext.planRevision : '') : '';
   // What to say for this question at this company: terms and lines drawn from the posting and the structured résumé.
   const hints: Hints | null = question ? buildHints(question, data.jobs.find((j) => j.id === pack?.jobId), data.resume || []) : null;
   const draft = drafts[key] || emptyDraft;
@@ -307,7 +311,7 @@ export default function InterviewPractice({
     ) : null;
   const attempts = (data.attempts || [])
     .filter(
-      (a) => a.questionSetId === pack?.id && a.questionId === question?.id,
+      (a) => a.questionSetId === pack?.id && a.questionId === question?.id && (!plannedContext || (a.practiceContext?.planId === plannedContext.planId && a.practiceContext?.scheduleId === plannedContext.scheduleId)),
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const attempt = attempts.find((a) => a.id === picked[key]) || attempts[0];
@@ -375,6 +379,7 @@ export default function InterviewPractice({
   ] as const;
   async function save(requestReview: boolean) {
     if (!pack || !question) return;
+    if (practiceRecord && practiceRecord.split('|').length > 2 && !plannedContext) { setError('计划已更新，请从训练计划重新进入。'); return; }
     const currentKey = key;
     await run(async () => {
       const saved = await api<Attempt>('attempts', {
@@ -384,6 +389,7 @@ export default function InterviewPractice({
         language: draft.language,
         durationSeconds: Number(draft.seconds || 0),
         requestReview,
+        ...(plannedContext ? { practiceContext: plannedContext } : {}),
       });
       setPicked((p) => ({ ...p, [currentKey]: saved.id }));
       setDrafts((p) => ({ ...p, [currentKey]: { ...draft, dirty: false } }));
@@ -850,6 +856,8 @@ export default function InterviewPractice({
   }
   return (
     <div className="practice-workspace">
+      {routeBase === '#interview-review' && <RecordBack title={tr('针对性练习')} onBack={() => { window.location.hash = linkedPlan?.interviewId ? interviewSessionHash(linkedPlan.interviewId) : '#interview-review'; }} />}
+      {linkedPlan && <div className="inline-note"><b><Ja text={linkedPlan.title} /></b><p>{linkedPlan.content?.schedule.find(s => s.id === plannedContext?.scheduleId)?.date} · {tr('先独立回答，再只改一个重点重答。')}</p></div>}
       {!pack || !question ? (
         <section className="panel"><div className="empty"><p>{tr('题目不存在')}</p></div></section>
       ) : (

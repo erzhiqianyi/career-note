@@ -1191,7 +1191,7 @@ export default function Home() {
             </section>
           ) : (
             <>
-              {active === '面试复盘' && <InterviewReviewHub key={auth?.uid || 'local'} data={data} openReport={setDoc} />}
+              {active === '面试复盘' && (hash.startsWith('#interview-review/question/') || hash.startsWith('#interview-review/help/') || hash.startsWith('#interview-review/guide/') ? <InterviewPractice key={'review-' + (auth?.uid || 'local')} data={data} reload={reload} openMaterial={setDoc} openReport={setDoc} routeBase="#interview-review" /> : <InterviewReviewHub key={auth?.uid || 'local'} data={data} openReport={setDoc} />)}
               <div hidden={active !== '公司'}>
                 <InterviewPractice
                   data={data}

@@ -5913,5 +5913,16 @@
   "待转写": {"ja": "転写待ち", "en": "Awaiting transcript"},
   "待复盘": {"ja": "振り返り待ち", "en": "Awaiting review"},
   "已复盘": {"ja": "振り返り済み", "en": "Reviewed"},
-  "已关联练习": {"ja": "練習に関連付け済み", "en": "Practice linked"}
+  "已关联练习": {"ja": "練習に関連付け済み", "en": "Practice linked"},
+  "针对性练习": {"ja": "改善に向けた練習", "en": "Targeted practice"},
+  "先独立回答，再只改一个重点重答。": {"ja": "まず自分で答え、一つの改善点を直して答え直します。", "en": "Answer independently, then fix one point and answer again."},
+  "从原问答和改善点进入练习，保留每次真实回答。": {"ja": "元の問答と改善点から練習し、毎回の回答を保存します。", "en": "Practise from the original exchanges and feedback, keeping each real answer."},
+  "分钟 / 天": {"ja": "分／日", "en": "minutes / day"},
+  "完成次数表示训练进度，是否达标需结合真实录音复盘。": {"ja": "回数は練習の進み具合です。目標の達成は実際の録音で確認します。", "en": "Counts track practice progress; assess the goal using actual recordings."},
+  "训练日程": {"ja": "練習日程", "en": "Practice schedule"},
+  "具体练习": {"ja": "練習内容", "en": "Exercise"},
+  "已保存 / 目标": {"ja": "保存済み／目標", "en": "Saved / target"},
+  "开始练习": {"ja": "練習を始める", "en": "Start practice"},
+  "训练方法与检查标准": {"ja": "練習方法と確認基準", "en": "Practice instructions and criteria"},
+  "按日程开始的回答计入当天进度；自由练习单独保存。": {"ja": "日程から始めた回答を当日の進捗に数えます。自由練習は別に保存します。", "en": "Answers started from the schedule count toward that day. Free practice is saved separately."}
 }

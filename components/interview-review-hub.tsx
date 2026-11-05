@@ -4,7 +4,7 @@ import { ArrowUpRight, FileText, Headphones } from 'lucide-react';
 import { DataActions, DataCell, DataRow, DataTable, DataTitle } from './data-table';
 import { api, apiBlob, type Report, type State } from '@/lib/career';
 import type { InterviewSession } from '@/lib/interview-session';
-import { interviewReportSection, reportInterviewId } from '@/lib/interview-review-navigation';
+import { interviewReportSection, reportInterviewId, reviewPracticeHash } from '@/lib/interview-review-navigation';
 import { RecordBack, useRecordPage } from './record-page';
 import { useLocale } from './locale-provider';
 import { Ja } from './japanese-text';
@@ -100,6 +100,30 @@ export default function InterviewReviewHub({ data, openReport }: { data: State; 
       const matching = reports.filter(report => interviewReportSection(report) === section).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       return <section className="panel" key={section}><h3>{t(label)}</h3>{matching.length ? matching.map(report => <button className="text-button" key={report.id} onClick={() => openReport(report)}><FileText size={16} aria-hidden="true" /><Ja text={report.title} /></button>) : <p className="muted">{t('尚未保存')}</p>}</section>;
     })}</div>
+    {document?.practice?.length ? <section className="panel"><h3>{t('针对性练习')}</h3><p className="muted">{t('从原问答和改善点进入练习，保留每次真实回答。')} {t('按日程开始的回答计入当天进度；自由练习单独保存。')}</p><div className="interview-review-practice-links">{document.practice.map(link => {
+      const pack = data.questionSets.find(p => p.id === link.questionSetId);
+      const question = pack?.questions.find(q => q.id === link.questionId);
+      return question ? <a className="secondary" key={link.questionSetId + ':' + link.questionId} href={reviewPracticeHash(link.questionSetId, link.questionId)}><Ja text={question.title} /></a> : null;
+    })}</div></section> : null}
+    {(data.practicePlans || []).filter(plan => plan.interviewId === selected && plan.content).map(plan => <section className="panel" key={plan.id}>
+      <h3><Ja text={plan.title} /></h3><p>{plan.startDate} — {plan.endDate} · {plan.dailyMinutes} {t('分钟 / 天')}</p>
+      <p><Ja text={plan.goal} /></p>
+      <p className="muted">{t('完成次数表示训练进度，是否达标需结合真实录音复盘。')}</p>
+      <div className="dt-panel"><DataTable label={t('训练日程')} columns={[
+        { key: 'date', label: t('日期'), width: '120px' },
+        { key: 'exercise', label: t('具体练习'), width: 'minmax(150px,1fr)' },
+        { key: 'minutes', label: t('分钟'), width: '70px' },
+        { key: 'progress', label: t('已保存 / 目标'), width: '120px' },
+        { key: 'open', label: t('操作'), width: '80px' },
+      ]}>{plan.content!.schedule.map(item => {
+        const exercise = plan.content!.exercises.find(e => e.id === item.exerciseId);
+        if (!exercise) return null;
+        const count = data.attempts.filter(a => a.questionSetId === exercise.questionSetId && a.questionId === exercise.questionId && a.practiceContext?.planId === plan.id && a.practiceContext.scheduleId === item.id && a.practiceContext.exerciseId === exercise.id).length;
+        const href = reviewPracticeHash(exercise.questionSetId, exercise.questionId, plan, item.id);
+        return <DataRow key={item.id}><DataCell label={t('日期')}>{item.date}</DataCell><DataTitle title={<Ja text={exercise.title} />} onClick={() => { window.location.hash = href; }} /><DataCell label={t('分钟')}>{item.minutes}</DataCell><DataCell label={t('已保存 / 目标')}>{count} / {item.targetAttempts}</DataCell><DataActions><a href={href} className="text-button">{t('开始练习')}</a></DataActions></DataRow>;
+      })}</DataTable></div>
+      <details><summary>{t('训练方法与检查标准')}</summary><p className="prewrap"><Ja text={plan.content!.successCriteria} /></p>{plan.content!.exercises.map(ex => <details key={ex.id}><summary><Ja text={ex.title} /></summary><p className="prewrap"><Ja text={ex.instructions} /></p></details>)}{plan.content!.checkpoints.map(check => <p key={check.id}><b>{check.date} · <Ja text={check.title} /></b><br /><Ja text={check.criteria} /></p>)}</details>
+    </section>)}
     <section className="panel"><h3>{t('原始录音')}</h3>{current?.audio ? <><button className="secondary" disabled={audioLoading} onClick={() => void listen()}><Headphones size={17} aria-hidden="true" />{t(audioLoading ? '正在读取录音…' : '载入录音')}</button>{audio && <audio ref={audioElement} controls src={audio} preload="metadata" onLoadedMetadata={() => { if (audioElement.current) audioElement.current.currentTime = Math.min(seekOnLoad.current, audioElement.current.duration || 0); }} aria-label={t('原始录音')} />}</> : <p className="muted">{t('尚未保存')}</p>}</section>
     {document?.flow && <section className="panel"><h3>{t('实际问答')}</h3><p className="muted">{t('问题经过语义整理；未确认内容请结合原录音核对。')}</p>{document.flow.exchanges.map((exchange, i) => <details className="interview-review-exchange" key={exchange.id}><summary>{i + 1}. <Ja text={exchange.question} /></summary><p><Ja text={exchange.answerSummary} /></p>{exchange.ranges.map((range, j) => <button className="secondary" key={j} disabled={audioLoading} onClick={() => void listen(range.start)}>{t('定位录音')} {Math.floor(range.start / 60)}:{String(Math.floor(range.start % 60)).padStart(2, '0')}</button>)}</details>)}</section>}
   </section>;
