@@ -1,3 +1,4 @@
+import { SpeechTranscriptionError, type SpeechAI, ensureSpeechSchema, startSpeechJob, getSpeechJob, speechJobStatus, recognizeSpeechChunk, completeSpeechJob, speechUsage, SPEECH_MAX_WAV_BYTES } from './speech-transcription';
 import { answerFlowSchema, type AnswerFlow } from '../lib/answer-flow';
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
 import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
@@ -22,6 +23,11 @@ import { normalizeCompanyProfile } from '../lib/company-profile';
 import { plainJapanese } from '../lib/japanese-readings';
 import { preferenceGroups } from '../lib/job-preferences';
 import { jobStatuses, type JobStatus } from '../lib/job-status';
+import { InterviewError, listInterviews, getInterview, getInterviewVersion, createInterview, updateInterview, requestInterviewAnalysis,
+  beginInterviewAudio, uploadInterviewPart, completeInterviewAudio, interviewAudioResponse, readInterviewBytes } from './interviews';
+import { interviewSummary } from '../lib/interview-session';
+import { PracticePlanError, createPracticePlan, editPracticePlan, getPracticePlan, listPracticePlans, practicePlanDetail,
+  requestPracticePlanTask, savePracticePlan, savePracticePlanReview, setPracticePlanStatus, validatePracticeContext, type PracticePlanStore } from './practice-plans';
 
 type JobPriority = '高' | '普通' | '低';
 type McpScope = 'career:read' | 'career:write' | 'agent:write' | 'admin';
@@ -31,6 +37,7 @@ type MaterialKind = '履歴書' | '職務経歴書' | '志望動機' | '面试�
 
 type Env = {
   CAREER_DB: D1Database;
+  AI?: SpeechAI;
   CAREER_AUTH_MODE?: string;
   CAREER_ADMIN_UIDS?: string;
   FIREBASE_PROJECT_ID?: string;
@@ -208,6 +215,10 @@ async function putRecord(db: Workspace, kind: string, item: Record<string, unkno
     .run();
 }
 
+function practicePlanStore(db: Workspace): PracticePlanStore {
+  return { ...db, get: (kind, id) => getRecord(db, kind, id), put: (kind, value) => putRecord(db, kind, value), list: kind => records(db, kind) };
+}
+
 // The sequence is scoped to the verified user's workspace. Allocation is one atomic
 // SQLite statement, so concurrent imports cannot receive the same number.
 async function nextCompanyNumber(db: Workspace): Promise<number> {
@@ -294,6 +305,9 @@ async function state(db: Workspace, uid = 'local', resumeSummary = false) {
     questionSets: await records(db, 'questionSets'),
     attempts: await records(db, 'attempts'),
     reviews: await records(db, 'reviews'),
+    interviews: (await records(db, 'interviews')).map(item => interviewSummary(item as Parameters<typeof interviewSummary>[0])),
+    practicePlans: await records(db, 'practicePlans'),
+    practicePlanReviews: await records(db, 'practicePlanReviews'),
     // Study furigana for the app; agents read it through career_get_readings instead of every context call.
     ...(resumeSummary ? {} : { readings: await listReadings(db.connection, workspaceKey(db, 'readings')) }),
   };
@@ -808,12 +822,14 @@ async function importReview(db: Workspace, data: Record<string, unknown>) {
 
 async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
   const clientRequestId = validateString(data.clientRequestId, 'clientRequestId', { max: 120 });
+  const practiceContext = await validatePracticeContext(practicePlanStore(db), data.practiceContext, asString(data.questionSetId), asString(data.questionId));
   if (clientRequestId) {
     const existing = (await records(db, 'attempts')).find(item => item.clientRequestId === clientRequestId);
     if (existing) {
       if (existing.questionSetId !== data.questionSetId || existing.questionId !== data.questionId ||
           existing.answer !== data.answer || existing.language !== data.language ||
-          existing.durationSeconds !== data.durationSeconds) {
+          existing.durationSeconds !== data.durationSeconds ||
+          JSON.stringify(existing.practiceContext ?? null) !== JSON.stringify(practiceContext ?? null)) {
         throw new AppError(409, '请求 ID 已用于另一条回答');
       }
       return existing;
@@ -853,6 +869,7 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
     durationSeconds: duration,
     profileRevision: (await getProfile(db)).revision,
     createdAt: now(),
+    ...(practiceContext ? { practiceContext } : {}),
   };
   await putRecord(db, 'attempts', attempt);
 
@@ -861,7 +878,7 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
       kind: '回答点评',
       jobId: attempt.jobId,
       attemptId: attempt.id,
-      instructions: '',
+      instructions: practiceContext ? `计划练习回答。先用 career_get_practice_plan 读取计划的对应版本和练习目标。优先指出一个影响理解的问题，给具体重练动作；不伪造测量或经历。计划关联：${JSON.stringify(practiceContext)}` : '',
     });
   }
 
@@ -1026,7 +1043,7 @@ async function createAudioLink(db: Workspace, env: Env, request: Request, uid: s
     language: attempt.language,
   };
 }
-async function audioLinkResponse(rawDb: D1Database, env: Env, token: string) {
+async function audioLinkResponse(rawDb: D1Database, env: Env, token: string, request: Request) {
   const links = audioLinks(rawDb);
   const link = await getRecord(links, 'audioLinks', token);
   if (!link) return jsonResponse({ error: '下载链接不存在或已过期' }, { status: 404 });
@@ -1034,6 +1051,7 @@ async function audioLinkResponse(rawDb: D1Database, env: Env, token: string) {
     await rawDb.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(links, 'audioLinks'), token).run();
     return jsonResponse({ error: '下载链接已过期，请重新获取' }, { status: 410 });
   }
+  if (link.interview === true) return interviewAudioResponse(audioBucket(env), String(link.key), request);
   return attemptAudioResponse(env, String(link.key), String(link.contentType));
 }
 
@@ -1308,6 +1326,17 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
     const taskId = validateString(taskValue, 'taskId', { required: true, max: 120 });
     const task = await getRecord(db, 'tasks', taskId);
     if (!task) throw new AppError(400, '待处理任务不存在');
+    if (task.kind === '面试复盘') {
+      const interview = await getRecord(db, 'interviews', String(task.interviewId));
+      if (interview?.status !== 'practice' || !interview.practice?.length) throw new AppError(400, '面试复盘必须完成全体把握、复盘及练习关联');
+    }
+    if (task.kind === '练习计划') {
+      const plan = await getPracticePlan(practicePlanStore(db), asString(task.planId));
+      if (!plan.content) throw new AppError(400, '练习计划必须先保存能力、练习、日程和检查标准');
+    }
+    if (task.kind === '计划复盘' && !(await records(db, 'practicePlanReviews')).some(item => item.planId === task.planId && item.checkpointId === task.checkpointId && item.planRevision === task.planRevision)) {
+      throw new AppError(400, '计划复盘任务必须先保存对应检查点的评估');
+    }
     if (!preview) {
       if (task.kind === '公司准备' && counts.materials === 0)
         throw new AppError(400, '公司准备任务必须附上对应职位的材料');
@@ -1468,8 +1497,8 @@ const handler = async (
     const article = await getArticle(rawDb, articleJsonMatch[1]);
     return article ? jsonResponse(article) : jsonResponse({ error: '文章不存在' }, { status: 404 });
   }
-  const audioMatch = new URL(request.url).pathname.match(/^\/api\/career\/attempts\/audio\/([a-f0-9]{48})$/);
-  if (audioMatch && request.method === 'GET') return audioLinkResponse(rawDb, env, audioMatch[1]);
+  const audioMatch = new URL(request.url).pathname.match(/^\/api\/career\/(?:attempts|interviews)\/audio\/([a-f0-9]{48})$/);
+  if (audioMatch && request.method === 'GET') return audioLinkResponse(rawDb, env, audioMatch[1], request);
 
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -1497,6 +1526,162 @@ const handler = async (
   }
 
   const db: Workspace = { connection: rawDb, namespace: context.mode === 'off' ? '' : JSON.stringify([env.FIREBASE_PROJECT_ID, context.uid]) };
+
+  if (pathname === '/api/career/practice-plans' || pathname.startsWith('/api/career/practice-plans/')) {
+    const store = practicePlanStore(db);
+    const action = pathname.slice('/api/career/practice-plans'.length);
+    if (method === 'GET') {
+      ensureScopes(context, ['career:read']);
+      if (!action) return jsonResponse(await listPracticePlans(store));
+      const id = url.searchParams.get('id') || '';
+      if (action === '/detail') return jsonResponse(await practicePlanDetail(store, id, url.searchParams.has('revision') ? Number(url.searchParams.get('revision')) : undefined));
+      if (action === '/history') {
+        await getPracticePlan(store, id);
+        return jsonResponse({ versions: (await records(db, 'practicePlanVersions')).filter(item => item.id === id).map(item => ({ revision: item.revision, updatedAt: item.updatedAt, status: item.status, goal: item.goal })) });
+      }
+      throw new PracticePlanError(404, '计划接口不存在');
+    }
+    if (method !== 'POST') throw new PracticePlanError(405, '请求方法不支持');
+    if (['/edit', '/status'].includes(action)) {
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new PracticePlanError(403, '目标、期间和达成状态请由本人在应用中修改');
+    } else ensureScopes(context, context.tokenType === 'mcp' ? ['agent:write'] : ['career:write']);
+    if (Number(request.headers.get('content-length')) > 900000) throw new PracticePlanError(413, '计划内容过大');
+    let data: Record<string, unknown>;
+    try { data = JSON.parse(new TextDecoder().decode(await readInterviewBytes(request, 900000))); }
+    catch (error) { if (error instanceof InterviewError) throw error; throw new PracticePlanError(400, '请求体必须是 JSON 对象'); }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new PracticePlanError(400, '请求体必须是 JSON 对象');
+    if (!action) return jsonResponse(await createPracticePlan(store, data));
+    if (action === '/edit') return jsonResponse(await editPracticePlan(store, data));
+    if (action === '/status') return jsonResponse(await setPracticePlanStatus(store, data));
+    if (action === '/save' || action === '/save/preview') return jsonResponse(await savePracticePlan(store, data, action.endsWith('/preview')));
+    if (action === '/review' || action === '/review/preview') return jsonResponse(await savePracticePlanReview(store, data, action.endsWith('/preview')));
+    if (action === '/request') {
+      if (!['planning', 'review'].includes(asString(data.kind))) throw new PracticePlanError(400, '计划任务类型不正确');
+      return jsonResponse(await requestPracticePlanTask(store, asString(data.id), data.kind as 'planning' | 'review', asString(data.checkpointId)));
+    }
+    throw new PracticePlanError(404, '计划接口不存在');
+  }
+
+  if (pathname === '/api/career/speech' || pathname.startsWith('/api/career/speech/')) {
+    ensureScopes(context, [method === 'GET' ? 'career:read' : 'career:write']);
+    if (context.tokenType === 'mcp') throw new SpeechTranscriptionError(403, '認識の実行は本人のアプリから操作してください。');
+    const store = { ...db, get: (kind: string, id: string) => getRecord(db, kind, id),
+      put: (kind: string, value: Record<string, unknown>) => putRecord(db, kind, value),
+      list: (kind: string) => records(db, kind) };
+    await ensureSpeechSchema(db.connection);
+    const action = pathname.slice('/api/career/speech'.length);
+    const id = url.searchParams.get('id') || '';
+    if (method === 'GET' && action === '/usage') return jsonResponse(await speechUsage(store));
+    if (method === 'GET' && action === '/status') return jsonResponse(await speechJobStatus(store, id));
+    if (method !== 'POST') throw new SpeechTranscriptionError(405, '認識の操作が正しくありません。');
+    if (action === '/chunk') {
+      if (!env.AI || !env.CAREER_AUDIO) throw new SpeechTranscriptionError(503, 'Cloudflare AI と録音保存の設定が必要です。');
+      return jsonResponse(await recognizeSpeechChunk(store, env.AI, env.CAREER_AUDIO, context.uid, id,
+        url.searchParams.has('part') ? Number(url.searchParams.get('part')) : NaN, await readInterviewBytes(request, SPEECH_MAX_WAV_BYTES)));
+    }
+    let data: Record<string, unknown>;
+    try { data = JSON.parse(new TextDecoder().decode(await readInterviewBytes(request, 4096))); }
+    catch (error) { if (error instanceof InterviewError) throw error; throw new SpeechTranscriptionError(400, 'JSON を送信してください。'); }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new SpeechTranscriptionError(400, 'JSON オブジェクトを送信してください。');
+    if (!action) {
+      if (!env.AI || !env.CAREER_AUDIO) throw new SpeechTranscriptionError(503, 'Cloudflare AI と録音保存の設定が必要です。');
+      return jsonResponse(await startSpeechJob(store, data));
+    }
+    if (action === '/complete') {
+      const result = await completeSpeechJob(store, asString(data.id));
+      if (result.job.target === 'interview') {
+        let document = await getInterview(store, result.job.interviewId);
+        if (document.transcript?.source !== result.transcript.source) {
+          if (document.transcript) throw new SpeechTranscriptionError(409, '既存の転写を保持しています。認識結果を上書きしません。');
+          await updateInterview(store, { id: document.id, revision: result.job.sourceRevision,
+            stage: 'transcript', data: result.transcript }, false);
+          document = await getInterview(store, result.job.interviewId);
+        }
+        const latest = await getSpeechJob(store, result.job.id);
+        await store.put('speechJobs', { ...latest, committedRevision: document.revision });
+      }
+      return jsonResponse(result);
+    }
+    throw new SpeechTranscriptionError(404, '認識の操作が見つかりません。');
+  }
+
+  if (pathname === '/api/career/interviews' || pathname.startsWith('/api/career/interviews/')) {
+    const store = { ...db, get: (kind: string, id: string) => getRecord(db, kind, id),
+      put: (kind: string, value: Record<string, unknown>) => putRecord(db, kind, value),
+      list: (kind: string) => records(db, kind) };
+    const action = pathname.slice('/api/career/interviews'.length);
+    if (method === 'GET') {
+      ensureScopes(context, ['career:read']);
+      if (!action) return jsonResponse(await listInterviews(store));
+      const id = url.searchParams.get('id') || '';
+      const session = await getInterviewVersion(store, id, url.searchParams.get('revision'));
+      if (action === '/detail') {
+        const { transcript, ...detail } = session;
+        return jsonResponse({ ...detail, transcript: transcript ? { source: transcript.source, segmentCount: transcript.segments.length, originalLength: Array.from(transcript.originalText).length } : null });
+      }
+      if (action === '/document') return jsonResponse(session);
+      if (action === '/history') {
+        const versions = (await records(db, 'interviewVersions')).filter(item => item.id === id).map(item => interviewSummary(item as Parameters<typeof interviewSummary>[0]));
+        return jsonResponse({ versions: versions.sort((a, b) => b.revision - a.revision) });
+      }
+      if (action === '/transcript') {
+        const view = url.searchParams.get('view') || 'segments';
+        const maxLimit = view === 'original' ? 12000 : 100;
+        const offset = Number(url.searchParams.get('offset') || 0), limit = Number(url.searchParams.get('limit') || maxLimit);
+        if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > maxLimit) throw new InterviewError(400, '转写分页参数不正确');
+        const transcript = session.transcript;
+        const source = transcript?.source || '';
+        const original = Array.from(transcript?.originalText || '');
+        const values = view === 'original' ? original : transcript?.segments || [];
+        if (!['segments', 'original'].includes(view)) throw new InterviewError(400, '转写视图不正确');
+        return jsonResponse({ id, revision: session.revision, source, view, offset, total: values.length,
+          ...(view === 'original' ? { text: original.slice(offset, offset + limit).join('') } : { segments: values.slice(offset, offset + limit) }),
+          hasMore: offset + limit < values.length, nextOffset: Math.min(values.length, offset + limit) });
+      }
+      if (action === '/audio') {
+        if (!session.audio) throw new InterviewError(404, '录音尚未上传');
+        return interviewAudioResponse(audioBucket(env), `${context.uid}/interviews/${id}/original`, request);
+      }
+      throw new InterviewError(404, '面试接口不存在');
+    }
+    if (method !== 'POST') throw new InterviewError(405, '请求方法不支持');
+    if (['/stage', '/stage/preview'].includes(action)) ensureScopes(context, ['agent:write']);
+    else if (action === '/audio-link') ensureScopes(context, ['career:read']);
+    else {
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new InterviewError(403, '原始录音导入和任务提交请在应用中操作');
+    }
+    if (action === '/upload-part') return jsonResponse(await uploadInterviewPart(store, audioBucket(env), url.searchParams.get('id') || '', Number(url.searchParams.get('part')), request));
+    if (Number(request.headers.get('content-length')) > 1_500_000) throw new InterviewError(413, '面试内容过大');
+    const body = new TextDecoder().decode(await readInterviewBytes(request, 1_500_000));
+    let data: Record<string, unknown>;
+    try { data = JSON.parse(body); } catch { throw new InterviewError(400, '请求体必须是 JSON 对象'); }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new InterviewError(400, '请求体必须是 JSON 对象');
+    if (!action) return jsonResponse(await createInterview(store, data));
+    if (action === '/stage' || action === '/stage/preview') {
+      const result = await updateInterview(store, data, action.endsWith('/preview'));
+      if (action === '/stage' && data.stage === 'practice') {
+        for (const task of await records(db, 'tasks')) {
+          if (task.interviewId === data.id && task.status === '待处理') await putRecord(db, 'tasks', { ...task, status: '已完成', completedAt: now() });
+        }
+      }
+      return jsonResponse(result);
+    }
+    if (action === '/request-analysis') return jsonResponse(await requestInterviewAnalysis(store, asString(data.id)));
+    if (action === '/upload') return jsonResponse(await beginInterviewAudio(store, audioBucket(env), context.uid, data));
+    if (action === '/upload-complete') return jsonResponse(await completeInterviewAudio(store, audioBucket(env), asString(data.id)));
+    if (action === '/audio-link') {
+      const session = await getInterview(store, asString(data.id));
+      if (!session.audio) throw new InterviewError(404, '录音尚未上传');
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(24)), b => b.toString(16).padStart(2, '0')).join('');
+      const expiresAt = new Date(Date.now() + AUDIO_LINK_TTL_MS).toISOString();
+      await putRecord(audioLinks(rawDb), 'audioLinks', { id: token, interview: true, key: `${context.uid}/interviews/${session.id}/original`, expiresAt });
+      return jsonResponse({ id: session.id, ...session.audio, durationSeconds: session.durationSeconds, expiresAt,
+        url: resolveOrigins(request, env).publicOrigin + '/api/career/interviews/audio/' + token });
+    }
+    throw new InterviewError(404, '面试接口不存在');
+  }
 
   if (pathname === '/api/career/material-files' || pathname === '/api/career/material-files/content') {
     const requestedKind = url.searchParams.get('kind');
@@ -1859,8 +2044,8 @@ const worker = {
       } }), corsOrigin);
     }
     return handler(request, env).catch((error: unknown) =>
-      jsonResponse({ error: error instanceof AppError ? error.message : '本机数据服务处理失败，请重试' },
-        { status: error instanceof AppError ? error.code : 500 })).then((response) => withCors(response, corsOrigin));
+      jsonResponse({ error: error instanceof AppError || error instanceof InterviewError || error instanceof PracticePlanError || error instanceof SpeechTranscriptionError ? error.message : '本机数据服务处理失败，请重试' },
+        { status: error instanceof AppError || error instanceof InterviewError || error instanceof PracticePlanError || error instanceof SpeechTranscriptionError ? error.code : 500 })).then((response) => withCors(response, corsOrigin));
   },
 } as unknown as ExportedHandler<Env>;
 

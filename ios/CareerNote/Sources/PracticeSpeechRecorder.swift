@@ -25,22 +25,27 @@ final class PracticeSpeechRecorder {
     @ObservationIgnored private var recognizer: SFSpeechRecognizer?
     @ObservationIgnored private var recognitionTask: SFSpeechRecognitionTask?
 
-    func start(localeID: String) async {
+    @ObservationIgnored private var cloudRecognition: (@MainActor (URL) async throws -> String)?
+    @ObservationIgnored private var generation = UUID()
+
+    func start(localeID: String, cloud: (@MainActor (URL) async throws -> String)? = nil) async {
         errorMessage = nil
         guard await microphoneAuthorized() else {
             errorMessage = "请在系统设置中允许 Career Note 使用麦克风。"
             return
         }
-        guard await speechAuthorized() else {
-            errorMessage = "请在系统设置中允许 Career Note 使用语音识别。"
-            return
-        }
-        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeID)),
-              recognizer.supportsOnDeviceRecognition else {
-            errorMessage = "这台设备尚不支持所选语言的本机语音识别。"
-            return
+        var selectedRecognizer: SFSpeechRecognizer?
+        if cloud == nil {
+            guard await speechAuthorized() else {
+                errorMessage = "请在系统设置中允许 Career Note 使用语音识别。"; return
+            }
+            selectedRecognizer = SFSpeechRecognizer(locale: Locale(identifier: localeID))
+            guard selectedRecognizer?.supportsOnDeviceRecognition == true else {
+                errorMessage = "这台设备尚不支持所选语言的本机语音识别。"; return
+            }
         }
         discard()
+        cloudRecognition = cloud
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
@@ -59,7 +64,7 @@ final class PracticeSpeechRecorder {
                               userInfo: [NSLocalizedDescriptionKey: "麦克风未能开始录音。"])
             }
             self.recorder = recorder
-            self.recognizer = recognizer
+            self.recognizer = selectedRecognizer
             recordingURL = url
             transcript = ""
             seconds = 0
@@ -109,6 +114,8 @@ final class PracticeSpeechRecorder {
     }
 
     func discard() {
+        generation = UUID()
+        cloudRecognition = nil
         recorder?.stop()
         recorder = nil
         player?.stop()
@@ -129,6 +136,22 @@ final class PracticeSpeechRecorder {
     }
 
     private func recognize(url: URL) async {
+        let current = generation
+        if let cloudRecognition {
+            phase = .recognizing
+            errorMessage = nil
+            do {
+                let text = try await cloudRecognition(url)
+                guard generation == current else { return }
+                transcript = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if transcript.isEmpty { errorMessage = "没有识别到文字，可以重试或重新录音。" }
+            } catch {
+                guard generation == current else { return }
+                errorMessage = error.localizedDescription
+            }
+            phase = .ready
+            return
+        }
         guard let recognizer, recognizer.supportsOnDeviceRecognition else {
             errorMessage = "这台设备无法在本机识别该语言。"
             phase = .ready
@@ -154,9 +177,11 @@ final class PracticeSpeechRecorder {
                     }
                 }
             }
+            guard generation == current else { return }
             transcript = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if transcript.isEmpty { errorMessage = "没有识别到文字，可以重试识别或重新录音。" }
         } catch {
+            guard generation == current else { return }
             errorMessage = "本机识别失败：\(error.localizedDescription)"
         }
         recognitionTask = nil

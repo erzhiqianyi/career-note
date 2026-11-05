@@ -99,8 +99,11 @@ private final class SQLiteStore {
             throw storeError(detail)
         }
         do {
+            #if os(iOS)
+            // Keep device protection on iOS; the macOS CLI smoke runner has no device-unlock lifecycle.
             try FileManager.default.setAttributes(
                 [.protectionKey: FileProtectionType.completeUnlessOpen], ofItemAtPath: url.path)
+            #endif
             try execute("PRAGMA journal_mode=DELETE")
             try execute("CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value BLOB NOT NULL)")
             try execute("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, company TEXT NOT NULL, role TEXT NOT NULL, status TEXT NOT NULL, next_date TEXT, payload BLOB NOT NULL)")
@@ -142,6 +145,9 @@ private final class SQLiteStore {
         state.resume = try rows("resume_entries")
         state.profile = try metadata("profile")
         state.today = try metadata("today")
+        state.interviews = try metadata("interviews")
+        state.practicePlans = try metadata("practice_plans")
+        state.practicePlanReviews = try metadata("practice_plan_reviews")
         let pending: [PendingAttempt] = try rows("pending_attempts")
         let drafts: [CareerPersonalizedResume] = try rows("personalized_resumes")
         let lastUpdated: Date? = try metadata("last_updated")
@@ -167,6 +173,9 @@ private final class SQLiteStore {
             try execute("DELETE FROM metadata")
             try putMetadata("profile", snapshot.state.profile)
             try putMetadata("today", snapshot.state.today)
+            try putMetadata("interviews", snapshot.state.interviews)
+            try putMetadata("practice_plans", snapshot.state.practicePlans)
+            try putMetadata("practice_plan_reviews", snapshot.state.practicePlanReviews)
             try putMetadata("last_updated", snapshot.lastUpdated)
             try putMetadata("cache_version", 1)
             try execute("COMMIT")

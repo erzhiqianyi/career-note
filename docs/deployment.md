@@ -121,3 +121,9 @@ GA4 を手動ビルドで有効にする場合は、API の設定と同じビル
 - 公開環境に載るのは求人・履歴・練習記録などの個人データです。Firebase ログインは必須（strict）で、検証済みの Google または Apple アカウントを利用できます。Firebase UID ごとに独立したワークスペースになります。管理者権限は `CAREER_ADMIN_UIDS` にだけ与えてください。iOS の設定は [iOS クライアント](../ios/README.md) を参照してください。
 - `npm run dev:tunnel` の隧道公開と本番公開は別物です。隧道はローカル Worker を一時的に公開するもので、本番 Worker のデータとは共有されません。
 - ローカルの `wrangler dev` は `database_id` を見ず、`~/.local/share/career-note/worker-state/` のローカル SQLite を使います。本番 D1 のバックアップは `npx wrangler d1 export career-note --remote --output backup.sql` で取れます。
+
+## Optional Cloudflare speech recognition
+
+The generated deployment configuration includes an `AI` binding for Workers AI. The generic local configuration omits it so local startup needs no Cloudflare login. No provider key is embedded in the iOS app. Deploy the Worker to the owner's account using the existing process above; this does not change subscriptions. Enable Workers AI access in that account if necessary. An absent binding, including the default local setup, returns 503 without spending inference quota. To test real inference locally, use an explicit separate config with `[ai] binding = "AI"` and Cloudflare authentication. Local Wrangler calls to a remote AI binding also consume the account's real AI quota; ordinary automated tests stub inference.
+
+The app uses Whisper large v3 turbo with a conservative 180-minute daily application budget shared across its users. This is an application guard, not a billing cap: other Workers/models and other Cloudflare products have separate or shared allowances. Review [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/) and the actual account plan before live use. It never switches providers or upgrades a plan automatically. Uploads stay in private R2; recognition metadata and daily reservations use D1. Tables are created lazily by the authenticated speech endpoint. See [interview review](interview-review.md).

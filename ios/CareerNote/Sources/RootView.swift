@@ -9,6 +9,11 @@ enum AppRoute: Hashable, Codable {
     case questionSet(String)
     case answer(packID: String, questionID: String)
     case report(String)
+    case interviews
+    case interview(String)
+    case practicePlans
+    case practicePlan(String)
+    case plannedAnswer(packID: String, questionID: String, context: PracticeContext)
     case resumeEntry(String)
     case personalizedResume(String)
     case settings
@@ -267,6 +272,19 @@ struct RootView: View {
             if let report = model.state.reports.first(where: { $0.id == id }) {
                 TextDetailView(title: report.title, subtitle: report.date, content: report.content)
             } else { missingContent }
+        case .interviews:
+            InterviewListView(model: model)
+        case .interview(let id):
+            InterviewDetailView(model: model, id: id)
+        case .practicePlans:
+            PracticePlanListView(model: model)
+        case .practicePlan(let id):
+            PracticePlanDetailView(model: model, id: id)
+        case .plannedAnswer(let packID, let questionID, let context):
+            if let pack = (model.state.questionSets + BuiltinBank.packs).first(where: { $0.id == packID }),
+               let question = pack.questions.first(where: { $0.id == questionID }) {
+                AnswerView(model: model, pack: pack, question: question, practiceContext: context)
+            } else { missingContent }
         case .resumeEntry(let id):
             if let entry = model.state.resume?.first(where: { $0.id == id }) {
                 ResumeEntryDetail(entry: entry)
@@ -406,6 +424,33 @@ private struct PracticeList: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 Text("面试练习").font(.largeTitle.bold())
+                NavigationLink(value: AppRoute.practicePlans) {
+                    PhoneCard {
+                        HStack(spacing: 12) {
+                            Image(systemName: "target").font(.title2).foregroundStyle(PhoneStyle.accent)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("练习计划").font(.headline).foregroundStyle(.primary)
+                                Text("目标・期间・能力・练习・阶段复盘").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        }
+                    }
+                }.buttonStyle(.plain)
+                NavigationLink(value: AppRoute.interviews) {
+                    PhoneCard {
+                        HStack(spacing: 12) {
+                            Image(systemName: "waveform.and.magnifyingglass").font(.title2).foregroundStyle(PhoneStyle.accent)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("真实面试复盘").font(.headline).foregroundStyle(.primary)
+                                Text("整场录音 → 面试流程 → 复盘 → 针对性练习")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                        }
+                    }
+                }.buttonStyle(.plain)
                 Picker("练习类型", selection: $scope) {
                     Text("通用练习").tag(PracticeScope.general)
                     Text("公司相关").tag(PracticeScope.company)
@@ -492,7 +537,7 @@ private struct PracticeList: View {
     }
 }
 
-private enum BuiltinBank {
+enum BuiltinBank {
     static let packs: [QuestionSet] = {
         guard let url = Bundle.main.url(forResource: "interview-bank", withExtension: "json"),
               let data = try? Data(contentsOf: url),
@@ -645,10 +690,13 @@ private struct AnswerFlowView: View {
 }
 
 struct AnswerView: View {
+    @AppStorage("practiceRecognitionProvider") private var recognitionProvider = "local"
     @Bindable var model: AppModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let pack: QuestionSet
     let question: CareerQuestion
+    var practiceContext: PracticeContext? = nil
+    @State private var practiceKeywords = ""
     @State private var speech = PracticeSpeechRecorder()
     @State private var referenceSpeech = ReferenceSpeechPlayer()
     @State private var recognitionLanguage = "ja-JP"
@@ -663,12 +711,20 @@ struct AnswerView: View {
     private var history: [SavedAttempt] {
         model.state.attempts
             .filter { $0.questionSetId == pack.id && $0.questionId == question.id }
+            .filter { attempt in
+                guard let context = practiceContext else { return true }
+                return attempt.practiceContext?.planId == context.planId && attempt.practiceContext?.scheduleId == context.scheduleId
+            }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
     private var pending: [PendingAttempt] {
         model.pending
             .filter { $0.questionSetId == pack.id && $0.questionId == question.id }
+            .filter { attempt in
+                guard let context = practiceContext else { return true }
+                return attempt.practiceContext?.planId == context.planId && attempt.practiceContext?.scheduleId == context.scheduleId
+            }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -767,6 +823,25 @@ struct AnswerView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                if let context = practiceContext {
+                    PhoneCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("計画に沿って練習").font(.headline)
+                            if let plan = model.state.practicePlans?.first(where: { $0.id == context.planId }) {
+                                Text(plan.goal).font(.subheadline)
+                                if let exercise = plan.content?.exercises.first(where: { $0.id == context.exerciseId }) {
+                                    RichContent(text: exercise.instructions)
+                                }
+                            }
+                            Text("話す前にキーワードを三つまで整理しましょう。中国語・日本語のどちらでも構いません。")
+                                .font(.caption).foregroundStyle(.secondary)
+                            TextField("キーワード", text: $practiceKeywords, axis: .vertical)
+                                .textFieldStyle(.roundedBorder)
+                            Text("録音 → 一つの改善点を確認 → もう一度録音。実際の回答が計画に記録されます。")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 if horizontalSizeClass == .regular {
                     HStack(alignment: .top, spacing: 16) {
                         promptCard.frame(maxWidth: .infinity)
@@ -940,6 +1015,17 @@ struct AnswerView: View {
         }
     }
 
+    private func startRecording() async {
+        if recognitionProvider == "cloudflare" {
+            guard let uid = model.userID else { return }
+            let jobID = "practice-" + UUID().uuidString
+            let language = recognitionLanguage == "zh-CN" ? "zh" : "ja"
+            await speech.start(localeID: recognitionLanguage, cloud: { url in
+                try await model.transcribeRecording(url: url, jobID: jobID, language: language, uid: uid)
+            })
+        } else { await speech.start(localeID: recognitionLanguage) }
+    }
+
     private var answerCard: some View {
         PhoneCard {
             VStack(alignment: .leading, spacing: 14) {
@@ -952,11 +1038,15 @@ struct AnswerView: View {
                 .pickerStyle(.segmented)
                 .disabled(speech.phase != .idle)
 
+                Picker("音声認識", selection: $recognitionProvider) {
+                    Text("端末内").tag("local")
+                    Text("Cloudflare").tag("cloudflare")
+                }.pickerStyle(.segmented).disabled(speech.phase != .idle)
                 switch speech.phase {
                 case .idle:
                     Button {
                         referenceSpeech.stop()
-                        Task { await speech.start(localeID: recognitionLanguage) }
+                        Task { await startRecording() }
                     } label: {
                         Label("回答を録音", systemImage: "mic.fill")
                             .frame(maxWidth: .infinity)
@@ -974,7 +1064,7 @@ struct AnswerView: View {
                 case .recognizing:
                     HStack(spacing: 10) {
                         ProgressView()
-                        Text("设备上正在识别录音…")
+                        Text("録音を認識しています…")
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -985,7 +1075,7 @@ struct AnswerView: View {
                         }
                         Spacer()
                         Button {
-                            Task { await speech.start(localeID: recognitionLanguage) }
+                            Task { await startRecording() }
                         } label: {
                             Label("重新录音", systemImage: "arrow.counterclockwise")
                         }
@@ -995,7 +1085,7 @@ struct AnswerView: View {
                         .font(.caption)
                 }
 
-                Text("录音与语音识别先在本机完成；保存后会按现有同步流程上传回答。")
+                Text(recognitionProvider == "cloudflare" ? "Cloudflare に音声を送信して認識します。通信が必要です。失敗時も画面を閉じるまでは録音を保持します。" : "音声認識は端末内で処理します。保存後に回答を同期します。")
                     .font(.caption).foregroundStyle(.secondary)
                 if let error = speech.errorMessage {
                     Text(error).font(.caption).foregroundStyle(.red)
@@ -1010,7 +1100,7 @@ struct AnswerView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Text(speech.transcript.isEmpty ? "录音结束后，本机识别的文字会显示在这里。" : speech.transcript)
+                    Text(speech.transcript.isEmpty ? "录音结束后，识别的文字会显示在这里。" : speech.transcript)
                         .foregroundStyle(speech.transcript.isEmpty ? Color.secondary : Color.primary)
                         .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
                         .textSelection(.enabled)
@@ -1103,11 +1193,13 @@ struct AnswerView: View {
 
     private func save(requestReview: Bool) {
         guard canSave else { return }
+        var context = practiceContext
+        context?.keywords = String(practiceKeywords.prefix(1000))
         let queued = model.queue(questionSetId: pack.id, questionId: question.id,
                                  answer: speech.transcript,
                                  language: recognitionLanguage == "ja-JP" ? "日语" : "中文构思",
                                  duration: speech.seconds, requestReview: requestReview,
-                                 recordingURL: speech.recordingURL)
+                                 recordingURL: speech.recordingURL, practiceContext: context)
         guard queued else { return }
         saved = true
         speech.discard()
