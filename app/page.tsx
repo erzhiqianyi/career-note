@@ -1738,7 +1738,7 @@ export default function Home() {
             )}
           {'kind' in doc && doc.kind === '志望動機' && <ApplicationReason material={doc} />}
           <article className="document-body">
-            {applicationDoc ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{markdownJapaneseReadings(applicationContent)}</ReactMarkdown> : <DocumentText text={doc.content} />}
+            {applicationDoc || (!('kind' in doc) && reportInterviewId(doc)) ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{markdownJapaneseReadings(applicationDoc ? applicationContent : doc.content)}</ReactMarkdown> : <DocumentText text={doc.content} />}
           </article>
           {!printableDoc && <div className="source-box">
             <h3>{tr('依据与待确认事项')}</h3>
