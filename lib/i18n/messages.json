@@ -5905,5 +5905,13 @@
   "载入录音": {"ja": "録音を読み込む", "en": "Load recording"},
   "实际问答": {"ja": "実際の問答", "en": "Actual exchanges"},
   "问题经过语义整理；未确认内容请结合原录音核对。": {"ja": "質問は意味を整理しています。未確認の内容は元の録音と照合してください。", "en": "Questions are paraphrased. Check uncertain details against the original recording."},
-  "定位录音": {"ja": "録音の位置へ", "en": "Seek recording"}
+  "定位录音": {"ja": "録音の位置へ", "en": "Seek recording"},
+  "面试记录": {"ja": "面接記録", "en": "Interview records"},
+  "面试日期": {"ja": "面接日", "en": "Interview date"},
+  "录音时长": {"ja": "録音時間", "en": "Recording duration"},
+  "复盘状态": {"ja": "振り返り状況", "en": "Review status"},
+  "待转写": {"ja": "転写待ち", "en": "Awaiting transcript"},
+  "待复盘": {"ja": "振り返り待ち", "en": "Awaiting review"},
+  "已复盘": {"ja": "振り返り済み", "en": "Reviewed"},
+  "已关联练习": {"ja": "練習に関連付け済み", "en": "Practice linked"}
 }
