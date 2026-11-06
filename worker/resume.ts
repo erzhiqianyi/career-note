@@ -1,16 +1,23 @@
 import { resumeKinds, validateResume, type ResumeEntry } from '../lib/resume';
+// Must stay byte-identical to what SQLite stores in sqlite_master, which is how an up-to-date index is recognised.
+const RESUME_SINGLETON_INDEX = `CREATE UNIQUE INDEX resume_singleton_language ON resume_entries(owner,kind,coalesce(json_extract(body,'$.language'),'ja')) WHERE archived=0 AND kind IN ('basics')`;
 export async function ensureResumeSchema(db: D1Database) {
   await db.exec(
     `CREATE TABLE IF NOT EXISTS resume_entries (owner TEXT NOT NULL,id TEXT NOT NULL,kind TEXT NOT NULL,revision INTEGER NOT NULL,parent_id TEXT NOT NULL,archived INTEGER NOT NULL,body TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(owner,id));`,
   );
   // 基本资料按语言各一条；求职方向是一条记录一个方向。
   // 旧记录没有 language 字段，一律视为日语；不改写 body，以免触发历史表触发器。
-  await db.exec(`DROP INDEX IF EXISTS resume_singleton;`);
-  // 旧版本的同名索引也约束 preferences；显式删除后按新契约重建。
-  await db.exec(`DROP INDEX IF EXISTS resume_singleton_language;`);
-  await db.exec(
-    `CREATE UNIQUE INDEX IF NOT EXISTS resume_singleton_language ON resume_entries(owner,kind,coalesce(json_extract(body,'$.language'),'ja')) WHERE archived=0 AND kind IN ('basics');`,
-  );
+  // 只在定义不符时重建：每个 isolate 冷启动都会走到这里，无条件 DROP 会反复全表重建索引。
+  // 旧版本的同名索引也约束 preferences，定义不同时同样删除后按新契约重建。
+  const indexes = await db
+    .prepare("SELECT name,sql FROM sqlite_master WHERE type='index' AND name IN ('resume_singleton','resume_singleton_language')")
+    .all<{ name: string; sql: string }>();
+  const current = (indexes.results || []).find((row) => row.name === 'resume_singleton_language');
+  if ((indexes.results || []).some((row) => row.name === 'resume_singleton')) await db.exec(`DROP INDEX resume_singleton;`);
+  if (current?.sql !== RESUME_SINGLETON_INDEX) {
+    if (current) await db.exec(`DROP INDEX resume_singleton_language;`);
+    await db.exec(`${RESUME_SINGLETON_INDEX};`);
+  }
   await db.exec(
     `CREATE TABLE IF NOT EXISTS resume_history (owner TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(owner,id,revision));`,
   );
