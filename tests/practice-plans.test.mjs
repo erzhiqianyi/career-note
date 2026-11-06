@@ -127,6 +127,13 @@ test('MCP provides scoped goal planning and checkpoint writes while achievement 
   let plan = (await call(writer, 'career_create_practice_plan', { id: 'mcp-plan', input })).structuredContent;
   await call(writer, 'career_save_practice_plan', { ...change(plan), preview: true });
   plan = (await call(writer, 'career_save_practice_plan', { ...change(plan), preview: false })).structuredContent;
+  const agentTurn = { ...answer(plan, 'mcp-turn'), requestReview: undefined, agentPractice: { stage: 'sentence', sessionId: 'mcp-session', sentenceIndex: 1, feedback: '具体例を追加する。', nextStep: '担当業務を説明する。', source: 'Current learner message.' }, preview: true };
+  delete agentTurn.requestReview;
+  await call(writer, 'career_save_practice_turn', agentTurn);
+  const storedTurn = (await call(writer, 'career_save_practice_turn', { ...agentTurn, preview: false })).structuredContent;
+  assert.equal(storedTurn.answer, agentTurn.answer);
+  assert.ok(!readerTools.some(item => item.name === 'career_save_practice_turn'));
+  await api(mf, reader)('practice-plans/turn', agentTurn, 403);
   const detail = (await call(reader, 'career_get_practice_plan', { id: plan.id })).structuredContent;
   assert.equal(detail.plan.content.skills[0].id, 'clarity');
   assert.equal((await call(reader, 'career_list_practice_plans')).structuredContent.plans.length, 1);
@@ -160,4 +167,64 @@ test('practice plans, versions, baseline sources and recorded evidence stay isol
   await bob('practice-plans', { id: 'baseline-forgery', input: { ...input, sourceAttemptIds: [recorded.id] } }, 400);
   await bob('practice-plans', { id: plan.id, input: { ...input, title: 'Bob private goal' } });
   assert.equal((await alice('practice-plans/detail?id=' + plan.id)).plan.title, input.title);
+});
+
+test('standalone Japanese curricula reject interview sources and questions and preserve purpose on old-client edits', async t => {
+  const send = api(await host(t));
+  const languageInput = { ...input, purpose: 'japanese', goal: '日常の出来事を正しい助詞と活用で説明する' };
+  await send('practice-plans', { id: 'bad-language-source', input: { ...languageInput, interviewId: 'interview' } }, 400);
+  await send('practice-plans', { id: 'bad-language-job', input: { ...languageInput, jobId: 'job' } }, 400);
+  const plan = await send('practice-plans', { id: 'japanese-only', input: languageInput });
+  await send('practice-plans/save/preview', change(plan), 400);
+  const question = { id: 'particles', title: '助詞の練習', questionJa: '昨日の出来事を説明してください。', meaning: 'Explain a daily event', why: 'Particles', outline: 'Time, place, action', sampleAnswer: '昨日、図書館で本を読みました。', followUps: 'Use another tense', category: '日语表达基础', targetSeconds: 60 };
+  await send('import', { schemaVersion: 1, completeTaskIds: [], questionSets: [{ id: 'japanese-general', jobId: 'builtin:general', title: '日常表現', scenario: 'Everyday Japanese', plan: 'Accuracy', sourceNotes: 'Synthetic', questions: [question] }] });
+  const languageContent = { ...content, exercises: [{ ...content.exercises[0], title: '助詞を使う', questionSetId: 'japanese-general', questionId: question.id }] };
+  await send('practice-plans/save/preview', change(plan, languageContent));
+  const active = await send('practice-plans/save', change(plan, languageContent));
+  assert.equal(active.purpose, 'japanese');
+  const attempt = await send('attempts', { questionSetId: 'japanese-general', questionId: question.id, answer: '昨日、図書館で本を読みました。', language: '日语', durationSeconds: 0 });
+  await send('practice-plans', { id: 'language-with-evidence', input: { ...languageInput, sourceAttemptIds: [attempt.id] } });
+  const interviewAttempt = await send('attempts', { questionSetId: 'builtin-basics', questionId: 'self-intro', answer: '開発を担当しました。', language: '日语', durationSeconds: 10 });
+  await send('practice-plans', { id: 'language-with-wrong-evidence', input: { ...languageInput, sourceAttemptIds: [interviewAttempt.id] } }, 400);
+  const edited = await send('practice-plans/edit', { id: active.id, revision: active.revision, input: { ...input, goal: languageInput.goal } });
+  assert.equal(edited.purpose, 'japanese');
+  await send('practice-plans/edit', { id: edited.id, revision: edited.revision, input: { ...input, interviewId: 'anything' } }, 400);
+});
+
+test('legacy Japanese plans require exact language-question evidence for the separate entrance', async () => {
+  const { isJapanesePracticePlan } = await import('../lib/practice-plan.ts');
+  const packs = [{ id: 'language', questions: [{ id: 'q', category: '日语表达基础' }] }];
+  const plan = { ...input, id: 'legacy', content: { exercises: [{ questionSetId: 'language', questionId: 'q' }] } };
+  assert.equal(isJapanesePracticePlan(plan, packs), true);
+  assert.equal(isJapanesePracticePlan({ ...plan, interviewId: 'source-interview' }, packs), false);
+  assert.equal(isJapanesePracticePlan({ ...plan, purpose: 'interview' }, packs), false);
+  assert.equal(isJapanesePracticePlan({ ...plan, content: undefined }, packs), false);
+  assert.equal(isJapanesePracticePlan({ ...plan, content: { exercises: [{ questionSetId: 'language', questionId: 'missing' }] } }, packs), false);
+  assert.equal(isJapanesePracticePlan({ ...plan, purpose: 'japanese', content: undefined }, packs), true);
+});
+
+test('Agent practice saves immutable keyword and sentence turns, resumes with feedback, and only counts full answers', async t => {
+  const send = api(await host(t));
+  let plan = await send('practice-plans', { id: 'agent-topic', input });
+  plan = await send('practice-plans/save', change(plan));
+  const turn = (id, stage, answerText) => ({ ...answer(plan, id), answer: answerText, requestReview: false,
+    agentPractice: { stage, sessionId: 'conversation-1', sentenceIndex: stage === 'sentence' ? 1 : 0,
+      feedback: '具体例を一つ追加する。', nextStep: '次は担当したことを一文で説明する。', source: 'Learner message in the current fixture conversation.' } });
+  const keyword = turn('keywords-1', 'keywords', 'Java・開発・担当');
+  await send('practice-plans/turn/preview', keyword);
+  assert.equal((await send('practice-plans/detail?id=' + plan.id)).attempts.length, 0);
+  const saved = await send('practice-plans/turn', keyword);
+  assert.equal((await send('practice-plans/turn', keyword)).id, saved.id);
+  await send('practice-plans/turn', { ...keyword, agentPractice: { ...keyword.agentPractice, nextStep: 'Changed' } }, 409);
+  await send('practice-plans/turn', turn('sentence-1', 'sentence', 'Javaの開発を担当しました。'));
+  let detail = await send('practice-plans/detail?id=' + plan.id);
+  assert.equal(detail.attempts.length, 2);
+  assert.equal(detail.progress.items[0].savedAttempts, 0);
+  assert.equal(detail.attempts.find(a => a.id === saved.id).agentPractice.nextStep, keyword.agentPractice.nextStep);
+  await send('practice-plans/turn', { ...turn('bad', 'full', '回答'), practiceContext: { ...keyword.practiceContext, exerciseId: 'wrong' } }, 400);
+  await send('practice-plans/turn', { ...keyword, clientRequestId: '' }, 400);
+  await send('practice-plans/turn', turn('full-1', 'full', 'Javaの開発を担当しました。テストも実施しました。'));
+  detail = await send('practice-plans/detail?id=' + plan.id);
+  assert.equal(detail.progress.items[0].savedAttempts, 1);
+  assert.equal(detail.plan.status, 'active');
 });

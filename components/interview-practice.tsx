@@ -1,4 +1,5 @@
 'use client';
+import { practiceAgentPrompt } from '@/lib/practice-plan';
 import { AnswerFlowView } from './answer-flow';
 import { interviewSessionHash, reportInterviewId, reviewPracticeContext } from '@/lib/interview-review-navigation';
 import { RecordBack, useRecordPage } from './record-page';
@@ -148,6 +149,10 @@ export default function InterviewPractice({
   onOpenEvent?: (event: CareerEvent) => void;
 }) {
   const { t: tr, locale } = useLocale();
+  const savedPacks = routeBase.endsWith('/japanese')
+    ? data.questionSets.filter(pack => pack.jobId === BANK_JOB_ID).map(pack => ({ ...pack, questions: pack.questions.filter(q => q.category === '日语表达基础') })).filter(pack => pack.questions.length)
+    : data.questionSets;
+  const availablePacks = routeBase.endsWith('/japanese') ? savedPacks : [...builtinQuestionSets, ...savedPacks];
   const day = (v: string) => (v ? v.slice(0, 10).replaceAll('-', '.') : '—');
   // 准备资料（企业研究、志望动机、面试准备等）和练习题同属一家公司的面试准备，放在同一页。
   const materials = data.materials || [];
@@ -176,7 +181,7 @@ export default function InterviewPractice({
     window.history.replaceState(null, '', '#jobs/company/' + number);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   }, [company, data.jobs]);
-  const [help, setHelp] = useRecordPage<string>(routeBase, 'help', id => { const [p, q] = id.split('|'); return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
+  const [help, setHelp] = useRecordPage<string>(routeBase, 'help', id => { const [p, q] = id.split('|'); return availablePacks.some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null; }, id => id);
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>(['进行中']);
@@ -187,7 +192,7 @@ export default function InterviewPractice({
   const [deleteError, setDeleteError] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const deleteDialog = useRef<HTMLDialogElement>(null);
-  const [tab, setTab] = useState<PrepTab>('practice');
+  const [tab, setTab] = useState<PrepTab>(routeBase === '#jobs' ? 'info' : 'practice');
   const [actionOpen, setActionOpen] = useState(false);
   const actionDialog = useRef<HTMLDialogElement>(null);
   const [sort, setSort] = useState<{ key: PrepSortKey; desc: boolean }>({ key: 'schedule', desc: false });
@@ -196,10 +201,10 @@ export default function InterviewPractice({
   useEffect(() => setListPage(1), [search, statusFilter, platformFilter, sort]);
   const [practiceRecord, setPracticeRecord] = useRecordPage<string>(routeBase, 'question', id => {
     const [p, q] = id.split('|');
-    return [...builtinQuestionSets, ...data.questionSets].some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null;
+    return availablePacks.some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null;
   }, id => id);
-  const [guide, setGuide] = useRecordPage<string>(routeBase, 'guide', id => [...builtinQuestionSets, ...data.questionSets].some(p => p.id === id) ? id : null, id => id);
-  const routePack = help ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === help.split('|')[0]) : guide ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === guide) : practiceRecord ? [...builtinQuestionSets, ...data.questionSets].find(p => p.id === practiceRecord.split('|')[0]) : undefined;
+  const [guide, setGuide] = useRecordPage<string>(routeBase, 'guide', id => availablePacks.some(p => p.id === id) ? id : null, id => id);
+  const routePack = help ? availablePacks.find(p => p.id === help.split('|')[0]) : guide ? availablePacks.find(p => p.id === guide) : practiceRecord ? availablePacks.find(p => p.id === practiceRecord.split('|')[0]) : undefined;
   const jobId = routePack ? (routePack.jobId || BANK_JOB_ID) : company || BANK_JOB_ID;
   const isBank = jobId === BANK_JOB_ID;
   // Bank text is authored in Chinese and translatable; user/agent text is shown verbatim.
@@ -282,8 +287,8 @@ export default function InterviewPractice({
     return () => window.removeEventListener('beforeunload', warn);
   }, [drafts]);
   const packs = isBank
-    ? (data.questionSets || []).filter((p) => p.jobId === BANK_JOB_ID)
-    : (data.questionSets || [])
+    ? savedPacks.filter((p) => p.jobId === BANK_JOB_ID)
+    : savedPacks
         .filter((p) => p.jobId === jobId)
         .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
   const pack = routePack || (isBank ? packs.find((p) => p.id === packId) : undefined) || packs[0];
@@ -327,7 +332,7 @@ export default function InterviewPractice({
   );
   const practiced = new Set(
     (data.attempts || [])
-      .filter((a) => a.questionSetId === pack?.id)
+      .filter((a) => a.questionSetId === pack?.id && (!a.agentPractice || a.agentPractice.stage === 'full'))
       .map((a) => a.questionId),
   );
   function edit(change: Partial<Draft>) {
@@ -656,7 +661,7 @@ export default function InterviewPractice({
       <div className="prep-tabs" role="tablist" aria-label={tr('面试准备')}>
         {tabs.map(([id, label]) => {
           const count = id === 'materials' ? companyMaterials.length : 0;
-          return <button key={id} type="button" role="tab" aria-selected={id === activeTab} className={id === activeTab ? 'is-active' : ''} onClick={() => setTab(id)}>
+          return <button key={id} type="button" role="tab" aria-selected={id === activeTab} className={id === activeTab ? 'is-active' : ''} onClick={() => { if (id === 'practice' && routeBase === '#jobs') window.location.hash = '#interview-review/company/' + encodeURIComponent(jobId); else setTab(id); }}>
             {tr(label)}{count > 0 && <span className="prep-tab-count">{count}</span>}
           </button>;
         })}
@@ -666,7 +671,7 @@ export default function InterviewPractice({
         data={data}
         onOpenMaterial={(id) => { const material = materials.find((m) => m.id === id); if (material) openMaterial(material); }}
         onOpenEvent={onOpenEvent}
-        onOpenPractice={() => setTab('practice')}
+        onOpenPractice={() => { window.location.hash = '#interview-review/company/' + encodeURIComponent(jobId); }}
       />}
       {activeTab === 'info' && currentJob && <div className="prep-tab-panel prep-info">
         <details className="panel prep-info-section" open>
@@ -749,7 +754,7 @@ export default function InterviewPractice({
         <>
           <div className="section-head prep-practice-head"><h2>{tr('练习题目')}</h2><span className="muted">{tr('已练问题')} {practiced.size} / {pack.questions.length}</span></div>
           <section className="panel question-list prep-tab-panel">
-            {pack.questions.map((q, i) => (
+            {pack.questions.filter(q => routeBase.endsWith('/japanese') ? q.category === '日语表达基础' : q.category !== '日语表达基础').map((q, i) => (
               <button
                 disabled={busy}
                 className="question-option"
@@ -766,7 +771,7 @@ export default function InterviewPractice({
                   {practiced.has(q.id) ? <Check size={16} /> : String(i + 1).padStart(2, '0')}
                 </span>
                 <span>
-                  <b><Ja text={bt(q.title)} /></b>
+                  <b>{q.questionNumber && <span>Q{q.questionNumber} · </span>}<Ja text={bt(q.title)} /></b>
                   <small>
                     {tr(q.category)} · {q.targetSeconds}
                     {tr('秒')}
@@ -856,7 +861,7 @@ export default function InterviewPractice({
   }
   return (
     <div className="practice-workspace">
-      {routeBase === '#interview-review' && <RecordBack title={tr('针对性练习')} onBack={() => { window.location.hash = linkedPlan?.interviewId ? interviewSessionHash(linkedPlan.interviewId) : '#interview-review'; }} />}
+      {routeBase.startsWith('#interview-review') && <RecordBack title={routeBase.endsWith('/japanese') ? '日语练习' : tr('针对性练习')} onBack={() => { window.location.hash = routeBase.endsWith('/japanese') ? routeBase : linkedPlan?.interviewId ? interviewSessionHash(linkedPlan.interviewId) : '#interview-review'; }} />}
       {linkedPlan && <div className="inline-note"><b><Ja text={linkedPlan.title} /></b><p>{linkedPlan.content?.schedule.find(s => s.id === plannedContext?.scheduleId)?.date} · {tr('先独立回答，再只改一个重点重答。')}</p></div>}
       {!pack || !question ? (
         <section className="panel"><div className="empty"><p>{tr('题目不存在')}</p></div></section>
@@ -927,6 +932,12 @@ export default function InterviewPractice({
               {tr(error)}
             </div>
           )}
+          {question.questionNumber && <button className="text-button" onClick={async () => {
+            try {
+              await navigator.clipboard.writeText('Q' + question.questionNumber);
+              setNotice('Q' + question.questionNumber + ' コピーしました');
+            } catch { setError('番号をコピーできませんでした'); }
+          }}>Q{question.questionNumber} · 番号をコピー</button>}
           {help && <section className="panel question-help-page"><h2 lang="ja"><Ja text={question.questionJa} mode="ja" /></h2>              <p>{bt(question.meaning)}</p>
               {(question.simpleQuestionJa || question.vocabulary) && (
                 <details className="language-support">
@@ -1041,7 +1052,14 @@ export default function InterviewPractice({
               <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('查看完整回答提示')}</button>
             </section>}
             {practiceRecord && <section className="panel answer-panel">
-              <div className="answer-editor">
+              <h3>在 Agent 中练习</h3><p>基本关键词 → 一次一句 → 完整回答。这里保存原回答和练习回顾。</p>
+              <button className="primary" onClick={() => void run(async () => {
+                await navigator.clipboard.writeText(linkedPlan ? practiceAgentPrompt(linkedPlan, plannedContext?.scheduleId) :
+                  '请使用 Career Note MCP 读取 career_get_practice_plan_guide 和现有专题计划。围绕题组 ID ' + pack.id + '、问题 ID ' + question.id +
+                  ' 选择或制定对应的专题计划，保留旧题目与历史回答。先关键词，再每次一句，最后由我组成完整回答。每轮用 career_save_practice_turn 预览、保存、读回我的原话、反馈与 nextStep。');
+                setNotice('已复制 Agent 练习指令。');
+              })}>复制 Agent 练习指令</button>
+              <details><summary>补录历史回答</summary><div className="answer-editor">
                 <label htmlFor="practice-answer">
                   {tr('你的回答')}
                   <span>{draft.dirty ? tr('· 尚未保存') : ''}</span>
@@ -1123,7 +1141,7 @@ export default function InterviewPractice({
                     {tr('保存并请 AI Agent 点评')}
                   </button>
                 </div>
-              </div>
+              </div></details>
             </section>}
           </div>
           {practiceRecord && <section className="panel feedback-panel">

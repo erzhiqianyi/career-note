@@ -4319,3 +4319,10 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .interview-review-table .dt-cell { font-variant-numeric: tabular-nums; }
 .interview-review-practice-links { display: flex; flex-wrap: wrap; gap: 10px; }
 .interview-review-practice-links .secondary { display: inline-flex; text-decoration: none; }
+
+.review-entry-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px; }
+.review-entry { display: block; color: inherit; text-decoration: none; }
+.review-entry:hover { border-color: var(--accent); }
+.japanese-practice-hub { display: grid; gap: 16px; }
+.japanese-practice-form { display: grid; gap: 16px; }
+.japanese-practice-form label { display: grid; gap: 6px; }

@@ -1,3 +1,4 @@
+import { agentPracticeSchema } from '../lib/practice-plan';
 import { SpeechTranscriptionError, type SpeechAI, ensureSpeechSchema, startSpeechJob, getSpeechJob, speechJobStatus, recognizeSpeechChunk, completeSpeechJob, speechUsage, SPEECH_MAX_WAV_BYTES } from './speech-transcription';
 import { answerFlowSchema, type AnswerFlow } from '../lib/answer-flow';
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
@@ -174,6 +175,7 @@ async function ensureSchema(db: D1Database, gateway: McpAppServer): Promise<void
   await db.exec(
     `CREATE TABLE IF NOT EXISTS records (kind TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (kind,id));`,
   );
+  await db.exec(`CREATE TABLE IF NOT EXISTS question_numbers (workspace TEXT NOT NULL, number INTEGER NOT NULL, pack_id TEXT NOT NULL, question_id TEXT NOT NULL, PRIMARY KEY (workspace, number), UNIQUE (workspace, pack_id, question_id));`);
   await db.exec(`CREATE TABLE IF NOT EXISTS meta (id TEXT PRIMARY KEY, body TEXT NOT NULL);`);
   // Who each MCP grant belongs to, in human terms: refreshed at every consent so career_get_connection_info can name the account.
   await db.exec(`CREATE TABLE IF NOT EXISTS mcp_owners (uid TEXT PRIMARY KEY, email TEXT, display_name TEXT, provider TEXT, updated_at TEXT NOT NULL);`);
@@ -290,6 +292,35 @@ async function getProfile(db: Workspace) {
   return { ...defaultProfile(), ...((await getMeta(db)) || {}) };
 }
 
+// Numbers live independently of editable content and are never recycled after deletion.
+async function numberedQuestionSets(db: Workspace) {
+  const packs = await records(db, 'questionSets');
+  const workspace = workspaceKey(db, 'questionNumbers');
+  const saved = await db.connection.prepare('SELECT number, pack_id, question_id FROM question_numbers WHERE workspace=?1').bind(workspace).all<{number: number; pack_id: string; question_id: string}>();
+  const numbers = new Map((saved.results || []).map(row => [JSON.stringify([row.pack_id, row.question_id]), row.number]));
+  for (const pack of packs) {
+    const questions = (pack.questions || []) as Record<string, unknown>[];
+    for (const question of questions) {
+      const key = JSON.stringify([pack.id, question.id]);
+      let number = numbers.get(key);
+      if (number === undefined) {
+        // Atomic allocation and unique identity also handle concurrent first reads.
+        const row = await db.connection.prepare(`
+          INSERT INTO question_numbers(workspace, number, pack_id, question_id)
+          SELECT ?1, COALESCE(MAX(number), 0) + 1, ?2, ?3 FROM question_numbers WHERE workspace=?1
+          ON CONFLICT(workspace, pack_id, question_id) DO UPDATE SET question_id=excluded.question_id
+          RETURNING number
+        `).bind(workspace, String(pack.id), String(question.id)).first<{number: number}>();
+        if (!row) throw new AppError(500, '无法分配问题编号');
+        number = row.number;
+        numbers.set(key, number);
+      }
+      question.questionNumber = number;
+    }
+  }
+  return packs;
+}
+
 async function state(db: Workspace, uid = 'local', resumeSummary = false) {
   await ensureCompanyNumbers(db);
   const profile = await getProfile(db);
@@ -302,7 +333,7 @@ async function state(db: Workspace, uid = 'local', resumeSummary = false) {
     reports: await records(db, 'reports'),
     tasks: await records(db, 'tasks'),
     today: today(),
-    questionSets: await records(db, 'questionSets'),
+    questionSets: await numberedQuestionSets(db),
     attempts: await records(db, 'attempts'),
     reviews: await records(db, 'reviews'),
     interviews: (await records(db, 'interviews')).map(item => interviewSummary(item as Parameters<typeof interviewSummary>[0])),
@@ -641,7 +672,9 @@ async function requestTask(db: Workspace, data: Record<string, unknown>) {
     status: '待处理',
     attemptId,
     createdAt: now(),
-    instructions: validateString(data.instructions, 'instructions', { max: 100000 }),
+    instructions: validateString(data.instructions, 'instructions', { max: 100000 }) || (kind === '公司准备'
+      ? '默认准备公司研究、履歴書、職務経歴書、志望動機四类申请资料；复用已确认母版，按岗位调整重点并列出待确认项。公司专项面试资料和题组等收到面试安排或本人明确要求后再准备；当前沿用已有个人通用练习。按本次任务阶段验收并读回，不自动投递或改变状态。'
+      : ''),
   };
   await putRecord(db, 'tasks', task);
   return task;
@@ -820,7 +853,11 @@ async function importReview(db: Workspace, data: Record<string, unknown>) {
   return result;
 }
 
-async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
+async function saveAttempt(db: Workspace, data: Record<string, unknown>, preview = false) {
+  const parsedAgent = data.agentPractice === undefined ? undefined : agentPracticeSchema.safeParse(data.agentPractice);
+  if (parsedAgent && !parsedAgent.success) throw new AppError(400, "Agent 练习记录格式不正确");
+  const agentPractice = parsedAgent?.data;
+  if (agentPractice && (!data.clientRequestId || !data.practiceContext)) throw new AppError(400, "Agent 练习必须关联计划并提供稳定请求 ID");
   const clientRequestId = validateString(data.clientRequestId, 'clientRequestId', { max: 120 });
   const practiceContext = await validatePracticeContext(practicePlanStore(db), data.practiceContext, asString(data.questionSetId), asString(data.questionId));
   if (clientRequestId) {
@@ -829,6 +866,7 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
       if (existing.questionSetId !== data.questionSetId || existing.questionId !== data.questionId ||
           existing.answer !== data.answer || existing.language !== data.language ||
           existing.durationSeconds !== data.durationSeconds ||
+          JSON.stringify(existing.agentPractice ?? null) !== JSON.stringify(agentPractice ?? null) ||
           JSON.stringify(existing.practiceContext ?? null) !== JSON.stringify(practiceContext ?? null)) {
         throw new AppError(409, '请求 ID 已用于另一条回答');
       }
@@ -870,7 +908,9 @@ async function saveAttempt(db: Workspace, data: Record<string, unknown>) {
     profileRevision: (await getProfile(db)).revision,
     createdAt: now(),
     ...(practiceContext ? { practiceContext } : {}),
+    ...(agentPractice ? { agentPractice } : {}),
   };
+  if (preview) return { valid: true, attempt };
   await putRecord(db, 'attempts', attempt);
 
   if (data.requestReview === true) {
@@ -1557,6 +1597,10 @@ const handler = async (
     try { data = JSON.parse(new TextDecoder().decode(await readInterviewBytes(request, 900000))); }
     catch (error) { if (error instanceof InterviewError) throw error; throw new PracticePlanError(400, '请求体必须是 JSON 对象'); }
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new PracticePlanError(400, '请求体必须是 JSON 对象');
+    if (action === '/turn' || action === '/turn/preview') {
+      if (!data.agentPractice) throw new PracticePlanError(400, '缺少 Agent 练习阶段');
+      return jsonResponse(await saveAttempt(db, { ...data, requestReview: false }, action.endsWith('/preview')));
+    }
     if (!action) return jsonResponse(await createPracticePlan(store, data));
     if (action === '/edit') return jsonResponse(await editPracticePlan(store, data));
     if (action === '/status') return jsonResponse(await setPracticePlanStatus(store, data));
@@ -1740,6 +1784,25 @@ const handler = async (
     if (!context.admin && context.mode !== 'off') throw new AppError(403, '仅管理员可管理文章');
     if (context.tokenType === 'mcp') throw new AppError(403, '请在应用中管理文章');
     return jsonResponse({ articles: await listArticles(rawDb, true) });
+  }
+
+  if (pathname === '/api/career/questions/by-number' && method === 'GET') {
+    ensureScopes(context, ['career:read']);
+    const input = url.searchParams.get('number') || '';
+    if (!/^(?:Q)?[1-9][0-9]*$/i.test(input)) throw new AppError(400, '问题编号应为 Q123 或 123');
+    const number = Number(input.replace(/^q/i, ''));
+    if (!Number.isSafeInteger(number)) throw new AppError(400, '问题编号无效');
+    const packs = await numberedQuestionSets(db);
+    for (const pack of packs) {
+      const question = (pack.questions as Record<string, unknown>[]).find(q => q.questionNumber === number);
+      if (!question) continue;
+      const attempts = (await records(db, 'attempts')).filter(a => a.questionSetId === pack.id && a.questionId === question.id);
+      const attemptIds = new Set(attempts.map(a => a.id));
+      const reviews = (await records(db, 'reviews')).filter(r => attemptIds.has(r.attemptId));
+      return jsonResponse({ reference: 'Q' + number, questionSetId: pack.id, questionSetTitle: pack.title, jobId: pack.jobId, question,
+        attempts, reviews, instructions: 'Use questionSetId and question.id for questionSetPatches. Preview, import, then read back. Reference answers are not user answers.' });
+    }
+    throw new AppError(404, '找不到该编号的问题');
   }
 
   if (pathname === '/api/career/state' && method === 'GET') {

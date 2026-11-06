@@ -74,4 +74,25 @@ test('MCP research skill supplies complete portable instructions and usable scop
   const linked = (await call(reader, materialRoute.readBackTool)).materials.find(row => row.id === material.id);
   assert.equal(linked.jobId, job.id);
   assert.equal(linked.content, material.content);
+
+  // Preparing application documents must not require a speculative company interview pack.
+  assert.deepEqual(guide.preparationPolicy.applicationMaterialKinds, ['公司研究', '履歴書', '職務経歴書', '志望動機']);
+  assert.equal(guide.preparationPolicy.minimumApplicationSyncMaterial.kind, '志望動機');
+  assert.equal(guide.preparationPolicy.minimumApplicationSyncMaterial.maxApplicationReasonCharacters, 100);
+  assert.equal(guide.preparationPolicy.minimumApplicationSyncMaterial.exceptExplicitJobsOnlyOrPreview, true);
+  const task = await call(writer, 'career_create_task', { kind: '公司准备', jobId: job.id });
+  assert.match(task.instructions, /四类申请资料/);
+  assert.match(task.instructions, /收到面试安排或本人明确要求/);
+  const applicationMaterials = guide.preparationPolicy.applicationMaterialKinds.map((kind, index) => ({
+    id: 'fixture-application-' + index, jobId: job.id, kind, title: 'Fixture ' + kind,
+    content: '# ' + kind + '\n\nFixture confirmed facts.', sourceNotes: 'Disposable fixture',
+  }));
+  const applicationBundle = { schemaVersion: 1, materials: applicationMaterials, completeTaskIds: [task.id] };
+  await call(writer, 'career_preview_import', { bundle: applicationBundle });
+  await call(writer, 'career_import', { bundle: applicationBundle });
+  const completed = await call(reader, 'career_get_context');
+  assert.equal(completed.tasks.find(row => row.id === task.id).status, '已完成');
+  assert.deepEqual(completed.questionSets, after.questionSets);
+  const explicit = await call(writer, 'career_create_task', { kind: '公司准备', jobId: job.id, instructions: 'Interview arranged: prepare the first-round practice requested by the user.' });
+  assert.equal(explicit.instructions, 'Interview arranged: prepare the first-round practice requested by the user.');
 });

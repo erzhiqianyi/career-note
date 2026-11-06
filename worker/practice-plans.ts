@@ -47,6 +47,14 @@ async function commit(store: PracticePlanStore, old: PracticePlan, value: Practi
   return next;
 }
 async function validateSources(store: PracticePlanStore, input: z.infer<typeof practicePlanInputSchema>) {
+  if (input.purpose === 'japanese' && (input.jobId || input.interviewId)) throw new PracticePlanError(400, '日语练习不能关联公司或真实面试');
+  if (input.purpose === 'japanese') {
+    for (const id of input.sourceAttemptIds) {
+      const attempt = await store.get('attempts', id);
+      if (!attempt || (attempt.question as { category?: string } | undefined)?.category !== '日语表达基础' || attempt.jobId)
+        throw new PracticePlanError(400, '日语练习只能使用一般日语练习的回答作为基准');
+    }
+  }
   if (input.jobId && !await store.get('jobs', input.jobId)) throw new PracticePlanError(400, '关联职位不存在');
   if (input.interviewId) {
     const interview = await store.get('interviews', input.interviewId);
@@ -79,8 +87,9 @@ export async function editPracticePlan(store: PracticePlanStore, input: unknown)
   const data = parse(z.object({ id: practiceIdSchema, revision: z.number().int().positive(), input: practicePlanInputSchema }).strict(), input);
   const old = await getPracticePlan(store, data.id);
   if (old.revision !== data.revision) throw new PracticePlanError(409, '计划已更新，请重新读取');
-  await validateSources(store, data.input);
-  const next = { ...old, ...data.input, status: 'requested' as const };
+  const constraints = { ...data.input, purpose: data.input.purpose ?? old.purpose };
+  await validateSources(store, constraints);
+  const next = { ...old, ...constraints, status: 'requested' as const };
   delete next.content;
   const saved = await commit(store, old, next);
   await requestPracticePlanTask(store, saved.id, 'planning');
@@ -101,7 +110,7 @@ export async function practicePlanDetail(store: PracticePlanStore, id: string, r
   const attemptIds = new Set(attempts.map(item => item.id));
   const answerReviews = (await store.list('reviews')).filter(item => attemptIds.has(item.attemptId));
   return { plan, progress: practicePlanProgress(plan, attempts as { id: string; practiceContext?: unknown }[]),
-    attemptIds: [...attemptIds], answerReviewIds: answerReviews.map(item => item.id), reviews };
+    attempts, attemptIds: [...attemptIds], answerReviewIds: answerReviews.map(item => item.id), reviews };
 }
 export async function requestPracticePlanTask(store: PracticePlanStore, id: string, kind: 'planning' | 'review', checkpointId = '') {
   const plan = await getPracticePlan(store, id);
@@ -127,7 +136,9 @@ export async function savePracticePlan(store: PracticePlanStore, input: unknown,
   for (const items of [content.skills, content.exercises, content.schedule, content.checkpoints]) if (!unique(items.map(item => item.id))) throw new PracticePlanError(400, '计划内编号重复');
   for (const exercise of content.exercises) {
     if (!unique(exercise.skillIds) || exercise.skillIds.some(id => !content.skills.some(skill => skill.id === id))) throw new PracticePlanError(400, '练习必须关联计划内的能力');
-    const pack = findBuiltinQuestionSet(exercise.questionSetId) || await store.get('questionSets', exercise.questionSetId) as { jobId: string; questions?: { id: string }[] } | null;
+    const pack = findBuiltinQuestionSet(exercise.questionSetId) || await store.get('questionSets', exercise.questionSetId) as { jobId: string; questions?: { id: string; category?: string }[] } | null;
+    if (old.purpose === 'japanese' && (pack?.jobId !== 'builtin:general' || !pack.questions?.some(item => item.id === exercise.questionId && item.category === '日语表达基础')))
+      throw new PracticePlanError(400, '日语练习计划只能关联一般日语练习题');
     if (!pack?.questions?.some(item => item.id === exercise.questionId) || (pack.jobId !== old.jobId && pack.jobId !== 'builtin:general')) throw new PracticePlanError(400, '练习题不存在或不属于关联公司／通用题组');
   }
   const budgets = new Map<string, number>();

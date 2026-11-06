@@ -1,4 +1,5 @@
 'use client';
+import { BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { RecordBack, SubViewContext, useRecordPage, type SubView } from '@/components/record-page';
@@ -23,7 +24,7 @@ import { Ja, JaChildren } from '@/components/japanese-text';
 import { markdownJapaneseReadings } from '@/lib/japanese-readings';
 import WorkspaceFooter from '@/components/workspace-footer';
 import InterviewPractice from '@/components/interview-practice';
-import InterviewReviewHub from '@/components/interview-review-hub';
+import ReviewWorkspace, { PracticeWorkspace } from '@/components/review-workspace';
 import { reportInterviewId } from '@/lib/interview-review-navigation';
 import StatusMark from '@/components/status-mark';
 import DailyBrief, { collectBrief, briefSize } from '@/components/daily-brief';
@@ -121,6 +122,7 @@ const nav = [
   { label: '日程', icon: CalendarDays },
   { label: '公司', icon: BriefcaseBusiness },
   { label: '面试复盘', icon: ScrollText },
+  { label: '练习', icon: BookOpen },
   { label: '我的履历', icon: UserRound },
   { label: '个性化简历', icon: FileText },
   { label: 'Agent 协作', icon: Workflow },
@@ -129,7 +131,7 @@ const nav = [
 ];
 // Phone layout: every page lives behind the brand drawer (no bottom tab bar).
 // Content pages come first; anything that configures the workspace is grouped as "settings".
-const drawerPages = ['今日准备', '日程', '公司', '面试复盘', '我的履历', '个性化简历'];
+const drawerPages = ['今日准备', '日程', '公司', '面试复盘', '练习', '我的履历', '个性化简历'];
 const drawerSettings = ['Agent 协作', '求职平台', '系统设置'];
 // `parent` is the nav page that stays highlighted; `back` is where the header arrow goes when it is not the parent.
 const subPages: Record<string, { parent: string; hash: string; back?: string }> = {
@@ -152,6 +154,7 @@ const hashes: Record<string, string> = {
   '#calendar': '日程',
   '#jobs': '公司',
   '#interview-review': '面试复盘',
+  '#practice': '练习',
   '#interview': '公司', // legacy links from before interview prep merged into the company page
   '#platforms': '求职平台',
   '#resume': '我的履历',
@@ -248,7 +251,7 @@ function Field({
   return (
     <label className={large ? 'field wide' : 'field'}>
       <span>
-        {tr(label)}
+        {tr(label === '面试复盘' ? '复盘' : label)}
         {required && ' *'}
       </span>
       {large ? (
@@ -836,12 +839,12 @@ export default function Home() {
               key={label}
               aria-current={activePage === label ? 'page' : undefined}
               className={[activePage === label ? 'active' : '', ['我的履历', 'Agent 协作'].includes(label) ? 'nav-group-start' : ''].filter(Boolean).join(' ')}
-              title={navCollapsed ? tr(label) : undefined}
-              aria-label={navCollapsed ? tr(label) : undefined}
+              title={navCollapsed ? tr(label === '面试复盘' ? '复盘' : label) : undefined}
+              aria-label={navCollapsed ? tr(label === '面试复盘' ? '复盘' : label) : undefined}
               onClick={() => go(label)}
             >
               <Icon size={19} />
-              <span className="nav-label">{tr(label)}</span>
+              <span className="nav-label">{tr(label === '面试复盘' ? '复盘' : label)}</span>
               {label === 'Agent 协作' && pending.length > 0 && (
                 <span className="nav-count">{pending.length}</span>
               )}
@@ -872,7 +875,7 @@ export default function Home() {
                   onClick={() => go(label)}
                 >
                   <Icon size={20} />
-                  <span>{tr(label)}</span>
+                  <span>{tr(label === '面试复盘' ? '复盘' : label)}</span>
                   <ChevronRight size={18} />
                 </button>
               ))}
@@ -891,7 +894,7 @@ export default function Home() {
                   onClick={() => go(label)}
                 >
                   <Icon size={20} />
-                  <span>{tr(label)}</span>
+                  <span>{tr(label === '面试复盘' ? '复盘' : label)}</span>
                   {label === 'Agent 协作' && pending.length > 0 && (
                     <span className="nav-count">{pending.length}</span>
                   )}
@@ -939,7 +942,7 @@ export default function Home() {
               <button
                 className="icon-button header-back"
                 aria-label={tr('返回 {0}', [
-                  recordView ? tr(activePage) : tr(subPages[active]?.back ?? subPages[active]?.parent ?? active),
+                  recordView ? tr(activePage === '面试复盘' ? '复盘' : activePage) : tr(subPages[active]?.back ?? subPages[active]?.parent ?? active),
                 ])}
                 onClick={() => {
                   if (recordView) recordView.onBack();
@@ -954,9 +957,9 @@ export default function Home() {
               </button>
             )}
             {isSubPage ? (
-              <span className="breadcrumb" id="page-subtitle">{recordView ? recordView.title ?? tr(activePage) : briefOpen ? tr('今日简报') : prepRoute ? prepRoute.title : jobEdit ? tr(jobEdit.id ? '编辑职位与投递进展' : '添加目标职位') : tr(activePage)}</span>
+              <span className="breadcrumb" id="page-subtitle">{recordView ? recordView.title ?? tr(activePage === '面试复盘' ? '复盘' : activePage) : briefOpen ? tr('今日简报') : prepRoute ? prepRoute.title : jobEdit ? tr(jobEdit.id ? '编辑职位与投递进展' : '添加目标职位') : tr(activePage === '面试复盘' ? '复盘' : activePage)}</span>
             ) : (
-              <h1 className="header-page-title">{tr(activePage)}</h1>
+              <h1 className="header-page-title">{tr(activePage === '面试复盘' ? '复盘' : activePage)}</h1>
             )}
           </div>
           <div className="row header-tools">
@@ -1026,7 +1029,7 @@ export default function Home() {
             <div className="form-grid">
               {researchFields.map(([k, label]) => k === 'matchLevel' ? (
                 <label className="field" key={k}>
-                  <span>{tr(label)}</span>
+                  <span>{tr(label === '面试复盘' ? '复盘' : label)}</span>
                   <select name="matchLevel" defaultValue={jobEdit.matchLevel || ''}>
                     <option value="">{tr('待评估')}</option>
                     {matchLevels.map((s) => (
@@ -1038,7 +1041,7 @@ export default function Home() {
                 </label>
               ) : k === 'sourceChannel' ? (
                 <label className="field" key={k}>
-                  <span>{tr(label)}</span>
+                  <span>{tr(label === '面试复盘' ? '复盘' : label)}</span>
                   <select name={k} defaultValue={jobEdit.sourceChannel || ''}>
                     <option value="">{tr('未记录')}</option>
                     {sourceChannels.map((channel) => <option key={channel} value={channel}>{tr(channel)}</option>)}
@@ -1046,14 +1049,14 @@ export default function Home() {
                 </label>
               ) : k === 'sourcePlatform' ? (
                 <label className="field" key={k}>
-                  <span>{tr(label)}</span>
+                  <span>{tr(label === '面试复盘' ? '复盘' : label)}</span>
                   <input name={k} list="job-source-platforms" defaultValue={jobEdit.sourcePlatform || ''} maxLength={120} />
                 </label>
               ) : (
                 <Field
                   key={k}
                   name={k}
-                  label={tr(label)}
+                  label={tr(label === '面试复盘' ? '复盘' : label)}
                   value={String(jobEdit[k as keyof Job] || '')}
                   required={k === 'company' || k === 'role'}
                   type={
@@ -1191,7 +1194,8 @@ export default function Home() {
             </section>
           ) : (
             <>
-              {active === '面试复盘' && (hash.startsWith('#interview-review/question/') || hash.startsWith('#interview-review/help/') || hash.startsWith('#interview-review/guide/') ? <InterviewPractice key={'review-' + (auth?.uid || 'local')} data={data} reload={reload} openMaterial={setDoc} openReport={setDoc} routeBase="#interview-review" /> : <InterviewReviewHub key={auth?.uid || 'local'} data={data} openReport={setDoc} />)}
+              {active === '练习' && <PracticeWorkspace key={auth?.uid || 'local'} data={data} reload={reload} />}
+              {active === '面试复盘' && <ReviewWorkspace key={auth?.uid || 'local'} data={data} hash={hash} reload={reload} openMaterial={setDoc} openReport={setDoc} />}
               <div hidden={active !== '公司'}>
                 <InterviewPractice
                   data={data}
@@ -1239,7 +1243,7 @@ export default function Home() {
                         <Newspaper size={20} />
                         <span className="brief-entry-title">{tr('今日简报')}</span>
                         <span className="brief-entry-parts">
-                          {shown.length ? shown.map(([label, n]) => <span key={label}>{tr(label)} <b>{n}</b></span>) : <span className="muted">{tr('今天还没有新内容')}</span>}
+                          {shown.length ? shown.map(([label, n]) => <span key={label}>{tr(label === '面试复盘' ? '复盘' : label)} <b>{n}</b></span>) : <span className="muted">{tr('今天还没有新内容')}</span>}
                         </span>
                         <span className="brief-entry-total">{briefSize(brief)}</span>
                       </button>
@@ -1875,7 +1879,7 @@ function ProfileForm({
           <Field
             key={k}
             name={k}
-            label={tr(label)}
+            label={tr(label === '面试复盘' ? '复盘' : label)}
             value={String(initial.current[k as keyof typeof profile] || '')}
             large
           />

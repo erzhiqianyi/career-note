@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PracticePlanListView: View {
     @Bindable var model: AppModel
+    var purpose = "all"
     @State private var creating = false
 
     var body: some View {
@@ -9,14 +10,14 @@ struct PracticePlanListView: View {
             LazyVStack(alignment: .leading, spacing: 16) {
                 PhoneCard {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("目標から練習を組み立てる").font(.headline)
-                        Text("目標と期間を決め、必要な能力・練習・確認方法を整理します。途中の回答に合わせて計画を調整できます。")
+                        Text(purpose == "company" ? "公司预先练习" : "按专题计划练习").font(.headline)
+                        Text("面试基本问题、日语提升、転職フェア等专题。通过 Agent 从关键词逐句练习，再组成完整回答；这里保存计划与回顾。")
                             .font(.subheadline).foregroundStyle(.secondary)
                         Button { creating = true } label: { Label("練習計画を作る", systemImage: "plus") }
                             .buttonStyle(.borderedProminent)
                     }
                 }
-                ForEach((model.state.practicePlans ?? []).sorted { $0.updatedAt > $1.updatedAt }) { plan in
+                ForEach((model.state.practicePlans ?? []).filter { purpose == "company" ? (!$0.jobId.isEmpty || !$0.interviewId.isEmpty) : ($0.jobId.isEmpty && $0.interviewId.isEmpty) }.sorted { $0.updatedAt > $1.updatedAt }) { plan in
                     NavigationLink(value: AppRoute.practicePlan(plan.id)) {
                         PhoneCard {
                             VStack(alignment: .leading, spacing: 7) {
@@ -37,15 +38,17 @@ struct PracticePlanListView: View {
             }.padding(16).frame(maxWidth: 700)
         }
         .frame(maxWidth: .infinity).background(PhoneStyle.canvas)
-        .navigationTitle("練習計画")
+        .navigationTitle(purpose == "company" ? "公司专题计划" : "练习")
         .refreshable { await model.sync() }
-        .sheet(isPresented: $creating) { PracticePlanForm(model: model) }
+        .sheet(isPresented: $creating) { PracticePlanForm(model: model, purpose: purpose) }
     }
 }
 
 struct PracticePlanForm: View {
     @Bindable var model: AppModel
     let original: PracticePlan?
+    @State private var purpose: String
+    private let allowsCompany: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var requestID: String
     @State private var title: String
@@ -60,8 +63,10 @@ struct PracticePlanForm: View {
     @State private var saving = false
     @State private var error: String?
 
-    init(model: AppModel, original: PracticePlan? = nil, sourceInterviewID: String = "") {
+    init(model: AppModel, original: PracticePlan? = nil, sourceInterviewID: String = "", purpose: String = "interview") {
         self.model = model; self.original = original
+        self.allowsCompany = purpose == "company" || !sourceInterviewID.isEmpty || !(original?.jobId ?? "").isEmpty || !(original?.interviewId ?? "").isEmpty
+        _purpose = State(initialValue: original.map { $0.isJapanesePractice(in: model.state) ? "japanese" : "interview" } ?? (purpose == "japanese" ? "japanese" : "interview"))
         let interview = model.state.interviews?.first { $0.id == sourceInterviewID }
         _requestID = State(initialValue: original?.id ?? UUID().uuidString)
         _title = State(initialValue: original?.title ?? "")
@@ -86,8 +91,12 @@ struct PracticePlanForm: View {
         NavigationStack {
             Form {
                 Section("達成したいこと") {
+                    Picker("练习方向", selection: $purpose) {
+                        Text("面试基本问题／活动专题").tag("interview")
+                        if !allowsCompany { Text("日语提升").tag("japanese") }
+                    }
                     TextField("計画名（任意）", text: $title)
-                    TextField("例：質問に結論から答え、具体例で説明できる", text: $goal, axis: .vertical)
+                    TextField(purpose == "japanese" ? "例：助詞と動詞の活用を正しく使い、日常の出来事を説明する" : "例：質問に結論から答え、具体例を短く説明する", text: $goal, axis: .vertical)
                         .lineLimit(3...6)
                     TextField("現在困っていること（未評価でも構いません）", text: $currentSituation, axis: .vertical)
                         .lineLimit(3...6)
@@ -102,6 +111,7 @@ struct PracticePlanForm: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("参考にする資料（任意）") {
+                    if allowsCompany && purpose != "japanese" {
                     Picker("会社・職種", selection: $jobID) {
                         Text("通用練習").tag("")
                         ForEach(model.state.jobs) { job in Text("\(job.company) · \(job.role)").tag(job.id) }
@@ -110,7 +120,12 @@ struct PracticePlanForm: View {
                         Text("指定なし").tag("")
                         ForEach((model.state.interviews ?? []).filter { jobID.isEmpty || $0.jobId == jobID }) { interview in Text(interview.title).tag(interview.id) }
                     }
-                    ForEach(Array(model.state.attempts.sorted { $0.createdAt > $1.createdAt }.prefix(8))) { attempt in
+                    }
+                    ForEach(Array(model.state.attempts.filter { attempt in
+                        purpose != "japanese" || model.state.questionSets.contains { pack in
+                            pack.jobId == "builtin:general" && pack.id == attempt.questionSetId && pack.questions.contains { $0.id == attempt.questionId && $0.category == "日语表达基础" }
+                        }
+                    }.sorted { $0.createdAt > $1.createdAt }.prefix(8))) { attempt in
                         Toggle(isOn: Binding(get: { sourceAttemptIDs.contains(attempt.id) }, set: { selected in
                             if selected { sourceAttemptIDs.insert(attempt.id) } else { sourceAttemptIDs.remove(attempt.id) }
                         })) {
@@ -140,10 +155,10 @@ struct PracticePlanForm: View {
         saving = true
         let goal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
         let situation = currentSituation.trimmingCharacters(in: .whitespacesAndNewlines)
-        let input = PracticePlanInput(title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(goal.prefix(60)) : title,
+        let input = PracticePlanInput(purpose: purpose, title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(goal.prefix(60)) : title,
                                       goal: goal, currentSituation: situation.isEmpty ? "未評価。初回の回答から確認してください。" : situation,
                                       startDate: Self.format.string(from: startDate), endDate: Self.format.string(from: endDate),
-                                      dailyMinutes: dailyMinutes, jobId: jobID, interviewId: interviewID, sourceAttemptIds: sourceAttemptIDs.sorted())
+                                      dailyMinutes: dailyMinutes, jobId: allowsCompany ? jobID : "", interviewId: allowsCompany ? interviewID : "", sourceAttemptIds: sourceAttemptIDs.sorted())
         Task {
             defer { saving = false }
             do { try await model.savePracticePlanRequest(id: requestID, input: input, revision: original?.revision); dismiss() }
@@ -174,6 +189,7 @@ struct PracticePlanDetailView: View {
             LazyVStack(alignment: .leading, spacing: 16) {
                 if let plan {
                     overview(plan)
+                    ShareLink(item: plan.agentPrompt()) { Label("复制到 Agent 接续练习", systemImage: "square.and.arrow.up") }
                     if plan.content != nil {
                         Picker("計画の表示", selection: $selectedTab) {
                             Text("練習").tag(0); Text("能力・目標").tag(1); Text("振り返り").tag(2)
@@ -334,27 +350,30 @@ private struct PracticePlanExerciseCard: View {
     let isToday: Bool
 
     var body: some View {
-        let attempts = plan.attempts(for: item, in: model.state.attempts)
+        let attempts = model.state.attempts.filter { $0.practiceContext?.planId == plan.id && $0.practiceContext?.scheduleId == item.id }
         let pending = model.pending.filter { $0.practiceContext?.planId == plan.id && $0.practiceContext?.scheduleId == item.id }
         PhoneCard {
             VStack(alignment: .leading, spacing: 10) {
                 Text("\(item.date)\(isToday ? " · 今日" : "") · \(item.minutes) 分").font(.caption.bold()).foregroundStyle(PhoneStyle.accent)
                 Text(exercise.title).font(.headline)
                 RichContent(text: exercise.instructions)
-                Text("保存済み \(attempts.count) / \(item.targetAttempts) 回\(pending.isEmpty ? "" : " · 同期待ち \(pending.count) 回")")
+                Text("完整回答 \(plan.attempts(for: item, in: model.state.attempts).count) / \(item.targetAttempts) 回\(pending.isEmpty ? "" : " · 同期待ち \(pending.count) 回")")
                     .font(.caption).foregroundStyle(.secondary)
-                if let pack = (model.state.questionSets + BuiltinBank.packs).first(where: { $0.id == exercise.questionSetId }),
-                   let question = pack.questions.first(where: { $0.id == exercise.questionId }) {
-                    NavigationLink(attempts.isEmpty ? "録音して練習" : "改善点を確認してもう一度練習",
-                                   value: AppRoute.plannedAnswer(packID: pack.id, questionID: question.id,
-                                     context: PracticeContext(planId: plan.id, planRevision: plan.revision, exerciseId: exercise.id, scheduleId: item.id, keywords: "")))
-                        .disabled(plan.status != "active")
-                } else { Text("関連する練習題を同期してください。") }
+                ShareLink(item: plan.agentPrompt(scheduleID: item.id)) {
+                    Label("在 Agent 中练习", systemImage: "square.and.arrow.up")
+                }
+                Text("复制到已连接 Career Note MCP 的 Agent。关键词 → 每次一句 → 完整回答；会从已保存进度接续。")
+                    .font(.caption).foregroundStyle(.secondary)
                 ForEach(attempts) { attempt in
                     DisclosureGroup("\(String(attempt.createdAt.prefix(10))) · \(attempt.durationSeconds ?? 0) 秒") {
                         VStack(alignment: .leading, spacing: 10) {
                             if let keywords = attempt.practiceContext?.keywords, !keywords.isEmpty { Text("構思：\(keywords)").font(.caption) }
                             RichContent(text: attempt.answer)
+                            if let turn = attempt.agentPractice {
+                                Text("阶段：\(turn.stage) · 第 \(turn.sentenceIndex) 句").font(.caption)
+                                RichContent(text: turn.feedback)
+                                Text("下次接续：\(turn.nextStep)")
+                            }
                             ForEach(model.state.reviews.filter { $0.attemptId == attempt.id }) { review in
                                 Text("改善のヒント").font(.caption.bold())
                                 RichContent(text: review.summary)

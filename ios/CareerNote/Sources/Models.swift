@@ -307,6 +307,7 @@ struct AnswerFlow: Codable {
 
 struct CareerQuestion: Codable, Identifiable {
     let id: String
+    var questionNumber: Int? = nil
     let title: String
     let questionJa: String
     let meaning: String?
@@ -319,7 +320,17 @@ struct CareerQuestion: Codable, Identifiable {
     let followUps: String?
 }
 
+struct AgentPractice: Codable {
+    let stage: String
+    let sessionId: String
+    let sentenceIndex: Int
+    let feedback: String
+    let nextStep: String
+    let source: String
+}
+
 struct SavedAttempt: Codable, Identifiable {
+    var agentPractice: AgentPractice? = nil
     let id: String
     let questionSetId: String
     let questionId: String
@@ -367,6 +378,7 @@ struct PracticeContext: Codable, Hashable {
 }
 
 struct PracticePlanInput: Codable {
+    var purpose: String? = nil
     let title: String
     let goal: String
     let currentSituation: String
@@ -379,6 +391,7 @@ struct PracticePlanInput: Codable {
 }
 
 struct PracticePlan: Codable, Identifiable {
+    var purpose: String? = nil
     let id: String
     let revision: Int
     let title: String
@@ -394,6 +407,22 @@ struct PracticePlan: Codable, Identifiable {
     let content: PracticePlanContent?
     let updatedAt: String
 
+    func isJapanesePractice(in state: CareerState) -> Bool {
+        if let purpose { return purpose == "japanese" }
+        guard jobId.isEmpty, interviewId.isEmpty, let exercises = content?.exercises, !exercises.isEmpty else { return false }
+        return exercises.allSatisfy { exercise in
+            state.questionSets.first { $0.id == exercise.questionSetId }?.questions.contains {
+                $0.id == exercise.questionId && $0.category == "日语表达基础"
+            } == true
+        }
+    }
+
+    func agentPrompt(scheduleID: String? = nil) -> String {
+        "请通过 Career Note MCP 继续专题练习。先读 career_get_practice_plan_guide 和 career_get_practice_plan，计划 ID：" + id +
+        "，版本：" + String(revision) + (scheduleID.map { "，日程 ID：" + $0 } ?? "") +
+        "。读回原回答、反馈和 nextStep，从上次位置接续。先关键词，再一次一句，最后由我组成完整回答。每轮通过 career_save_practice_turn 预览、保存、读回我的原话，反馈单独保存。"
+    }
+
     var statusLabel: String {
         switch status {
         case "active": "練習中"
@@ -406,7 +435,7 @@ struct PracticePlan: Codable, Identifiable {
     func attempts(for item: PracticePlanSchedule, in attempts: [SavedAttempt]) -> [SavedAttempt] {
         guard let exercise = content?.exercises.first(where: { $0.id == item.exerciseId }) else { return [] }
         return attempts.filter {
-            $0.practiceContext?.planId == id && $0.practiceContext?.scheduleId == item.id &&
+            ($0.agentPractice == nil || $0.agentPractice?.stage == "full") && $0.practiceContext?.planId == id && $0.practiceContext?.scheduleId == item.id &&
             $0.practiceContext?.exerciseId == item.exerciseId &&
             $0.questionSetId == exercise.questionSetId && $0.questionId == exercise.questionId
         }.sorted { $0.createdAt < $1.createdAt }

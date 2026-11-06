@@ -20,6 +20,12 @@ import Foundation
         precondition(plan.completedCount(in: [first, unrelated]) == 0)
         precondition(plan.completedCount(in: [first, second, unrelated]) == 1)
         precondition(plan.attempts(for: content.schedule[0], in: [first, unrelated]).count == 1)
+        var sentence = first
+        sentence.agentPractice = AgentPractice(stage: "sentence", sessionId: "agent-session", sentenceIndex: 1,
+            feedback: "具体例を一つ追加する", nextStep: "次は担当業務を説明する", source: "Current learner message fixture")
+        precondition(plan.completedCount(in: [sentence, second]) == 0)
+        precondition(plan.attempts(for: content.schedule[0], in: [sentence, first, second]).count == 2)
+        precondition(plan.agentPrompt(scheduleID: "session").contains("career_save_practice_turn"))
         let pending = PendingAttempt(id: "offline", questionSetId: "builtin-basics", questionId: "self-intro", answer: "未同期の回答", language: "日语",
                                      durationSeconds: 30, requestReview: true, createdAt: Date(), hasRecording: true, practiceContext: context)
         let written = PendingAttempt(id: "written", questionSetId: "builtin-basics", questionId: "self-intro", answer: "昨日、図書館で本を読みました。", language: "日语",
@@ -27,7 +33,7 @@ import Foundation
         let review = PracticePlanReview(id: "review", planId: plan.id, planRevision: 2, checkpointId: "final", summary: "改善を確認", nextActions: "別の題で練習", sourceNotes: "Fixture",
                                        assessments: [.init(skillId: "clarity", outcome: "developing", evidenceAttemptIds: [first.id], notes: "練習を続ける")], createdAt: "2026-11-05T04:00:00Z")
         var state = CareerState()
-        state.practicePlans = [plan]; state.practicePlanReviews = [review]; state.attempts = [first]
+        state.practicePlans = [plan]; state.practicePlanReviews = [review]; state.attempts = [sentence]
         try LocalStore.save(LocalSnapshot(state: state, pending: [pending, written], lastUpdated: Date()), uid: "fixture-user", in: directory)
         let loaded = try LocalStore.load(uid: "fixture-user", in: directory)
         precondition(loaded?.state.practicePlans?.first?.endDate == "2027-02-01")
@@ -41,6 +47,8 @@ import Foundation
         precondition(loaded?.pending.last?.answer == written.answer)
         precondition(loaded?.pending.last?.practiceContext?.scheduleId == "session")
         precondition(loaded?.state.attempts.first?.practiceContext?.planId == plan.id)
+        precondition(loaded?.state.attempts.first?.agentPractice?.stage == "sentence")
+        precondition(loaded?.state.attempts.first?.agentPractice?.nextStep == "次は担当業務を説明する")
         let other = try LocalStore.load(uid: "other-user", in: directory)
         precondition(other == nil)
         print("Practice plan cache, goal period, evidence, progress isolation and offline answer context passed")

@@ -452,3 +452,37 @@ void test('the owner can review a material and return it to pending without chan
  await send('materials/archive',{items:[{id:'review-draft',archived:true}]});
  assert.equal((await send('materials/review',{id:'review-draft',reviewed:true})).status,409);
 });
+
+void test('stable question references resolve exact content and survive reorder, patches and deletion', async t => {
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const save=body=>send('import',{schemaVersion:1,completeTaskIds:[],...body});
+ await save({jobs:[{id:'ref-job',company:'Example',role:'Engineer'}]});
+ const q=id=>({id,title:id,questionJa:'質問',meaning:'Question',why:'Fixture',outline:'Outline',sampleAnswer:'参考回答',followUps:'Follow up',category:'Opening',targetSeconds:60});
+ const pack={id:'ref-pack',jobId:'ref-job',title:'Practice',scenario:'Mock',plan:'Practice',sourceNotes:'Fixture',questions:[q('same'),q('second')]};
+ assert.equal((await save({questionSets:[pack]})).status,200);
+ const read=async()=> (await (await send('state')).json()).questionSets.find(p=>p.id===pack.id);
+ const states=await Promise.all([read(),read()]);
+ assert.deepEqual(states[0],states[1]);
+ const original=states[0];
+ const number=original.questions[0].questionNumber;
+ assert.ok(Number.isSafeInteger(number) && number>0);
+ assert.notEqual(number,original.questions[1].questionNumber);
+ // Concurrent first reads agree and preserve unique references.
+ assert.equal((await save({questionSets:[{...pack,questions:[q('second'),{...q('same'),title:'Renamed',questionNumber:999999}]}]})).status,200);
+ assert.equal((await read()).questions.find(q=>q.id==='same').questionNumber,number);
+ let response=await send('questions/by-number?number=Q'+number);
+ assert.equal(response.status,200);
+ let found=await response.json();
+ assert.equal(found.questionSetId,pack.id);assert.equal(found.question.id,'same');assert.equal(found.question.title,'Renamed');
+ assert.equal(found.question.sampleAnswer,'参考回答');
+ assert.deepEqual(found.attempts,[]);assert.deepEqual(found.reviews,[]);
+ assert.equal((await save({questionSetPatches:[{id:pack.id,questions:[{id:'same',outline:'Updated'}]}]})).status,200);
+ found=await (await send('questions/by-number?number='+number)).json();
+ assert.equal(found.question.questionNumber,number);assert.equal(found.question.outline,'Updated');
+ assert.equal((await save({questionSetPatches:[{id:pack.id,removeQuestionIds:['same']}]})).status,200);
+ assert.equal((await send('questions/by-number?number=Q'+number)).status,404);
+ await save({questionSetPatches:[{id:pack.id,questions:[q('new')]}]});
+ assert.ok((await read()).questions.find(q=>q.id==='new').questionNumber>number);
+ for(const bad of ['0','-1','Q','1.1','Q9007199254740992']) assert.equal((await send('questions/by-number?number='+bad)).status,400);
+});

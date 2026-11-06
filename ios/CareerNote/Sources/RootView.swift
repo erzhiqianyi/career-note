@@ -10,6 +10,8 @@ enum AppRoute: Hashable, Codable {
     case answer(packID: String, questionID: String)
     case report(String)
     case interviews
+    case companyPractice
+    case japanesePractice
     case interview(String)
     case practicePlans
     case practicePlan(String)
@@ -132,7 +134,7 @@ struct RootView: View {
                     List {
                         sidebarItem("企业", systemImage: "building.2", tab: 0)
                         sidebarItem("日程", systemImage: "calendar", tab: 3)
-                        sidebarItem("面试复盘", systemImage: "waveform.and.magnifyingglass", tab: 4)
+                        sidebarItem("复盘", systemImage: "waveform.and.magnifyingglass", tab: 4)
                         sidebarItem("练习", systemImage: "text.book.closed", tab: 1)
                         sidebarItem("简历", systemImage: "doc.text", tab: 2)
                     }
@@ -199,7 +201,7 @@ struct RootView: View {
             }
         case 4:
             NavigationStack(path: pathBinding($reviewPath)) {
-                InterviewListView(model: model)
+                ReviewHomeView(model: model)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
         case 2:
@@ -290,8 +292,12 @@ struct RootView: View {
             InterviewListView(model: model)
         case .interview(let id):
             InterviewDetailView(model: model, id: id)
+        case .companyPractice:
+            CompanyPracticeView(model: model)
+        case .japanesePractice:
+            PracticePlanListView(model: model, purpose: "japanese")
         case .practicePlans:
-            PracticePlanListView(model: model)
+            PracticePlanListView(model: model, purpose: "company")
         case .practicePlan(let id):
             PracticePlanDetailView(model: model, id: id)
         case .plannedAnswer(let packID, let questionID, let context):
@@ -411,143 +417,18 @@ private struct LoginView: View {
 
 private struct PracticeList: View {
     @Bindable var model: AppModel
-    @State private var scope: PracticeScope = .general
+    var body: some View { PracticePlanListView(model: model, purpose: "all") }
+}
 
-    private enum PracticeScope: Hashable { case general, company }
-
-    private struct GeneralQuestion: Identifiable {
-        let pack: QuestionSet
-        let question: CareerQuestion
-        var id: String { pack.id + "|" + question.id }
-    }
-
-    private var generalQuestions: [GeneralQuestion] {
-        let personal = model.state.questionSets.filter { $0.jobId == "builtin:general" }
-        return personal.flatMap { pack in
-            pack.questions.map { question in
-                GeneralQuestion(pack: pack, question: question)
-            }
-        }
-    }
-
-    private var companyPacks: [QuestionSet] {
-        model.state.questionSets.filter { $0.jobId != "builtin:general" }
-    }
-
+private struct CompanyPracticeView: View {
+    @Bindable var model: AppModel
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                Text("面试练习").font(.largeTitle.bold())
-                NavigationLink(value: AppRoute.practicePlans) {
-                    PhoneCard {
-                        HStack(spacing: 12) {
-                            Image(systemName: "target").font(.title2).foregroundStyle(PhoneStyle.accent)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("练习计划").font(.headline).foregroundStyle(.primary)
-                                Text("目标・期间・能力・练习・阶段复盘").font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                        }
-                    }
-                }.buttonStyle(.plain)
-                NavigationLink(value: AppRoute.interviews) {
-                    PhoneCard {
-                        HStack(spacing: 12) {
-                            Image(systemName: "waveform.and.magnifyingglass").font(.title2).foregroundStyle(PhoneStyle.accent)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("真实面试复盘").font(.headline).foregroundStyle(.primary)
-                                Text("整场录音 → 面试流程 → 复盘 → 针对性练习")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                        }
-                    }
-                }.buttonStyle(.plain)
-                Picker("练习类型", selection: $scope) {
-                    Text("通用练习").tag(PracticeScope.general)
-                    Text("公司相关").tag(PracticeScope.company)
-                }
-                .pickerStyle(.segmented)
-                if !model.pending.isEmpty || model.message != nil {
-                    PhoneCard {
-                        HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: model.pending.isEmpty ? "wifi.slash" : "arrow.triangle.2.circlepath")
-                                .foregroundStyle(PhoneStyle.accent)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(model.pending.isEmpty ? "显示本机资料" : "\(model.pending.count) 条回答待同步")
-                                    .font(.subheadline.bold())
-                                Text("联网后可继续上传，练习随时可用。")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer(minLength: 0)
-                            Button("同步") { Task { await model.sync() } }
-                                .font(.subheadline.bold())
-                                .disabled(model.busy)
-                        }
-                    }
-                }
-                if scope == .general {
-                    VStack(alignment: .leading, spacing: 10) {
-                        SectionHeading(title: "通用面试题", detail: "\(generalQuestions.count) 道")
-                        ForEach(Array(generalQuestions.enumerated()), id: \.element.id) { index, item in
-                            PracticeQuestionLink(model: model, pack: item.pack, question: item.question, number: index + 1)
-                        }
-                    }
-                } else {
-                    packSection("公司相关", packs: companyPacks)
-                }
+        List {
+            NavigationLink("公司专题计划", value: AppRoute.practicePlans)
+            ForEach(model.state.questionSets.filter { $0.jobId != "builtin:general" }) { pack in
+                NavigationLink(pack.title, value: AppRoute.questionSet(pack.id))
             }
-            .frame(maxWidth: 620, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
-        }
-        .refreshable { await model.sync() }
-        .background(PhoneStyle.canvas)
-        .toolbar(.hidden, for: .navigationBar)
-    }
-
-    @ViewBuilder
-    private func packSection(_ title: String, packs: [QuestionSet]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionHeading(title: title, detail: "\(packs.count) 组")
-            if packs.isEmpty {
-                PhoneCard {
-                    Text("同步后显示已准备的公司题组。")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                ForEach(packs) { pack in
-                    NavigationLink(value: AppRoute.questionSet(pack.id)) {
-                        PhoneCard {
-                            HStack(spacing: 12) {
-                                Image(systemName: "list.bullet.rectangle")
-                                    .font(.title3)
-                                    .foregroundStyle(PhoneStyle.accent)
-                                    .frame(width: 38, height: 38)
-                                    .background(PhoneStyle.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 11))
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(pack.title).font(.subheadline.bold()).foregroundStyle(.primary)
-                                        .lineLimit(2)
-                                    Text("\(pack.questions.count) 道题")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer(minLength: 0)
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.bold())
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
+        }.navigationTitle("公司预先练习")
     }
 }
 
@@ -558,6 +439,38 @@ enum BuiltinBank {
               let packs = try? JSONDecoder().decode([QuestionSet].self, from: data) else { return [] }
         return packs
     }()
+}
+
+struct ReviewHomeView: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                NavigationLink(value: AppRoute.interviews) {
+                    PhoneCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("实际面试复盘", systemImage: "waveform.and.magnifyingglass").font(.title3.bold())
+                            Text("按面试记录查看实际问答、转写、复盘和后续准备。")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }.buttonStyle(.plain)
+                NavigationLink(value: AppRoute.companyPractice) {
+                    PhoneCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("公司预先练习", systemImage: "character.book.closed").font(.title3.bold())
+                            Text("面试前的公司问题、预演计划、原回答与改进记录。")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Text("关键词 → 逐句练习 → 完整回答")
+                                .font(.caption).foregroundStyle(PhoneStyle.accent)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }.buttonStyle(.plain)
+            }.padding(16).frame(maxWidth: 700)
+        }.frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+            .navigationTitle("复盘")
+    }
 }
 
 struct QuestionList: View {
@@ -573,7 +486,7 @@ struct QuestionList: View {
                     .foregroundStyle(.secondary)
                     .padding(.bottom, 6)
             }
-            ForEach(Array(pack.questions.enumerated()), id: \.element.id) { index, question in
+            ForEach(Array(pack.questions.filter { $0.category != "日语表达基础" }.enumerated()), id: \.element.id) { index, question in
                 PracticeQuestionLink(model: model, pack: pack, question: question, number: index + 1)
             }
             }
@@ -601,7 +514,7 @@ struct PracticeQuestionLink: View {
                         .foregroundStyle(PhoneStyle.accent)
                         .frame(width: 28, alignment: .leading)
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(question.title).font(.headline).foregroundStyle(.primary)
+                        Text(question.questionNumber.map { "Q\($0) · \(question.title)" } ?? question.title).font(.headline).foregroundStyle(.primary)
                         Text(CareerRichText.plain(question.questionJa)).font(.subheadline)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -710,6 +623,7 @@ struct AnswerView: View {
     let pack: QuestionSet
     let question: CareerQuestion
     var practiceContext: PracticeContext? = nil
+    @State private var copiedReference = false
     @State private var answerMode = "voice"
     @State private var typedAnswer = ""
     @State private var initializedAnswerMode = false
@@ -854,24 +768,29 @@ struct AnswerView: View {
                                     RichContent(text: exercise.instructions)
                                 }
                             }
-                            Text("話す前にキーワードを三つまで整理しましょう。中国語・日本語のどちらでも構いません。")
+                            Text("答える前にキーワードを三つまで整理しましょう。中国語・日本語のどちらでも構いません。")
                                 .font(.caption).foregroundStyle(.secondary)
                             TextField("キーワード", text: $practiceKeywords, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
-                            Text("録音 → 一つの改善点を確認 → もう一度録音。実際の回答が計画に記録されます。")
+                            Text("回答 → 一つの改善点を確認 → もう一度回答。実際の回答が計画に記録されます。")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }
-                if horizontalSizeClass == .regular {
-                    HStack(alignment: .top, spacing: 16) {
-                        promptCard.frame(maxWidth: .infinity)
-                        answerCard.frame(maxWidth: .infinity)
+                promptCard
+                PhoneCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("在 Agent 中练习").font(.headline)
+                        Text("基本关键词 → 每次一句 → 完整回答。原话、反馈与下次位置保存在 Career Note。")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        ShareLink(item: practiceContext.flatMap { context in
+                            model.state.practicePlans?.first { $0.id == context.planId }?.agentPrompt(scheduleID: context.scheduleId)
+                        } ?? "请通过 Career Note MCP 读取 career_get_practice_plan_guide 和已有专题计划，围绕题组 \(pack.id) 的问题 \(question.id) 按计划练习。先关键词，再一次一句，最后由我组成完整回答；用 career_save_practice_turn 保存原话、反馈、nextStep，换聊天先读回接续。") {
+                            Label("复制 Agent 练习指令", systemImage: "square.and.arrow.up")
+                        }
                     }
-                } else {
-                    promptCard
-                    answerCard
                 }
+                DisclosureGroup("补录历史回答") { answerCard }
                 historyCard
             }
             .frame(maxWidth: horizontalSizeClass == .regular ? 1120 : 620, alignment: .leading)
@@ -891,7 +810,7 @@ struct AnswerView: View {
             referenceSpeech.stop()
             historyPlayer?.stop()
         }
-        .navigationTitle(CareerRichText.plain(question.title))
+        .navigationTitle(question.questionNumber.map { "Q\($0) · \(CareerRichText.plain(question.title))" } ?? CareerRichText.plain(question.title))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ReadingToggleButton() }
         .alert("已保存", isPresented: $saved) {
@@ -905,6 +824,16 @@ struct AnswerView: View {
         PhoneCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
+                    if let number = question.questionNumber {
+                        Button {
+                            UIPasteboard.general.string = "Q\(number)"
+                            copiedReference = true
+                        } label: {
+                            Label("Q\(number)", systemImage: copiedReference ? "checkmark" : "doc.on.doc")
+                                .font(.caption.bold().monospacedDigit())
+                        }
+                        .accessibilityLabel("質問番号 Q\(number) をコピー")
+                    }
                     if let category = question.category, !category.isEmpty {
                         Text(category)
                             .font(.caption.bold())

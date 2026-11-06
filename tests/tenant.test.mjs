@@ -92,6 +92,17 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.ok(!listed.result.tools.some(t=>t.name==='career_delete_jobs'));
   const read=await rpc(issued.token,'tools/call',{name:'career_get_context',arguments:{}});
   assert.equal(JSON.parse(read.result.content[0].text).profile.summary,'Alice only');
+  assert.ok(listed.result.tools.some(tool=>tool.name==='career_get_question'));
+  const reference=(await ok(a,'state')).questionSets[0].questions[0].questionNumber;
+  const resolved=await rpc(issued.token,'tools/call',{name:'career_get_question',arguments:{number:'Q'+reference}});
+  assert.equal(resolved.result.isError,false);
+  const questionResult=JSON.parse(resolved.result.content[0].text);
+  assert.equal(questionResult.question.id,'q');
+  assert.equal(questionResult.attempts[0].answer,'Private answer');
+  assert.equal(questionResult.reviews[0].id,'review');
+  assert.equal((await send(b,'questions/by-number?number=Q'+reference)).status,404);
+  assert.equal((await send('', 'questions/by-number?number=Q'+reference)).status,401);
+
   const writer={token:(await authorizeAgent(mf,{name:'Writer',scopes:['career:read','agent:write','career:write'],approveHeaders:{Authorization:'Bearer '+a}})).issued.access_token};
   const aliceJob = (await ok(a, 'state')).jobs[0];
   const bobJobBefore = (await ok(b, 'state')).jobs[0];

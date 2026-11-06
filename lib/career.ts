@@ -161,6 +161,7 @@ export type AgentActivity = {
 
 export type State = {
   practicePlans?: import('./practice-plan').PracticePlan[];
+  practicePlanReviews?: import('./practice-plan').PracticePlanReview[];
   interviews?: (Omit<import('./interview-session').InterviewSession, 'transcript' | 'flow' | 'review' | 'practice'> & { segmentCount: number; exchangeCount: number; practiceCount: number })[];
   resume: import('./resume').ResumeEntry[];
   platforms: import('./job-platforms').JobPlatform[];
@@ -247,6 +248,8 @@ export function download(
 
 export type Question = {
   id: string;
+  /** Server-owned stable reference for agent handoff. */
+  questionNumber?: number;
   title: string;
   questionJa: string;
   meaning: string;
@@ -279,6 +282,7 @@ export type QuestionSet = {
 };
 export type Attempt = {
   practiceContext?: import('./practice-plan').PracticeContext;
+  agentPractice?: import('./practice-plan').AgentPractice;
   id: string;
   questionSetId: string;
   questionId: string;

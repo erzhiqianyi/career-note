@@ -9,7 +9,7 @@ import protocol from '../lib/career-protocol.generated.json';
 import { preferenceGroups } from '../lib/job-preferences';
 import { jobStatuses } from '../lib/job-status';
 import { INTERVIEW_GUIDE, interviewUpdateSchema } from '../lib/interview-session';
-import { PRACTICE_PLAN_GUIDE, practicePlanInputSchema, practicePlanContentSchema, practicePlanReviewSchema } from '../lib/practice-plan';
+import { PRACTICE_PLAN_GUIDE, agentPracticeSchema, practiceContextSchema, practicePlanInputSchema, practicePlanContentSchema, practicePlanReviewSchema } from '../lib/practice-plan';
 
 export const CAREER_SCOPES = {
   'career:read': { description: 'Read profile, resume, jobs, materials, tasks and practice records', required: true },
@@ -122,6 +122,13 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       handler: ({ preview, ...args }, ctx) => api(ctx, 'practice-plans/save' + (preview ? '/preview' : ''), args),
     },
     {
+      name: 'career_save_practice_turn', scope: 'agent:write',
+      description: 'Save one actual learner turn from Agent practice, preserving exact words separately from feedback. Stages: keywords, one sentence, full learner answer. Read plan and prior turns first. Stable clientRequestId and sessionId; preview, save, read back via career_get_practice_plan. Never store your sample as user speech. Only full turns count toward scheduled practice.',
+      inputSchema: { clientRequestId: z.string().min(1).max(120), questionSetId: z.string().min(1), questionId: z.string().min(1), answer: z.string().min(1).max(20000), language: z.enum(['日语', '中文构思', '中日混合']), durationSeconds: z.number().int().min(0).max(3600), practiceContext: practiceContextSchema, agentPractice: agentPracticeSchema, preview: z.boolean() },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      handler: ({ preview, ...args }, ctx) => api(ctx, 'practice-plans/turn' + (preview ? '/preview' : ''), args),
+    },
+    {
       name: 'career_save_practice_plan_review', scope: 'agent:write',
       description: 'Save an immutable checkpoint evaluation with real skill-specific attempt evidence. No evidence means insufficient_evidence. Never automatically completes a goal. Preview/save/read back; use current planRevision.',
       inputSchema: { review: practicePlanReviewSchema, preview: z.boolean() },
@@ -183,6 +190,12 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
           skill: 'career-job-research',
           ...protocol.jobResearch,
           stages: ['collect', 'research', 'match', 'evaluate', 'sync'],
+          preparationPolicy: {
+            minimumApplicationSyncMaterial: { kind: '志望動機', includeApplicationReason: true, maxApplicationReasonCharacters: 100, reuseSuitableExistingVersion: true, exceptExplicitJobsOnlyOrPreview: true },
+            applicationMaterialKinds: ['公司研究', '履歴書', '職務経歴書', '志望動機'],
+            companyInterviewTrigger: 'interview arrangement or explicit user request',
+            practiceBeforeInterview: 'Reuse existing personal general practice; do not create company question sets during screening or application preparation.',
+          },
           prerequisites: { contractTool: 'career_get_contract', contextTool: 'career_get_context', externalSources: 'Use authorized connectors or browser access supplied by the calling agent environment.' },
           saveRoutes: {
             research: { collection: 'jobs', previewTool: 'career_preview_import', saveTool: 'career_import', readBackTool: 'career_get_context', scope: 'agent:write' },
@@ -240,9 +253,17 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       },
     },
     {
+      name: 'career_get_question',
+      scope: 'career:read',
+      description: 'Retrieve a saved practice question by its stable app reference (Q123 or 123), with set/job IDs, reference answer, original attempts and reviews. Use the returned IDs for preview/import patches; never treat the reference answer as the user answer. Numbers belong to the authenticated workspace.',
+      inputSchema: { number: z.string().regex(/^(?:Q)?[1-9][0-9]*$/i).describe('Question reference copied from the app, e.g. Q123.') },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      handler: (args, ctx) => api(ctx, 'questions/by-number?number=' + encodeURIComponent(String(args.number))),
+    },
+    {
       name: 'career_get_context',
       scope: 'career:read',
-      description: 'Read only the authenticated user’s profile, structured resume records, jobs, materials, reports, tasks, question sets, original attempts and reviews.',
+      description: 'Read only the authenticated user’s profile, structured resume records, jobs, materials, reports, tasks, question sets, original attempts and reviews. Saved questions carry a stable questionNumber; use career_get_question to resolve a Q-number copied from the app.',
       inputSchema: {},
       annotations: { readOnlyHint: true, openWorldHint: false },
       handler: (_args, ctx) => api(ctx, 'state?resumeView=summary'),
@@ -381,7 +402,7 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
     {
       name: 'career_create_task',
       scope: 'agent:write',
-      description: 'Queue a preparation task. Does not generate content, submit applications or contact employers.',
+      description: 'Queue a preparation task. Company preparation defaults to four application materials; company-specific interview materials/questions wait for an interview arrangement or an explicit request. Reuse general practice meanwhile. Does not generate content, submit applications or contact employers.',
       inputSchema: {
         kind: z.enum(['每日分析', '公司准备', '职位研究', '回答点评']),
         jobId: z.string().optional(),
