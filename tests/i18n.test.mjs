@@ -46,8 +46,10 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
           export const practice = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
           setTestRoute('#jobs/company/demo');
           export const practiceCompany = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
-          setTestRoute('#jobs/question/pack%7Cq');
-          export const practiceDetail = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
+          setTestRoute('#interview-review/company/demo');
+          export const reviewPractice = renderToStaticMarkup(React.createElement(InterviewPractice, {...practiceProps, routeBase:'#interview-review'}));
+          setTestRoute('#interview-review/question/pack%7Cq');
+          export const practiceDetail = renderToStaticMarkup(React.createElement(InterviewPractice, {...practiceProps, routeBase:'#interview-review'}));
         `,
         resolveDir: process.cwd(),
         loader: 'tsx',
@@ -90,7 +92,11 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
     assert.ok(output.practice.includes(output.translate(locale, '已逾期')));
     assert.match(output.practice, /Example/);
     assert.doesNotMatch(output.practice, /質問の原文/);
-    assert.match(output.practiceCompany, /質問の原文/);
+    // Company records open on company information; rehearsal questions live under Review.
+    assert.match(output.practiceCompany, /Original role/);
+    assert.doesNotMatch(output.practiceCompany, /質問の原文/);
+    assert.match(output.reviewPractice, /質問の原文/);
+    assert.doesNotMatch(output.reviewPractice, /<textarea/);
     assert.doesNotMatch(output.practiceCompany, /<textarea/);
     assert.doesNotMatch(output.practice, /自己紹介をお願いします。/);
     assert.doesNotMatch(output.practice, /<textarea/);
