@@ -5924,5 +5924,25 @@
   "已保存 / 目标": {"ja": "保存済み／目標", "en": "Saved / target"},
   "开始练习": {"ja": "練習を始める", "en": "Start practice"},
   "训练方法与检查标准": {"ja": "練習方法と確認基準", "en": "Practice instructions and criteria"},
-  "按日程开始的回答计入当天进度；自由练习单独保存。": {"ja": "日程から始めた回答を当日の進捗に数えます。自由練習は別に保存します。", "en": "Answers started from the schedule count toward that day. Free practice is saved separately."}
+  "按日程开始的回答计入当天进度；自由练习单独保存。": {"ja": "日程から始めた回答を当日の進捗に数えます。自由練習は別に保存します。", "en": "Answers started from the schedule count toward that day. Free practice is saved separately."},
+  "逐岗确认语言要求、工作地点、雇用形式和在留资格支持。": {
+    "ja": "言語要件、勤務地、雇用形態、在留資格の支援は求人ごとに確認してください。",
+    "en": "Check language requirements, location, employment type and residence support for each role."
+  },
+  "日本综合转职网站，提供职位搜索、直接申请和企业邀约。": {
+    "ja": "日本の総合転職サイト。求人検索、直接応募、企業からのスカウトを利用できます。",
+    "en": "Japanese job site with job search, direct applications and employer scouting."
+  },
+  "面向 IT 工程师和设计师的直接招聘平台，可搜索职位并接收企业邀约。": {
+    "ja": "ITエンジニア・デザイナー向けの転職サイト。求人検索や企業からのスカウトを通じて直接やりとりできます。",
+    "en": "Direct recruitment site for IT engineers and designers, with job search and employer scouting."
+  },
+  "提供职业咨询、职位介绍、申请文书和面试支持的转职中介。": {
+    "ja": "キャリア相談、求人紹介、応募書類や面接の支援を行う転職エージェント。",
+    "en": "Recruitment agency offering career consultation, job introductions, application document and interview support."
+  },
+  "专注 IT 工程师和创意人才的转职中介，由顾问提供职位匹配与求职支持。": {
+    "ja": "ITエンジニア・クリエイターに特化し、アドバイザーが求人紹介や転職支援を行うエージェント。",
+    "en": "Recruitment agency specializing in IT engineers and creators, with advisor-led job matching and career support."
+  }
 }
