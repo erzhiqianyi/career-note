@@ -8,13 +8,15 @@ struct PracticePlanListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
+                if purpose == "all" {
                 HStack {
-                    Text(purpose == "company" ? "公司专题计划" : "练习").font(.largeTitle.bold())
+                    Text("练习").font(.largeTitle.bold())
                     Spacer()
                     Button { creating = true } label: {
                         Image(systemName: "plus").frame(width: 44, height: 44)
                             .background(PhoneStyle.card, in: Circle())
                     }.accessibilityLabel("制定计划")
+                }
                 }
                 if purpose != "company" {
                     ForEach(PracticeTopic.allCases.filter { $0 != .interviewReview && $0.questionCount(in: model.state) > 0 }) { topic in
@@ -55,7 +57,16 @@ struct PracticePlanListView: View {
             }.padding(16).frame(maxWidth: 620, alignment: .leading)
         }
         .frame(maxWidth: .infinity).background(PhoneStyle.canvas)
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(purpose == "company" ? "公司专题计划" : "练习")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(purpose == "all" ? .hidden : .visible, for: .navigationBar)
+        .toolbar {
+            if purpose != "all" {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("制定计划", systemImage: "plus") { creating = true }
+                }
+            }
+        }
         .refreshable { await model.sync() }
         .sheet(isPresented: $creating) { PracticePlanForm(model: model, purpose: purpose) }
     }
