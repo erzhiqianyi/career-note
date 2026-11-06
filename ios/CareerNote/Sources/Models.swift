@@ -390,6 +390,33 @@ struct PracticePlanInput: Codable {
     let sourceAttemptIds: [String]
 }
 
+enum PracticeTopic: String, CaseIterable, Identifiable {
+    case basics, japanese, fair, interviewReview
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .basics: "面试基本问题"
+        case .japanese: "日语提升"
+        case .fair: "転職フェア练习"
+        case .interviewReview: "面试后专项练习"
+        }
+    }
+    static func topic(for question: CareerQuestion) -> PracticeTopic {
+        switch question.category {
+        case "日语表达基础": .japanese
+        case "フェア基本練習": .fair
+        case "総合練習" where question.id.hasPrefix("fair-"): .fair
+        case "面试复盘专项": .interviewReview
+        default: .basics
+        }
+    }
+    func questionCount(in state: CareerState) -> Int {
+        state.questionSets.filter { $0.jobId == "builtin:general" }.reduce(0) { count, pack in
+            count + pack.questions.filter { Self.topic(for: $0) == self }.count
+        }
+    }
+}
+
 struct PracticePlan: Codable, Identifiable {
     var purpose: String? = nil
     let id: String
@@ -406,6 +433,17 @@ struct PracticePlan: Codable, Identifiable {
     let status: String
     let content: PracticePlanContent?
     let updatedAt: String
+
+    func isCompanyPractice(in state: CareerState) -> Bool {
+        if !jobId.isEmpty { return true }
+        // Source interviews supply evidence without changing the audience of general exercises.
+        if let exercises = content?.exercises, !exercises.isEmpty {
+            return !exercises.allSatisfy { exercise in
+                state.questionSets.contains { $0.id == exercise.questionSetId && $0.jobId == "builtin:general" && $0.questions.contains { $0.id == exercise.questionId } }
+            } && !interviewId.isEmpty
+        }
+        return !interviewId.isEmpty
+    }
 
     func isJapanesePractice(in state: CareerState) -> Bool {
         if let purpose { return purpose == "japanese" }

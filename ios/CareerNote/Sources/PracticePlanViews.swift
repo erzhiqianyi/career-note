@@ -8,16 +8,29 @@ struct PracticePlanListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
-                PhoneCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(purpose == "company" ? "公司预先练习" : "按专题计划练习").font(.headline)
-                        Text("面试基本问题、日语提升、転職フェア等专题。通过 Agent 从关键词逐句练习，再组成完整回答；这里保存计划与回顾。")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        Button { creating = true } label: { Label("練習計画を作る", systemImage: "plus") }
-                            .buttonStyle(.borderedProminent)
+                HStack {
+                    Text(purpose == "company" ? "公司专题计划" : "练习").font(.largeTitle.bold())
+                    Spacer()
+                    Button { creating = true } label: {
+                        Image(systemName: "plus").frame(width: 44, height: 44)
+                            .background(PhoneStyle.card, in: Circle())
+                    }.accessibilityLabel("制定计划")
+                }
+                if purpose != "company" {
+                    ForEach(PracticeTopic.allCases.filter { $0 != .interviewReview && $0.questionCount(in: model.state) > 0 }) { topic in
+                        NavigationLink(value: AppRoute.practiceTopic(topic.rawValue)) {
+                            PhoneCard {
+                                HStack {
+                                    Text(topic.title).font(.headline).foregroundStyle(.primary)
+                                    Spacer()
+                                    Text("\(topic.questionCount(in: model.state)) 道题").font(.caption).foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                        }.buttonStyle(.plain)
                     }
                 }
-                ForEach((model.state.practicePlans ?? []).filter { purpose == "company" ? (!$0.jobId.isEmpty || !$0.interviewId.isEmpty) : ($0.jobId.isEmpty && $0.interviewId.isEmpty) }.sorted { $0.updatedAt > $1.updatedAt }) { plan in
+                ForEach((model.state.practicePlans ?? []).filter { $0.isCompanyPractice(in: model.state) == (purpose == "company") }.sorted { $0.updatedAt > $1.updatedAt }) { plan in
                     NavigationLink(value: AppRoute.practicePlan(plan.id)) {
                         PhoneCard {
                             VStack(alignment: .leading, spacing: 7) {
@@ -34,13 +47,36 @@ struct PracticePlanListView: View {
                         }
                     }.buttonStyle(.plain)
                 }
+                if (model.state.practicePlans ?? []).filter({ $0.isCompanyPractice(in: model.state) == (purpose == "company") }).isEmpty {
+                    Text("暂无练习计划，可从已有专题继续，或在右上角制定计划。")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if let message = model.message { Text(message).font(.caption).foregroundStyle(.secondary) }
-            }.padding(16).frame(maxWidth: 700)
+            }.padding(16).frame(maxWidth: 620, alignment: .leading)
         }
         .frame(maxWidth: .infinity).background(PhoneStyle.canvas)
-        .navigationTitle(purpose == "company" ? "公司专题计划" : "练习")
+        .toolbar(.hidden, for: .navigationBar)
         .refreshable { await model.sync() }
         .sheet(isPresented: $creating) { PracticePlanForm(model: model, purpose: purpose) }
+    }
+}
+
+struct PracticeTopicView: View {
+    @Bindable var model: AppModel
+    let topic: PracticeTopic
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                ForEach(model.state.questionSets.filter { $0.jobId == "builtin:general" }) { pack in
+                    ForEach(pack.questions.filter { PracticeTopic.topic(for: $0) == topic }) { question in
+                        PracticeQuestionLink(model: model, pack: pack, question: question,
+                            number: (pack.questions.firstIndex { $0.id == question.id } ?? 0) + 1)
+                    }
+                }
+            }.padding(16).frame(maxWidth: 620, alignment: .leading)
+        }.frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+            .navigationTitle(topic.title).navigationBarTitleDisplayMode(.inline)
+            .refreshable { await model.sync() }
     }
 }
 

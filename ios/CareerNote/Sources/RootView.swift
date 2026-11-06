@@ -13,6 +13,7 @@ enum AppRoute: Hashable, Codable {
     case companyPractice
     case japanesePractice
     case interview(String)
+    case practiceTopic(String)
     case practicePlans
     case practicePlan(String)
     case plannedAnswer(packID: String, questionID: String, context: PracticeContext)
@@ -296,6 +297,9 @@ struct RootView: View {
             CompanyPracticeView(model: model)
         case .japanesePractice:
             PracticePlanListView(model: model, purpose: "japanese")
+        case .practiceTopic(let id):
+            if let topic = PracticeTopic(rawValue: id) { PracticeTopicView(model: model, topic: topic) }
+            else { missingContent }
         case .practicePlans:
             PracticePlanListView(model: model, purpose: "company")
         case .practicePlan(let id):
@@ -443,33 +447,53 @@ enum BuiltinBank {
 
 struct ReviewHomeView: View {
     @Bindable var model: AppModel
-
+    @State private var creating = false
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                NavigationLink(value: AppRoute.interviews) {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Label("实际面试复盘", systemImage: "waveform.and.magnifyingglass").font(.title3.bold())
-                            Text("按面试记录查看实际问答、转写、复盘和后续准备。")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }.buttonStyle(.plain)
-                NavigationLink(value: AppRoute.companyPractice) {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Label("公司预先练习", systemImage: "character.book.closed").font(.title3.bold())
-                            Text("面试前的公司问题、预演计划、原回答与改进记录。")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                            Text("关键词 → 逐句练习 → 完整回答")
-                                .font(.caption).foregroundStyle(PhoneStyle.accent)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }.buttonStyle(.plain)
-            }.padding(16).frame(maxWidth: 700)
+            LazyVStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("复盘").font(.largeTitle.bold())
+                    Spacer()
+                    Button { creating = true } label: {
+                        Image(systemName: "plus").frame(width: 44, height: 44)
+                            .background(PhoneStyle.card, in: Circle())
+                    }.accessibilityLabel("制定公司练习计划")
+                }
+                SectionHeading(title: "实际面试", detail: nil)
+                ForEach((model.state.interviews ?? []).sorted { $0.date > $1.date }) { interview in
+                    NavigationLink(value: AppRoute.interview(interview.id)) {
+                        PhoneCard {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(interview.title).font(.headline).foregroundStyle(.primary)
+                                Text(interview.date).font(.caption).foregroundStyle(.secondary)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }.buttonStyle(.plain)
+                }
+                NavigationLink("查看全部面试与导入录音", value: AppRoute.interviews).font(.subheadline)
+                SectionHeading(title: "公司预先练习", detail: nil)
+                ForEach((model.state.practicePlans ?? []).filter { $0.isCompanyPractice(in: model.state) }) { plan in
+                    NavigationLink(plan.title, value: AppRoute.practicePlan(plan.id))
+                }
+                ForEach(model.state.questionSets.filter { $0.jobId != "builtin:general" }) { pack in
+                    NavigationLink(value: AppRoute.questionSet(pack.id)) {
+                        PhoneCard {
+                            HStack {
+                                Text(pack.title).font(.subheadline.bold()).foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }.buttonStyle(.plain)
+                }
+                if PracticeTopic.interviewReview.questionCount(in: model.state) > 0 {
+                    NavigationLink(PracticeTopic.interviewReview.title, value: AppRoute.practiceTopic(PracticeTopic.interviewReview.rawValue))
+                }
+            }.padding(16).frame(maxWidth: 620, alignment: .leading)
         }.frame(maxWidth: .infinity).background(PhoneStyle.canvas)
-            .navigationTitle("复盘")
+            .toolbar(.hidden, for: .navigationBar)
+            .refreshable { await model.sync() }
+            .sheet(isPresented: $creating) { PracticePlanForm(model: model, purpose: "company") }
     }
 }
 

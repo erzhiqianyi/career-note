@@ -1194,7 +1194,7 @@ export default function Home() {
             </section>
           ) : (
             <>
-              {active === '练习' && <PracticeWorkspace key={auth?.uid || 'local'} data={data} reload={reload} />}
+              {active === '练习' && (hash.startsWith('#practice/') ? <InterviewPractice data={data} reload={reload} openMaterial={setDoc} openReport={setDoc} routeBase="#practice" /> : <PracticeWorkspace key={auth?.uid || 'local'} data={data} reload={reload} />)}
               {active === '面试复盘' && <ReviewWorkspace key={auth?.uid || 'local'} data={data} hash={hash} reload={reload} openMaterial={setDoc} openReport={setDoc} />}
               <div hidden={active !== '公司'}>
                 <InterviewPractice

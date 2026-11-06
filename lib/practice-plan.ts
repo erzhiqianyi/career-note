@@ -60,6 +60,13 @@ export type PracticePlan = PracticePlanInput & {
   content?: PracticePlanContent; createdAt: string; updatedAt: string;
 };
 
+/** Source interview evidence alone does not make a general curriculum company-specific. */
+export function isCompanyPracticePlan(plan: PracticePlan, packs: {id: string; jobId?: string; questions: {id: string}[]}[]) {
+  if (plan.jobId) return true;
+  if (plan.content?.exercises.length && plan.content.exercises.every(ex => packs.some(pack => pack.id === ex.questionSetId && pack.jobId === 'builtin:general' && pack.questions.some(q => q.id === ex.questionId)))) return false;
+  return Boolean(plan.interviewId);
+}
+
 /** Legacy plans qualify only with explicit language-question evidence, never title guesses. */
 export function isJapanesePracticePlan(plan: PracticePlan, packs: { id: string; questions: { id: string; category?: string }[] }[]) {
   if (plan.purpose) return plan.purpose === 'japanese';

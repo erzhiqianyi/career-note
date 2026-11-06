@@ -33,7 +33,23 @@ import Foundation
         let review = PracticePlanReview(id: "review", planId: plan.id, planRevision: 2, checkpointId: "final", summary: "改善を確認", nextActions: "別の題で練習", sourceNotes: "Fixture",
                                        assessments: [.init(skillId: "clarity", outcome: "developing", evidenceAttemptIds: [first.id], notes: "練習を続ける")], createdAt: "2026-11-05T04:00:00Z")
         var state = CareerState()
-        state.practicePlans = [plan]; state.practicePlanReviews = [review]; state.attempts = [sentence]
+        state.questionSets = try JSONDecoder().decode([QuestionSet].self, from: Data(#"""
+        [{"id":"builtin-basics","jobId":"builtin:general","title":"Fixture topics","questions":[
+          {"id":"self-intro","title":"Intro","questionJa":"Intro","category":"先练必答"},
+          {"id":"language","title":"Language","questionJa":"Language","category":"日语表达基础"},
+          {"id":"fair","title":"Fair","questionJa":"Fair","category":"フェア基本練習"},
+          {"id":"fair-full","title":"Fair mock","questionJa":"Fair mock","category":"総合練習"},
+          {"id":"review","title":"Review","questionJa":"Review","category":"面试复盘专项"}]}]
+        """#.utf8))
+        for topic in PracticeTopic.allCases { precondition(topic.questionCount(in: state) == (topic == .fair ? 2 : 1)) }
+        var planJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as! [String: Any]
+        planJSON["interviewId"] = "source-interview"
+        let sourcePlan = try JSONDecoder().decode(PracticePlan.self, from: JSONSerialization.data(withJSONObject: planJSON))
+        precondition(!sourcePlan.isCompanyPractice(in: state))
+        planJSON["jobId"] = "company"
+        let companyPlan = try JSONDecoder().decode(PracticePlan.self, from: JSONSerialization.data(withJSONObject: planJSON))
+        precondition(companyPlan.isCompanyPractice(in: state))
+        state.practicePlans = [sourcePlan]; state.practicePlanReviews = [review]; state.attempts = [sentence]
         try LocalStore.save(LocalSnapshot(state: state, pending: [pending, written], lastUpdated: Date()), uid: "fixture-user", in: directory)
         let loaded = try LocalStore.load(uid: "fixture-user", in: directory)
         precondition(loaded?.state.practicePlans?.first?.endDate == "2027-02-01")

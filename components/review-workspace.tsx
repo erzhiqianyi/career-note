@@ -2,7 +2,11 @@
 import { useState } from 'react';
 import type { Material, Report, State } from '@/lib/career';
 import { api } from '@/lib/career';
-import { practiceAgentPrompt, practicePlanProgress } from '@/lib/practice-plan';
+import {
+  isCompanyPracticePlan,
+  practiceAgentPrompt,
+  practicePlanProgress,
+} from '@/lib/practice-plan';
 import InterviewReviewHub from './interview-review-hub';
 import InterviewPractice from './interview-practice';
 import { RecordBack } from './record-page';
@@ -112,7 +116,9 @@ export function PracticeWorkspace({
   const [purpose, setPurpose] = useState<'interview' | 'japanese'>('interview');
   const [jobId, setJobId] = useState('');
   const plans = (data.practicePlans || [])
-    .filter((plan) => Boolean(plan.jobId || plan.interviewId) === companyOnly)
+    .filter(
+      (plan) => isCompanyPracticePlan(plan, data.questionSets) === companyOnly,
+    )
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -128,13 +134,8 @@ export function PracticeWorkspace({
   }
   return (
     <section className="japanese-practice-hub">
-      <section className="panel">
+      <div className="section-head">
         <h2>{companyOnly ? '公司预先练习' : '专题练习'}</h2>
-        <p>基本关键词 → 逐句练习 → 完整回答</p>
-        <p>
-          在 AI Agent
-          中按计划练习；这里保存原回答、逐句反馈、接续位置和练习回顾。
-        </p>
         <button
           className="primary"
           onClick={() => {
@@ -143,28 +144,50 @@ export function PracticeWorkspace({
           }}
           disabled={busy || creating}
         >
-          制定专题计划
+          制定计划
         </button>
-      </section>
-      {!companyOnly && !creating && (
-        <section className="review-entry-grid" aria-label="专题建议">
-          {['面试基本问题', '日语提升', '転職フェア练习'].map((topic) => (
-            <button
-              className="panel review-entry"
-              key={topic}
-              onClick={() => {
-                setPurpose(topic === '日语提升' ? 'japanese' : 'interview');
-                setGoal(topic);
-                setRequestId(crypto.randomUUID());
-                setCreating(true);
-              }}
-            >
-              <h3>{topic}</h3>
-              <p>设定目标与时间，交给 Agent 安排练习</p>
-            </button>
-          ))}
-        </section>
-      )}
+      </div>
+      {!companyOnly &&
+        ['面试基本问题', '日语提升', '転職フェア练习'].map((topic) => {
+          const rows = data.questionSets
+            .filter((p) => p.jobId === 'builtin:general')
+            .flatMap((pack) =>
+              pack.questions
+                .filter((q) => {
+                  const group =
+                    q.category === '日语表达基础'
+                      ? '日语提升'
+                      : q.category === 'フェア基本練習' ||
+                          (q.category === '総合練習' &&
+                            q.id.startsWith('fair-'))
+                        ? '転職フェア练习'
+                        : q.category === '面试复盘专项'
+                          ? '复盘'
+                          : '面试基本问题';
+                  return group === topic;
+                })
+                .map((question) => ({ pack, question })),
+            );
+          return rows.length ? (
+            <details className="panel" key={topic}>
+              <summary>
+                {topic} · {rows.length} 道题
+              </summary>
+              {rows.map(({ pack, question }) => (
+                <a
+                  className="panel review-entry"
+                  key={pack.id + question.id}
+                  href={
+                    '#practice/question/' +
+                    encodeURIComponent(pack.id + '|' + question.id)
+                  }
+                >
+                  <Ja text={question.title} />
+                </a>
+              ))}
+            </details>
+          ) : null;
+        })}
       {creating && (
         <form
           className="panel japanese-practice-form"

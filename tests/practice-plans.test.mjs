@@ -228,3 +228,13 @@ test('Agent practice saves immutable keyword and sentence turns, resumes with fe
   assert.equal(detail.progress.items[0].savedAttempts, 1);
   assert.equal(detail.plan.status, 'active');
 });
+
+test('source interviews do not hide a general curriculum from Practice', async () => {
+  const { isCompanyPracticePlan } = await import('../lib/practice-plan.ts');
+  const packs = [{id:'general', jobId:'builtin:general', questions:[{id:'intro'}]}];
+  const plan = {...input, interviewId:'source-interview', content:{exercises:[{questionSetId:'general',questionId:'intro'}]}};
+  assert.equal(isCompanyPracticePlan(plan, packs), false);
+  assert.equal(isCompanyPracticePlan({...plan, jobId:'company'}, packs), true);
+  assert.equal(isCompanyPracticePlan({...plan, content:undefined}, packs), true);
+  assert.equal(isCompanyPracticePlan({...plan, content:{exercises:[{questionSetId:'missing',questionId:'intro'}]}}, packs), true);
+});
