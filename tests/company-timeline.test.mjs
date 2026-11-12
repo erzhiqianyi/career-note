@@ -8,7 +8,7 @@ const result = await build({ entryPoints: ['lib/company-timeline.ts'], bundle: t
 const module = { exports: {} };
 // Same realm as the assertions, so arrays and objects compare structurally.
 new Function('module', 'exports', 'require', result.outputFiles[0].text)(module, module.exports, require);
-const { pipelineView, companyTimeline } = module.exports;
+const { pipelineView, companyTimeline, isScreeningRejection } = module.exports;
 
 const job = (status, history, extra = {}) => ({ id: 'j', company: 'Example', role: 'Engineer', status, history, ...extra });
 
@@ -58,4 +58,13 @@ test('the timeline puts the next step and future events first and groups practic
   assert.deepEqual(past.map((i) => i.kind), ['practice', 'material', 'status']);
   assert.equal(past[0].count, 2);
   assert.equal(past[0].detail, '1');
+});
+
+test('only rejections that never reached an interview count as document-screening rejections', () => {
+  assert.equal(isScreeningRejection(job('未通过', [{ status: '已投递', at: '2026-11-02T00:00:00.000Z' }, { status: '未通过', at: '2026-11-12T00:00:00.000Z' }])), true);
+  assert.equal(isScreeningRejection(job('未通过', [{ status: '书类选考' }, { status: '未通过' }])), true);
+  assert.equal(isScreeningRejection(job('未通过', [])), true);
+  assert.equal(isScreeningRejection(job('未通过', [{ status: '面试中' }, { status: '未通过' }])), false);
+  assert.equal(isScreeningRejection(job('已撤回', [{ status: '已投递' }])), false);
+  assert.equal(isScreeningRejection(job('已投递', [])), false);
 });

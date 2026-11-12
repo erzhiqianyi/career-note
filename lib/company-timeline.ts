@@ -33,6 +33,16 @@ export function pipelineView(job: Pick<Job, 'status' | 'history'>): PipelineView
   return ended ? { steps, ending: { status: job.status, date: lastDate(job.status) } } : { steps };
 }
 
+/**
+ * 未通过 before any interview was recorded: the application ended at document screening.
+ * These are archived out of the active company list and get their own entry.
+ */
+export function isScreeningRejection(job: Pick<Job, 'status' | 'history'>): boolean {
+  if (job.status !== '未通过') return false;
+  const interview = pipeline.indexOf('面试中');
+  return !(job.history || []).some((item) => pipeline.indexOf(item.status as (typeof pipeline)[number]) >= interview);
+}
+
 export type TimelineItem = {
   key: string;
   date: string;

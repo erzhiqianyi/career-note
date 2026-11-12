@@ -1,4 +1,8 @@
 {
+  "书类未通过": { "ja": "書類選考お見送り", "en": "Rejected at screening" },
+  "书类选考未通过的公司": { "ja": "書類選考で見送りになった企業", "en": "Companies rejected at document screening" },
+  "书类选考未通过的公司已从进行中列表移出，记录与资料都保留。": { "ja": "書類選考で見送りになった企業は進行中の一覧から外しています。記録と資料はそのまま残ります。", "en": "Companies rejected at document screening are moved out of the active list. Their records and materials are kept." },
+  "返回进行中": { "ja": "進行中に戻る", "en": "Back to active" },
   "{0} 项进展": { "ja": "選考の進展 {0} 件", "en": "{0} selection updates" },
   "选考进展": { "ja": "選考の進展", "en": "Selection progress" },
   "{0} 项日程": { "ja": "予定 {0} 件", "en": "{0} scheduled" },

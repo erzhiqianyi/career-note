@@ -3770,6 +3770,13 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .list-toolbar .secondary.icon-only { padding: 0; width: 40px; height: 40px; justify-content: center; align-items: center; cursor: pointer; color: var(--ink-3); }
 .list-toolbar .secondary.icon-only:hover { color: var(--accent); }
 .list-toolbar .job-manage-button.is-active { border-color: #a9c5e5; background: #e3edfa; color: #194777; }
+/* Archived document-screening rejections: a separate entry beside the filters. */
+.list-toolbar .job-archive-button { display: inline-flex; align-items: center; gap: 6px; height: 40px; color: var(--ink-3); }
+.list-toolbar .job-archive-button:hover { color: var(--accent); }
+.list-toolbar .job-archive-button.is-active { border-color: #a9c5e5; background: #e3edfa; color: #194777; }
+.job-archive-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--line, #e5e7eb); font-size: 12px; line-height: 20px; text-align: center; }
+.job-archive-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: -6px 0 16px; color: var(--ink-3); font-size: 14px; }
+.job-archive-banner > span { flex: 1 1 240px; }
 
 /* Keep company sections directly below the page header. */
 .page:has(.practice-company-page) { padding-top: 0; }

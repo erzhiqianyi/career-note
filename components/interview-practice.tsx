@@ -8,6 +8,7 @@ import { useLocale } from '@/components/locale-provider';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
+  Archive,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -46,8 +47,11 @@ import { prepRank, prepStage, prepStageTone, type PrepProgress } from '@/lib/pre
 import { Ja } from '@/components/japanese-text';
 import { CompanyBoard } from '@/components/company-board';
 import { CompanyTimeline, ProgressStepper } from '@/components/company-progress';
+import { isScreeningRejection } from '@/lib/company-timeline';
 import type { CareerEvent } from '@/lib/calendar-events';
 import { plainJapanese } from '@/lib/japanese-readings';
+/** Status-filter preset: applications that ended at document screening, kept out of the active list. */
+const SCREENING_ARCHIVE = '书类未通过';
 const profileLabels: Record<string, string> = {
   summary: '个人概要',
   skills: '技能',
@@ -468,13 +472,15 @@ export default function InterviewPractice({
     const platformOptions = [...new Set(data.jobs.map(platformOf))].sort((a, b) => a.localeCompare(b));
     const jobs = data.jobs
       .filter(j => (j.company + ' ' + j.role + ' ' + (j.companyNumber || '')).toLowerCase().includes(search.toLowerCase()))
-      .filter(j => !statusFilter.length || statusFilter.some(status => status === '进行中' ? !closed.includes(j.status) : status === '有面试' ? isInterview(j) : j.status === status))
+      .filter(j => !statusFilter.length || statusFilter.some(status => status === '进行中' ? !closed.includes(j.status) : status === '有面试' ? isInterview(j) : status === SCREENING_ARCHIVE ? isScreeningRejection(j) : j.status === status))
       .filter(j => !platformFilter.length || platformFilter.includes(platformOf(j)))
       .sort((a, b) => {
         const x = keyOf(a), y = keyOf(b);
         const c = x < y ? -1 : x > y ? 1 : 0;
         return (sort.desc ? -c : c) || a.company.localeCompare(b.company);
       });
+    const screeningArchived = data.jobs.filter(isScreeningRejection).length;
+    const viewingArchive = statusFilter.length === 1 && statusFilter[0] === SCREENING_ARCHIVE;
     const pageCount = Math.max(1, Math.ceil(jobs.length / JOB_PAGE_SIZE));
     const currentPage = Math.min(listPage, pageCount);
     const pageJobs = jobs.slice((currentPage - 1) * JOB_PAGE_SIZE, currentPage * JOB_PAGE_SIZE);
@@ -503,7 +509,7 @@ export default function InterviewPractice({
             <ChevronDown size={15} aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="job-status-filter-menu" aria-label={tr('筛选投递状态')}>
-            {['进行中', '有面试', '全部'].map(preset => <DropdownMenuItem key={preset} onClick={() => setStatusFilter(preset === '全部' ? [] : [preset])}>
+            {['进行中', '有面试', SCREENING_ARCHIVE, '全部'].map(preset => <DropdownMenuItem key={preset} onClick={() => setStatusFilter(preset === '全部' ? [] : [preset])}>
               {tr(preset === '全部' ? '全部状态' : preset)}
               {(preset === '全部' ? !statusFilter.length : statusFilter.includes(preset)) && <Check size={15} aria-hidden="true" />}
             </DropdownMenuItem>)}
@@ -540,6 +546,9 @@ export default function InterviewPractice({
             </DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
+        {screeningArchived > 0 && <button type="button" className={'secondary job-archive-button' + (viewingArchive ? ' is-active' : '')} aria-pressed={viewingArchive} title={tr('书类选考未通过的公司')} onClick={() => setStatusFilter(viewingArchive ? ['进行中'] : [SCREENING_ARCHIVE])}>
+          <Archive size={16} aria-hidden="true" /><span className="phone-hidden">{tr('书类未通过')}</span><span className="job-archive-count">{screeningArchived}</span>
+        </button>}
         <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span>
         {data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
           <ListChecks size={20} aria-hidden="true" />
@@ -548,6 +557,11 @@ export default function InterviewPractice({
         {onImport && <button className="secondary phone-hidden" onClick={onImport}><Upload size={16} />{tr('导入')}</button>}
         {onAddJob && <button className="primary" onClick={onAddJob}><Plus size={18} />{tr('添加职位')}</button>}
       </div>
+      {viewingArchive && <div className="job-archive-banner" role="status">
+        <Archive size={16} aria-hidden="true" />
+        <span>{tr('书类选考未通过的公司已从进行中列表移出，记录与资料都保留。')}</span>
+        <button type="button" className="secondary" onClick={() => setStatusFilter(['进行中'])}>{tr('返回进行中')}</button>
+      </div>}
       {managing && <div className="job-bulk-actions">
         <span>{tr('已选择 {0} 项', [String(selectedJobIds.size)])}</span>
         <button type="button" className="secondary" disabled={!jobs.length} onClick={toggleVisible}>{tr(allVisibleSelected ? '取消选择当前列表' : '选择当前列表')}</button>
