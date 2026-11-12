@@ -57,7 +57,7 @@ final class AppModel {
             isDesignPreview = true
             userID = "design-preview"
             accountName = "设计预览 · 示例数据"
-            state = DesignPreview.state
+            state = ProcessInfo.processInfo.arguments.contains("-careerDesignLists") ? DesignPreview.listState : DesignPreview.state
             personalizedResumes = DesignPreview.personalizedResumes
             pending = DesignPreview.pending
             lastUpdated = Date()

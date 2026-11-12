@@ -8,21 +8,28 @@ struct ResumeHomeView: View {
     @AppStorage("resumeHomeSection") private var section = 0
     @AppStorage("resumeHomeLanguage") private var language = "ja"
     @State private var showingSettings = false
+    @State private var search = ""
 
     private var entries: [CareerResumeEntry] {
-        model.state.resume?.filter { $0.archived != true && ($0.language ?? "ja") == language } ?? []
+        model.state.resume?.filter { $0.archived != true && ($0.language ?? "ja") == language &&
+            matchesSearch(ResumeLabels.kind($0.kind) + " " + ResumeLabels.preview($0)) } ?? []
     }
     private var drafts: [CareerPersonalizedResume] {
-        model.personalizedResumes.filter { $0.archived != true && ($0.language ?? "ja") == language }
+        model.personalizedResumes.filter { $0.archived != true && ($0.language ?? "ja") == language &&
+            matchesSearch([$0.title, $0.targetCompany ?? "", $0.targetRole ?? ""].joined(separator: " ")) }
     }
     private var documents: [CareerMaterial] {
-        model.state.materials.filter { ["履歴書", "職務経歴書", "業務経歴書"].contains($0.kind) }
+        model.state.materials.filter { ["履歴書", "職務経歴書", "業務経歴書"].contains($0.kind) && matchesSearch($0.title + " " + $0.kind) }
             .sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+    }
+
+    private func matchesSearch(_ text: String) -> Bool {
+        search.isEmpty || CareerRichText.plain(text).localizedCaseInsensitiveContains(search)
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
                 HStack {
                     Text("简历").font(.largeTitle.bold())
                     Spacer()
@@ -47,6 +54,7 @@ struct ResumeHomeView: View {
                     }
                     .pickerStyle(.segmented)
                 }
+                PhoneListSearch(text: $search, prompt: "搜索履历或文稿")
                 switch section {
                 case 0: sourceEntries
                 case 1: personalized
@@ -57,6 +65,7 @@ struct ResumeHomeView: View {
             .padding(16)
             .padding(.bottom, 30)
         }
+        .scrollDismissesKeyboard(.interactively)
         .refreshable { await model.sync() }
         .background(PhoneStyle.canvas)
         .toolbar(.hidden, for: .navigationBar)
@@ -66,7 +75,7 @@ struct ResumeHomeView: View {
     }
 
     private var sourceEntries: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
             if let profile = model.state.profile {
                 SectionHeading(title: "职业摘要", detail: nil)
                 PhoneCard {
@@ -84,22 +93,14 @@ struct ResumeHomeView: View {
             }
             SectionHeading(title: "我的履历", detail: "\(entries.count) 条")
             if entries.isEmpty {
-                PhoneCard { Text("此语言暂无履历记录；联网后可同步网页版内容。")
-                    .foregroundStyle(.secondary) }
+                PhoneListEmpty(title: search.isEmpty ? "暂无履历记录" : "没有匹配的履历",
+                               detail: search.isEmpty ? "切换语言或联网同步后查看。" : "试试其他关键词，或清除搜索。")
             }
             ForEach(entries.sorted { ResumeLabels.rank($0.kind) < ResumeLabels.rank($1.kind) }) { entry in
                 NavigationLink(value: AppRoute.resumeEntry(entry.id)) {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(ResumeLabels.kind(entry.kind)).font(.headline).foregroundStyle(.primary)
-                            Text(CareerRichText.plain(ResumeLabels.preview(entry))).font(.subheadline)
-                                .foregroundStyle(.secondary).lineLimit(2)
-                            if let verification = entry.verification {
-                                Text(ResumeLabels.verification(verification)).font(.caption)
-                                    .foregroundStyle(PhoneStyle.accent)
-                            }
-                        }
-                    }
+                    PhoneListRow(title: ResumeLabels.kind(entry.kind),
+                                 subtitle: ResumeLabels.preview(entry),
+                                 status: entry.verification.map { ResumeLabels.verification($0) })
                 }
                 .buttonStyle(.plain)
             }
@@ -107,22 +108,17 @@ struct ResumeHomeView: View {
     }
 
     private var personalized: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
             SectionHeading(title: "个性化简历", detail: "\(drafts.count) 份")
             if drafts.isEmpty {
-                PhoneCard { Text("此语言暂无个性化简历草稿。")
-                    .foregroundStyle(.secondary) }
+                PhoneListEmpty(title: search.isEmpty ? "暂无个性化简历" : "没有匹配的简历",
+                               detail: search.isEmpty ? "切换语言或联网同步后查看。" : "试试其他关键词，或清除搜索。")
             }
             ForEach(drafts) { draft in
                 NavigationLink(value: AppRoute.personalizedResume(draft.id)) {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(draft.title).font(.headline).foregroundStyle(.primary)
-                            Text([draft.targetCompany, draft.targetRole].compactMap { $0 }
-                                .filter { !$0.isEmpty }.joined(separator: " · "))
-                                .font(.subheadline).foregroundStyle(.secondary)
-                        }
-                    }
+                    PhoneListRow(title: draft.title,
+                                 subtitle: [draft.targetCompany, draft.targetRole].compactMap { $0 }
+                                    .filter { !$0.isEmpty }.joined(separator: " · "))
                 }
                 .buttonStyle(.plain)
             }
@@ -130,19 +126,16 @@ struct ResumeHomeView: View {
     }
 
     private var materialDocuments: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
             SectionHeading(title: "已生成文稿", detail: "\(documents.count) 份")
-            if documents.isEmpty { PhoneCard { Text("暂无履歴書或職務経歴書文稿。")
-                .foregroundStyle(.secondary) } }
+            if documents.isEmpty {
+                PhoneListEmpty(title: search.isEmpty ? "暂无已生成文稿" : "没有匹配的文稿",
+                               detail: search.isEmpty ? "联网同步已保存的履歴書与職務経歴書。" : "试试其他关键词，或清除搜索。")
+            }
             ForEach(documents) { document in
                 NavigationLink(value: AppRoute.material(document.id)) {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(document.title).font(.headline).foregroundStyle(.primary)
-                            Text([document.kind, document.reviewStatus ?? "待核对"].joined(separator: " · "))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
+                    PhoneListRow(title: document.title,
+                                 metadata: [document.kind, document.reviewStatus ?? "待核对"].joined(separator: " · "))
                 }
                 .buttonStyle(.plain)
             }

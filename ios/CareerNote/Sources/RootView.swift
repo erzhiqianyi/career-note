@@ -16,6 +16,7 @@ enum AppRoute: Hashable, Codable {
     case practiceTopic(String)
     case practicePlans
     case practicePlan(String)
+    case practiceExercise(planID: String, scheduleID: String)
     case plannedAnswer(packID: String, questionID: String, context: PracticeContext)
     case resumeEntry(String)
     case personalizedResume(String)
@@ -304,6 +305,13 @@ struct RootView: View {
             PracticePlanListView(model: model, purpose: "company")
         case .practicePlan(let id):
             PracticePlanDetailView(model: model, id: id)
+        case .practiceExercise(let planID, let scheduleID):
+            if let plan = model.state.practicePlans?.first(where: { $0.id == planID }),
+               let content = plan.content,
+               let item = content.schedule.first(where: { $0.id == scheduleID }),
+               let exercise = content.exercises.first(where: { $0.id == item.exerciseId }) {
+                PracticePlanExerciseDetailView(model: model, plan: plan, exercise: exercise, item: item)
+            } else { missingContent }
         case .plannedAnswer(let packID, let questionID, let context):
             if let pack = (model.state.questionSets + BuiltinBank.packs).first(where: { $0.id == packID }),
                let question = pack.questions.first(where: { $0.id == questionID }) {
@@ -329,9 +337,15 @@ struct RootView: View {
 }
 
 enum PhoneStyle {
-    static let accent = Color(red: 0.18, green: 0.31, blue: 0.57)
+    static let accent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.48, green: 0.66, blue: 0.98, alpha: 1)
+            : UIColor(red: 0.18, green: 0.31, blue: 0.57, alpha: 1)
+    })
     static let canvas = Color(uiColor: .systemGroupedBackground)
     static let card = Color(uiColor: .secondarySystemGroupedBackground)
+    static let listSpacing: CGFloat = 12
+    static let contentWidth: CGFloat = 620
 }
 
 struct PhoneCard<Content: View>: View {
@@ -356,6 +370,100 @@ struct SectionHeading: View {
             if let detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
         }
         .padding(.horizontal, 2)
+    }
+}
+
+/// Shared navigation row: bounded summaries, consistent spacing and a clear disclosure.
+/// Accessibility sizes expand the content rather than shrinking the user's text.
+struct PhoneListRow: View {
+    let title: String
+    var subtitle: String? = nil
+    var metadata: String? = nil
+    var status: String? = nil
+    var trailing: String? = nil
+    var number: String? = nil
+    var disclosure = true
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        PhoneCard {
+            HStack(spacing: 12) {
+                if let number, !typeSize.isAccessibilitySize {
+                    Text(number).font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(PhoneStyle.accent)
+                        .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(CareerRichText.plain(title))
+                        .font(.headline).foregroundStyle(.primary)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(CareerRichText.plain(subtitle)).font(.subheadline).foregroundStyle(.secondary)
+                            .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                    }
+                    if let metadata, !metadata.isEmpty {
+                        Text(metadata).font(.caption).foregroundStyle(.secondary)
+                            .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                    }
+                    if let status, !status.isEmpty {
+                        Text(status).font(.caption.weight(.semibold)).foregroundStyle(PhoneStyle.accent)
+                    }
+                    if let trailing, typeSize.isAccessibilitySize {
+                        Text(trailing).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if let trailing, !typeSize.isAccessibilitySize {
+                    Text(trailing).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                if disclosure {
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary).accessibilityHidden(true)
+                }
+            }
+            .frame(minHeight: 24)
+            .contentShape(Rectangle())
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Inline search stays visible on home screens whose navigation bars are hidden.
+struct PhoneListSearch: View {
+    @Binding var text: String
+    let prompt: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+            TextField(prompt, text: $text)
+                .textInputAutocapitalization(.never).autocorrectionDisabled()
+                .submitLabel(.search).accessibilityLabel(prompt)
+            if !text.isEmpty {
+                Button { text = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        .frame(minWidth: 32, minHeight: 32)
+                }.buttonStyle(.plain).accessibilityLabel("清除搜索")
+            }
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 12).frame(minHeight: 44)
+        .background(PhoneStyle.card, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+struct PhoneListEmpty: View {
+    let title: String
+    let detail: String
+    var body: some View {
+        PhoneCard {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(.headline)
+                Text(detail).font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
     }
 }
 
@@ -427,12 +535,19 @@ private struct PracticeList: View {
 private struct CompanyPracticeView: View {
     @Bindable var model: AppModel
     var body: some View {
-        List {
-            NavigationLink("公司专题计划", value: AppRoute.practicePlans)
-            ForEach(model.state.questionSets.filter { $0.jobId != "builtin:general" }) { pack in
-                NavigationLink(pack.title, value: AppRoute.questionSet(pack.id))
-            }
-        }.navigationTitle("公司预先练习")
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
+                NavigationLink(value: AppRoute.practicePlans) {
+                    PhoneListRow(title: "公司专题计划")
+                }.buttonStyle(.plain)
+                ForEach(model.state.questionSets.filter { $0.jobId != "builtin:general" && $0.hasPracticeQuestions }) { pack in
+                    NavigationLink(value: AppRoute.questionSet(pack.id)) {
+                        PhoneListRow(title: pack.title, trailing: "\(pack.questions.count) 道题")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(16).frame(maxWidth: PhoneStyle.contentWidth)
+        }.frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+            .navigationTitle("公司预先练习")
     }
 }
 
@@ -448,9 +563,26 @@ enum BuiltinBank {
 struct ReviewHomeView: View {
     @Bindable var model: AppModel
     @State private var creating = false
+    @State private var search = ""
+    private var interviews: [InterviewSummary] {
+        (model.state.interviews ?? []).filter {
+            search.isEmpty || ($0.title + " " + $0.date).localizedCaseInsensitiveContains(search)
+        }.sorted { $0.date > $1.date }
+    }
+    private var plans: [PracticePlan] {
+        (model.state.practicePlans ?? []).filter {
+            $0.isCompanyPractice(in: model.state) &&
+            (search.isEmpty || ($0.title + " " + $0.goal).localizedCaseInsensitiveContains(search))
+        }.sorted { $0.updatedAt > $1.updatedAt }
+    }
+    private var packs: [QuestionSet] {
+        model.state.questionSets.filter {
+            $0.jobId != "builtin:general" && $0.hasPracticeQuestions && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search))
+        }
+    }
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
                 HStack {
                     Text("复盘").font(.largeTitle.bold())
                     Spacer()
@@ -459,38 +591,38 @@ struct ReviewHomeView: View {
                             .background(PhoneStyle.card, in: Circle())
                     }.accessibilityLabel("制定公司练习计划")
                 }
-                SectionHeading(title: "实际面试", detail: nil)
-                ForEach((model.state.interviews ?? []).sorted { $0.date > $1.date }) { interview in
-                    NavigationLink(value: AppRoute.interview(interview.id)) {
-                        PhoneCard {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(interview.title).font(.headline).foregroundStyle(.primary)
-                                Text(interview.date).font(.caption).foregroundStyle(.secondary)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }.buttonStyle(.plain)
+                PhoneListSearch(text: $search, prompt: "搜索面试、公司或计划")
+                SectionHeading(title: "实际面试", detail: interviews.count > 3 ? "最近 3 / \(interviews.count) 场" : "\(interviews.count) 场")
+                ForEach(interviews.prefix(3)) { interview in
+                    InterviewListLink(interview: interview)
                 }
-                NavigationLink("查看全部面试与导入录音", value: AppRoute.interviews).font(.subheadline)
-                SectionHeading(title: "公司预先练习", detail: nil)
-                ForEach((model.state.practicePlans ?? []).filter { $0.isCompanyPractice(in: model.state) }) { plan in
-                    NavigationLink(plan.title, value: AppRoute.practicePlan(plan.id))
+                if interviews.isEmpty {
+                    PhoneListEmpty(title: "暂无匹配的面试", detail: "可查看全部面试，或导入新的录音。")
                 }
-                ForEach(model.state.questionSets.filter { $0.jobId != "builtin:general" }) { pack in
+                NavigationLink(value: AppRoute.interviews) {
+                    PhoneListRow(title: "全部面试与录音导入", trailing: "\((model.state.interviews ?? []).count) 场")
+                }.buttonStyle(.plain)
+                SectionHeading(title: "公司预先练习", detail: "\(plans.count) 个计划 · \(packs.count) 个题组")
+                    .padding(.top, 8)
+                ForEach(plans) { plan in PracticePlanLink(model: model, plan: plan) }
+                ForEach(packs) { pack in
                     NavigationLink(value: AppRoute.questionSet(pack.id)) {
-                        PhoneCard {
-                            HStack {
-                                Text(pack.title).font(.subheadline.bold()).foregroundStyle(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
+                        PhoneListRow(title: pack.title, trailing: "\(pack.questions.count) 道题")
                     }.buttonStyle(.plain)
                 }
-                if PracticeTopic.interviewReview.questionCount(in: model.state) > 0 {
-                    NavigationLink(PracticeTopic.interviewReview.title, value: AppRoute.practiceTopic(PracticeTopic.interviewReview.rawValue))
+                if plans.isEmpty && packs.isEmpty {
+                    PhoneListEmpty(title: "暂无匹配的公司练习", detail: "收到面试安排后，可制定公司练习计划。")
                 }
-            }.padding(16).frame(maxWidth: 620, alignment: .leading)
+                if PracticeTopic.interviewReview.questionCount(in: model.state) > 0 &&
+                    (search.isEmpty || PracticeTopic.interviewReview.title.localizedCaseInsensitiveContains(search)) {
+                    NavigationLink(value: AppRoute.practiceTopic(PracticeTopic.interviewReview.rawValue)) {
+                        PhoneListRow(title: PracticeTopic.interviewReview.title,
+                                     trailing: "\(PracticeTopic.interviewReview.questionCount(in: model.state)) 道题")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(16).frame(maxWidth: PhoneStyle.contentWidth, alignment: .leading)
         }.frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+            .scrollDismissesKeyboard(.interactively)
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await model.sync() }
             .sheet(isPresented: $creating) { PracticePlanForm(model: model, purpose: "company") }
@@ -500,24 +632,37 @@ struct ReviewHomeView: View {
 struct QuestionList: View {
     @Bindable var model: AppModel
     let pack: QuestionSet
+    @State private var search = ""
+
+    private var questions: [CareerQuestion] {
+        pack.questions.filter { $0.category != "日语表达基础" && $0.matchesListSearch(search) }
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
+            PhoneListSearch(text: $search, prompt: "搜索题目或内容")
             if let scenario = pack.scenario, !scenario.isEmpty {
                 Text(scenario)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
                     .padding(.bottom, 6)
             }
-            ForEach(Array(pack.questions.filter { $0.category != "日语表达基础" }.enumerated()), id: \.element.id) { index, question in
-                PracticeQuestionLink(model: model, pack: pack, question: question, number: index + 1)
+            SectionHeading(title: "练习题目", detail: "\(questions.count) 道题")
+            ForEach(questions) { question in
+                PracticeQuestionLink(model: model, pack: pack, question: question,
+                                     number: (pack.questions.firstIndex { $0.id == question.id } ?? 0) + 1)
+            }
+            if questions.isEmpty {
+                PhoneListEmpty(title: "没有匹配的题目", detail: "试试其他关键词，或清除搜索。")
             }
             }
             .frame(maxWidth: 620, alignment: .leading)
             .padding(16)
         }
         .background(PhoneStyle.canvas)
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(CareerRichText.plain(pack.title))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -531,24 +676,9 @@ struct PracticeQuestionLink: View {
 
     var body: some View {
         NavigationLink(value: AppRoute.answer(packID: pack.id, questionID: question.id)) {
-            PhoneCard {
-                HStack(alignment: .top, spacing: 12) {
-                    Text(String(format: "%02d", number))
-                        .font(.caption.bold().monospacedDigit())
-                        .foregroundStyle(PhoneStyle.accent)
-                        .frame(width: 28, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(question.questionNumber.map { "Q\($0) · \(question.title)" } ?? question.title).font(.headline).foregroundStyle(.primary)
-                        Text(CareerRichText.plain(question.questionJa)).font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.bold())
-                        .foregroundStyle(.tertiary)
-                }
-            }
+            PhoneListRow(title: question.questionNumber.map { "Q\($0) · \(question.title)" } ?? question.title,
+                         subtitle: question.questionJa,
+                         number: question.questionNumber == nil ? String(format: "%02d", number) : nil)
         }
         .buttonStyle(.plain)
     }

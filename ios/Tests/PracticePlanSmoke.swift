@@ -42,6 +42,14 @@ import Foundation
           {"id":"review","title":"Review","questionJa":"Review","category":"面试复盘专项"}]}]
         """#.utf8))
         for topic in PracticeTopic.allCases { precondition(topic.questionCount(in: state) == (topic == .fair ? 2 : 1)) }
+        let searchable = try JSONDecoder().decode(CareerQuestion.self, from: Data(#"""
+        {"id":"search-fixture","questionNumber":72,"title":"入职准备","questionJa":"{入社|にゅうしゃ}までに、{技術|ぎじゅつ}を{勉強|べんきょう}します。","meaning":"入职前提前学习技术","category":"逆質問"}
+        """#.utf8))
+        precondition(searchable.matchesListSearch("入社までに"))
+        precondition(searchable.matchesListSearch("にゅうしゃまでに"))
+        precondition(searchable.matchesListSearch(" q72 "))
+        precondition(searchable.matchesListSearch("提前学习"))
+        precondition(!searchable.matchesListSearch("does-not-exist"))
         var planJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as! [String: Any]
         planJSON["interviewId"] = "source-interview"
         let sourcePlan = try JSONDecoder().decode(PracticePlan.self, from: JSONSerialization.data(withJSONObject: planJSON))

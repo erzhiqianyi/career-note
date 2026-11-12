@@ -42,6 +42,46 @@ enum DesignPreview {
         return state
     }()
 
+    /// A growing library fixture, kept entirely offline and separate from real user data.
+    static let listState: CareerState = {
+        var result = state
+        let questionJSON: [[String: Any]] = (0..<40).map { index in
+            let category = index < 11 ? "先练必答" : index < 18 ? "日语表达基础" : index < 30 ? "フェア基本練習" : "面试复盘专项"
+            return ["id": "list-question-\(index)", "questionNumber": index + 1,
+                    "title": index == 0 ? "入职前应准备的技术与知识" : "\(["说明项目背景", "动词与助词搭配", "介绍自己的工作经历", "确认初期职责与团队期待"][index % 4])（\(index + 1)）",
+                    "questionJa": index == 0 ? "{入社|にゅうしゃ}までに、{勉強|べんきょう}しておくとよい{技術|ぎじゅつ}や{知識|ちしき}はありますか。" : "これまでの経験と、担当した仕事について、簡単に説明してください。",
+                    "category": category, "meaning": "虚构列表设计验证题目", "targetSeconds": 60]
+        }
+        let packJSON: [String: Any] = ["id": "list-general", "jobId": "builtin:general", "title": "示例通用练习", "questions": questionJSON]
+        if let data = try? JSONSerialization.data(withJSONObject: packJSON),
+           let pack = try? JSONDecoder().decode(QuestionSet.self, from: data) {
+            result.questionSets = result.questionSets.filter { $0.jobId != "builtin:general" } + [pack]
+        }
+        let plans: [[String: Any]] = (0..<7).map { index in
+            let status = index < 4 ? "active" : index == 4 ? "paused" : "completed"
+            let title = ["面试表达改善｜一周训练", "日语表达｜动词、助词与完整句子", "逆質問｜入职准备与初期角色期待", "长标题示例｜向不同背景的面试官清楚介绍复杂项目中的个人职责和成果", "招聘会｜展位交流", "自我介绍｜基础训练", "项目说明｜复习"][index]
+            return ["id": "list-plan-\(index)", "revision": 1, "title": title,
+                    "goal": "虚构设计验证：先理解问题，再用一句结论和一个依据表达；完整目标保留在计划详情，列表只显示日期、状态与进度。",
+                    "currentSituation": "虚构设计数据，不代表真实练习结果。", "startDate": "2026-11-06", "endDate": "2026-11-12",
+                    "dailyMinutes": 20, "jobId": "", "interviewId": "", "sourceAttemptIds": [], "status": status,
+                    "updatedAt": "2026-11-0\(9 - index)T09:00:00Z",
+                    "content": ["baselineAnalysis": "虚构设计验证", "successCriteria": "只通过真实回答评价，次数不代表达标", "sourceNotes": "Fictional list fixture",
+                                "skills": [], "exercises": [["id": "list-exercise", "title": "提问练习", "skillIds": [], "instructions": "先关键词，再组成一句话。", "questionSetId": "list-general", "questionId": "list-question-0"]],
+                                "schedule": (0..<15).map { ["id": "list-schedule-\($0)", "date": "2026-11-06", "exerciseId": "list-exercise", "minutes": 10, "targetAttempts": 2] as [String: Any] }, "checkpoints": []]]
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: plans) {
+            result.practicePlans = try? JSONDecoder().decode([PracticePlan].self, from: data)
+        }
+        let interviews: [[String: Any]] = (0..<4).map { index in
+            ["id": "list-interview-\(index)", "revision": 1, "title": "示例科技 · 第\(index + 1)轮面试复盘", "jobId": "sample-job-1",
+             "date": "2026-11-0\(6 - index)", "durationSeconds": 2400, "status": "practice", "exchangeCount": 20, "practiceCount": 3]
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: interviews) {
+            result.interviews = try? JSONDecoder().decode([InterviewSummary].self, from: data)
+        }
+        return result
+    }()
+
     static let pending = [
         PendingAttempt(id: "sample-pending", questionSetId: "sample-pack",
                        questionId: "project", answer: "项目经历的离线草稿",

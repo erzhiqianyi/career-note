@@ -6,10 +6,16 @@ import UniformTypeIdentifiers
 struct InterviewListView: View {
     @Bindable var model: AppModel
     @State private var importing = false
+    @State private var search = ""
+    private var interviews: [InterviewSummary] {
+        (model.state.interviews ?? []).filter {
+            search.isEmpty || ($0.title + " " + $0.date).localizedCaseInsensitiveContains(search)
+        }.sorted { $0.date > $1.date }
+    }
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
                 PhoneCard {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("全体把握 → 振り返り → 練習").font(.headline)
@@ -31,25 +37,33 @@ struct InterviewListView: View {
                     }
                 }
                 if let message = model.message { Text(message).font(.caption).foregroundStyle(.secondary) }
-                ForEach(model.state.interviews ?? []) { interview in
-                    NavigationLink(value: AppRoute.interview(interview.id)) {
-                        PhoneCard {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(interview.title).font(.headline).foregroundStyle(.primary)
-                                Text("\(interview.date) · \(InterviewPlayer.time(interview.durationSeconds)) · \(interview.statusLabel)")
-                                    .font(.caption).foregroundStyle(.secondary)
-                                Text("問答 \(interview.exchangeCount ?? 0) · 練習 \(interview.practiceCount ?? 0)")
-                                    .font(.caption).foregroundStyle(PhoneStyle.accent)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }.buttonStyle(.plain)
+                PhoneListSearch(text: $search, prompt: "搜索面试或日期")
+                SectionHeading(title: "面试记录", detail: "\(interviews.count) 场")
+                ForEach(interviews) { interview in
+                    InterviewListLink(interview: interview)
                 }
-            }.padding(16).frame(maxWidth: 680)
+                if interviews.isEmpty {
+                    PhoneListEmpty(title: "暂无匹配的面试", detail: "可以调整搜索词，或导入面试录音。")
+                }
+            }.padding(16).frame(maxWidth: PhoneStyle.contentWidth)
         }
         .frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("面接の振り返り")
         .refreshable { await model.sync() }
         .sheet(isPresented: $importing) { InterviewImportView(model: model) }
+    }
+}
+
+struct InterviewListLink: View {
+    let interview: InterviewSummary
+    var body: some View {
+        NavigationLink(value: AppRoute.interview(interview.id)) {
+            PhoneListRow(title: interview.title,
+                         subtitle: "\(interview.date) · \(InterviewPlayer.time(interview.durationSeconds))",
+                         metadata: "問答 \(interview.exchangeCount ?? 0) · 練習 \(interview.practiceCount ?? 0)",
+                         status: interview.statusLabel)
+        }.buttonStyle(.plain)
     }
 }
 

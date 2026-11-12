@@ -4,59 +4,84 @@ struct PracticePlanListView: View {
     @Bindable var model: AppModel
     var purpose = "all"
     @State private var creating = false
+    @State private var search = ""
+    @State private var planFilter = "all"
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var query: String { search.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var topics: [PracticeTopic] {
+        guard purpose != "company" else { return [] }
+        return PracticeTopic.allCases.filter { topic in
+            topic != .interviewReview && topic.questionCount(in: model.state) > 0 &&
+            (query.isEmpty || topic.title.localizedCaseInsensitiveContains(query) ||
+             model.state.questionSets.filter { $0.jobId == "builtin:general" }.contains { pack in
+                 pack.questions.contains { PracticeTopic.topic(for: $0) == topic && $0.matchesListSearch(query) }
+             })
+        }
+    }
+    private var plans: [PracticePlan] {
+        (model.state.practicePlans ?? []).filter {
+            $0.isCompanyPractice(in: model.state) == (purpose == "company") &&
+            (query.isEmpty || ($0.title + " " + $0.goal).localizedCaseInsensitiveContains(query)) &&
+            (planFilter == "all" || (planFilter == "active" ? !["completed", "paused"].contains($0.status) : ["completed", "paused"].contains($0.status)))
+        }.sorted {
+            let lhs = ["completed", "paused"].contains($0.status)
+            let rhs = ["completed", "paused"].contains($1.status)
+            if lhs != rhs { return !lhs }
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return $0.id < $1.id
+        }
+    }
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
                 if purpose == "all" {
-                HStack {
-                    Text("练习").font(.largeTitle.bold())
-                    Spacer()
-                    Button { creating = true } label: {
-                        Image(systemName: "plus").frame(width: 44, height: 44)
-                            .background(PhoneStyle.card, in: Circle())
-                    }.accessibilityLabel("制定计划")
-                }
-                }
-                if purpose != "company" {
-                    ForEach(PracticeTopic.allCases.filter { $0 != .interviewReview && $0.questionCount(in: model.state) > 0 }) { topic in
-                        NavigationLink(value: AppRoute.practiceTopic(topic.rawValue)) {
-                            PhoneCard {
-                                HStack {
-                                    Text(topic.title).font(.headline).foregroundStyle(.primary)
-                                    Spacer()
-                                    Text("\(topic.questionCount(in: model.state)) 道题").font(.caption).foregroundStyle(.secondary)
-                                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }.buttonStyle(.plain)
+                    HStack {
+                        Text("练习").font(.largeTitle.bold())
+                        Spacer()
+                        Button { creating = true } label: {
+                            Image(systemName: "plus").frame(width: 44, height: 44)
+                                .background(PhoneStyle.card, in: Circle())
+                        }.accessibilityLabel("制定计划")
                     }
                 }
-                ForEach((model.state.practicePlans ?? []).filter { $0.isCompanyPractice(in: model.state) == (purpose == "company") }.sorted { $0.updatedAt > $1.updatedAt }) { plan in
-                    NavigationLink(value: AppRoute.practicePlan(plan.id)) {
-                        PhoneCard {
-                            VStack(alignment: .leading, spacing: 7) {
-                                Text(plan.title).font(.headline).foregroundStyle(.primary)
-                                Text(plan.goal).font(.subheadline).foregroundStyle(.secondary)
-                                Text("\(plan.startDate)〜\(plan.endDate) · 1日 \(plan.dailyMinutes) 分")
-                                    .font(.caption).foregroundStyle(.secondary)
-                                Text(plan.statusLabel).font(.caption.bold()).foregroundStyle(PhoneStyle.accent)
-                                if let content = plan.content {
-                                    Text("練習 \(plan.completedCount(in: model.state.attempts)) / \(content.schedule.count) 件")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }.buttonStyle(.plain)
+                PhoneListSearch(text: $search, prompt: "搜索专题、题目或计划")
+                if purpose != "company" {
+                    SectionHeading(title: "专题练习", detail: "\(topics.count) 个专题")
+                    ForEach(topics) { topic in
+                        NavigationLink(value: AppRoute.practiceTopic(topic.rawValue)) {
+                            PhoneListRow(title: topic.title, trailing: "\(topic.questionCount(in: model.state)) 道题")
+                        }.buttonStyle(.plain)
+                    }
+                    if topics.isEmpty {
+                        PhoneListEmpty(title: query.isEmpty ? "暂无练习题目" : "没有匹配的专题",
+                                       detail: query.isEmpty ? "同步题组后，可从这里开始练习。" : "试试其他题目关键词。")
+                    }
                 }
-                if (model.state.practicePlans ?? []).filter({ $0.isCompanyPractice(in: model.state) == (purpose == "company") }).isEmpty {
-                    Text("暂无练习计划，可从已有专题继续，或在右上角制定计划。")
-                        .font(.caption).foregroundStyle(.secondary)
+                SectionHeading(title: "练习计划", detail: "\(plans.count) 个计划")
+                    .padding(.top, 8)
+                if typeSize.isAccessibilitySize {
+                    HStack {
+                        Text("计划状态").font(.subheadline)
+                        Spacer()
+                        planStatusPicker.pickerStyle(.menu)
+                    }
+                } else {
+                    planStatusPicker.pickerStyle(.segmented)
+                }
+                ForEach(plans) { plan in
+                    PracticePlanLink(model: model, plan: plan)
+                }
+                if plans.isEmpty {
+                    PhoneListEmpty(title: query.isEmpty && planFilter == "all" ? "暂无练习计划" : "没有匹配的计划",
+                                   detail: query.isEmpty && planFilter == "all" ? "可从专题自由练习，或点右上角制定计划。" : "调整搜索词或计划状态后重试。")
                 }
                 if let message = model.message { Text(message).font(.caption).foregroundStyle(.secondary) }
-            }.padding(16).frame(maxWidth: 620, alignment: .leading)
+            }.padding(16).frame(maxWidth: PhoneStyle.contentWidth, alignment: .leading)
         }
         .frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(purpose == "company" ? "公司专题计划" : "练习")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(purpose == "all" ? .hidden : .visible, for: .navigationBar)
@@ -70,22 +95,58 @@ struct PracticePlanListView: View {
         .refreshable { await model.sync() }
         .sheet(isPresented: $creating) { PracticePlanForm(model: model, purpose: purpose) }
     }
+
+    private var planStatusPicker: some View {
+        Picker("计划状态", selection: $planFilter) {
+            Text("全部").tag("all")
+            Text("进行中").tag("active")
+            Text("历史").tag("history")
+        }
+    }
+}
+
+struct PracticePlanLink: View {
+    @Bindable var model: AppModel
+    let plan: PracticePlan
+
+    var body: some View {
+        NavigationLink(value: AppRoute.practicePlan(plan.id)) {
+            PhoneListRow(title: plan.title,
+                         subtitle: "\(plan.startDate) ～ \(plan.endDate) · 每天 \(plan.dailyMinutes) 分钟",
+                         metadata: plan.content.map { "练习 \(plan.completedCount(in: model.state.attempts)) / \($0.schedule.count) 项" },
+                         status: plan.statusLabel)
+        }.buttonStyle(.plain)
+    }
 }
 
 struct PracticeTopicView: View {
     @Bindable var model: AppModel
     let topic: PracticeTopic
+    @State private var search = ""
+
+    private var packs: [QuestionSet] { model.state.questionSets.filter { $0.jobId == "builtin:general" } }
+    private func questions(in pack: QuestionSet) -> [CareerQuestion] {
+        pack.questions.filter { PracticeTopic.topic(for: $0) == topic && $0.matchesListSearch(search) }
+    }
+    private var resultCount: Int { packs.reduce(0) { $0 + questions(in: $1).count } }
+
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
-                ForEach(model.state.questionSets.filter { $0.jobId == "builtin:general" }) { pack in
-                    ForEach(pack.questions.filter { PracticeTopic.topic(for: $0) == topic }) { question in
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
+                PhoneListSearch(text: $search, prompt: "搜索题目或内容")
+                SectionHeading(title: "练习题目", detail: "\(resultCount) 道题")
+                ForEach(packs) { pack in
+                    ForEach(questions(in: pack)) { question in
                         PracticeQuestionLink(model: model, pack: pack, question: question,
                             number: (pack.questions.firstIndex { $0.id == question.id } ?? 0) + 1)
                     }
                 }
-            }.padding(16).frame(maxWidth: 620, alignment: .leading)
+                if resultCount == 0 {
+                    PhoneListEmpty(title: "没有匹配的题目", detail: "试试其他关键词，或清除搜索。")
+                }
+            }.padding(16).frame(maxWidth: PhoneStyle.contentWidth, alignment: .leading)
         }.frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(topic.title).navigationBarTitleDisplayMode(.inline)
             .refreshable { await model.sync() }
     }
@@ -313,7 +374,11 @@ struct PracticePlanDetailView: View {
         }
         ForEach(items) { item in
             if let exercise = plan.content?.exercises.first(where: { $0.id == item.exerciseId }) {
-                PracticePlanExerciseCard(model: model, plan: plan, exercise: exercise, item: item, isToday: item.date == today)
+                NavigationLink(value: AppRoute.practiceExercise(planID: plan.id, scheduleID: item.id)) {
+                    PhoneListRow(title: exercise.title,
+                                 subtitle: "\(item.date)\(item.date == today ? " · 今日" : "") · \(item.minutes) 分",
+                                 metadata: "完整回答 \(plan.attempts(for: item, in: model.state.attempts).count) / \(item.targetAttempts) 回")
+                }.buttonStyle(.plain)
             }
         }
     }
@@ -389,28 +454,106 @@ struct PracticePlanDetailView: View {
     }
 }
 
-private struct PracticePlanExerciseCard: View {
+struct PracticePlanExerciseDetailView: View {
     @Bindable var model: AppModel
     let plan: PracticePlan
     let exercise: PracticePlanExercise
     let item: PracticePlanSchedule
-    let isToday: Bool
+    @State private var copied = false
+
+    private var pack: QuestionSet? {
+        (model.state.questionSets + BuiltinBank.packs).first { $0.id == exercise.questionSetId }
+    }
 
     var body: some View {
-        let attempts = model.state.attempts.filter { $0.practiceContext?.planId == plan.id && $0.practiceContext?.scheduleId == item.id }
         let pending = model.pending.filter { $0.practiceContext?.planId == plan.id && $0.practiceContext?.scheduleId == item.id }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                PhoneCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(CareerRichText.plain(exercise.title)).font(.title2.bold()).accessibilityAddTraits(.isHeader)
+                        Text("\(item.date) · 预计 \(item.minutes) 分钟").foregroundStyle(.secondary)
+                        Text("完整回答 \(plan.attempts(for: item, in: model.state.attempts).count) / \(item.targetAttempts) 回")
+                        if !pending.isEmpty {
+                            Text("待同步 \(pending.count) 回").foregroundStyle(.secondary)
+                        }
+                    }.font(.subheadline)
+                }
+                questionCard
+                PhoneCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("练习步骤").font(.headline).accessibilityAddTraits(.isHeader)
+                        RichContent(text: exercise.instructions)
+                        let skills = (plan.content?.skills ?? []).filter { exercise.skillIds.contains($0.id) }
+                        if !skills.isEmpty {
+                            Divider()
+                            Text("本次练习目标").font(.headline).accessibilityAddTraits(.isHeader)
+                            ForEach(skills) { skill in
+                                Text(skill.title).font(.subheadline.bold())
+                                RichContent(text: skill.target)
+                            }
+                        }
+                    }
+                }
+                PhoneCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("在 Agent 中练习").font(.headline).accessibilityAddTraits(.isHeader)
+                        Text("复制指令并粘贴到已连接 Career Note MCP 的聊天。Agent 会读取本项的进度，带你整理关键词、逐句练习，再完成整段回答。")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        Button {
+                            UIPasteboard.general.string = plan.agentPrompt(scheduleID: item.id)
+                            copied = true
+                        } label: {
+                            Label(copied ? "已复制练习指令" : "复制 Agent 练习指令",
+                                  systemImage: copied ? "checkmark" : "doc.on.doc")
+                        }.buttonStyle(.borderedProminent)
+                    }
+                }
+                historyCard
+            }.padding(16).frame(maxWidth: PhoneStyle.contentWidth)
+        }
+        .frame(maxWidth: .infinity).background(PhoneStyle.canvas)
+        .navigationTitle("练习详情").navigationBarTitleDisplayMode(.inline)
+        .toolbar { ReadingToggleButton() }
+        .refreshable { await model.sync() }
+    }
+
+    private var questionCard: some View {
         PhoneCard {
             VStack(alignment: .leading, spacing: 10) {
-                Text("\(item.date)\(isToday ? " · 今日" : "") · \(item.minutes) 分").font(.caption.bold()).foregroundStyle(PhoneStyle.accent)
-                Text(exercise.title).font(.headline)
-                RichContent(text: exercise.instructions)
-                Text("完整回答 \(plan.attempts(for: item, in: model.state.attempts).count) / \(item.targetAttempts) 回\(pending.isEmpty ? "" : " · 同期待ち \(pending.count) 回")")
-                    .font(.caption).foregroundStyle(.secondary)
-                ShareLink(item: plan.agentPrompt(scheduleID: item.id)) {
-                    Label("在 Agent 中练习", systemImage: "square.and.arrow.up")
+                Text("练习题目").font(.headline).accessibilityAddTraits(.isHeader)
+                if let pack, let question = pack.questions.first(where: { $0.id == exercise.questionId }) {
+                    if let seconds = question.targetSeconds, seconds > 0 {
+                        Label("单次回答约 \(seconds) 秒", systemImage: "clock")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    RichContent(text: question.questionJa, markdown: false)
+                    if let meaning = question.meaning, !meaning.isEmpty {
+                        RichContent(text: meaning, markdown: false, fontSize: 15)
+                    }
+                    let context = PracticeContext(planId: plan.id, planRevision: plan.revision,
+                                                  exerciseId: exercise.id, scheduleId: item.id, keywords: "")
+                    NavigationLink(value: AppRoute.plannedAnswer(packID: pack.id, questionID: question.id, context: context)) {
+                        Label("查看题目详情与参考", systemImage: "arrow.right.circle")
+                    }
+                } else {
+                    Text("本机暂时没有关联题目。联网后下拉同步，或按下方说明继续练习。")
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
-                Text("复制到已连接 Career Note MCP 的 Agent。关键词 → 每次一句 → 完整回答；会从已保存进度接续。")
-                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var historyCard: some View {
+        let attempts = model.state.attempts.filter {
+            $0.practiceContext?.planId == plan.id && $0.practiceContext?.scheduleId == item.id
+        }.sorted { $0.createdAt > $1.createdAt }
+        return PhoneCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("练习记录").font(.headline).accessibilityAddTraits(.isHeader)
+                if attempts.isEmpty {
+                    Text("暂无已同步的练习记录。").font(.subheadline).foregroundStyle(.secondary)
+                }
                 ForEach(attempts) { attempt in
                     DisclosureGroup("\(String(attempt.createdAt.prefix(10))) · \(attempt.durationSeconds ?? 0) 秒") {
                         VStack(alignment: .leading, spacing: 10) {

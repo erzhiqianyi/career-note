@@ -417,6 +417,23 @@ enum PracticeTopic: String, CaseIterable, Identifiable {
     }
 }
 
+extension QuestionSet {
+    var hasPracticeQuestions: Bool { questions.contains { $0.category != "占位" } }
+}
+
+extension CareerQuestion {
+    func matchesListSearch(_ search: String) -> Bool {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+        let text = [title, questionJa, meaning ?? "", category ?? "", questionNumber.map { "Q\($0)" } ?? ""]
+            .joined(separator: " ")
+        // Include both the written form and saved kana without requiring reading markup.
+        let written = text.replacingOccurrences(of: "\\{([^|{}]+)\\|[^{}]+\\}", with: "$1", options: .regularExpression)
+        let readings = text.replacingOccurrences(of: "\\{[^|{}]+\\|([^{}]+)\\}", with: "$1", options: .regularExpression)
+        return written.localizedCaseInsensitiveContains(query) || readings.localizedCaseInsensitiveContains(query)
+    }
+}
+
 struct PracticePlan: Codable, Identifiable {
     var purpose: String? = nil
     let id: String

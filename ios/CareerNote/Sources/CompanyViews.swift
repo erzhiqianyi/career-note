@@ -238,12 +238,7 @@ struct ScheduleHomeView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         SectionHeading(title: "今日简报", detail: nil)
                         NavigationLink(value: AppRoute.report(report.id)) {
-                            PhoneCard {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(report.title).font(.headline).foregroundStyle(.primary)
-                                    Text(report.content).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                                }
-                            }
+                            PhoneListRow(title: report.title, subtitle: report.content)
                         }
                         .buttonStyle(.plain)
                     }
@@ -284,10 +279,23 @@ struct CompanyListView: View {
         return date
     }
 
+    private func companyMetadata(_ job: CareerJob) -> String {
+        var parts: [String] = []
+        if let rating = job.rating, rating > 0 { parts.append("评分 \(rating)/5") }
+        parts.append("资料 \(model.state.materials.filter { $0.jobId == job.id }.count) 份")
+        let questionCount = model.state.questionSets.filter { $0.jobId == job.id }
+            .reduce(0) { $0 + $1.questions.filter { $0.category != "占位" }.count }
+        parts.append("题目 \(questionCount) 道")
+        if let next = job.nextAction, !next.isEmpty { parts.append(next) }
+        if let date = job.nextDate, !date.isEmpty { parts.append(String(date.prefix(10))) }
+        return parts.joined(separator: " · ")
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
                 Text("企业").font(.largeTitle.bold())
+                PhoneListSearch(text: $search, prompt: "搜索企业或职位")
                 Toggle("显示已结束的职位", isOn: $showClosed)
                     .font(.subheadline)
                 Toggle("按评分排序", isOn: $sortByRating)
@@ -301,37 +309,10 @@ struct CompanyListView: View {
                 }
                 ForEach(jobs) { job in
                     NavigationLink(value: AppRoute.job(job.id)) {
-                        PhoneCard {
-                            VStack(alignment: .leading, spacing: 9) {
-                                HStack(alignment: .top) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(job.company).font(.headline).foregroundStyle(.primary)
-                                        Text(job.role).font(.subheadline).foregroundStyle(.secondary)
-                                    }
-                                    Spacer(minLength: 4)
-                                    Text(job.status).font(.caption.bold())
-                                        .foregroundStyle(PhoneStyle.accent)
-                                }
-                                if let rating = job.rating, rating > 0 {
-                                    Text(String(repeating: "★", count: min(rating, 5)) + String(repeating: "☆", count: max(0, 5 - rating)))
-                                        .font(.caption).foregroundStyle(.orange)
-                                        .accessibilityLabel("个人评分 \(rating) 星")
-                                }
-                                if let next = job.nextAction, !next.isEmpty {
-                                    Label(next, systemImage: "calendar")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
-                                HStack {
-                                    Text("资料 \(model.state.materials.filter { $0.jobId == job.id }.count) 份")
-                                    let packs = model.state.questionSets.filter { $0.jobId == job.id }
-                                    Text("题目 \(packs.reduce(0) { $0 + $1.questions.count }) 道")
-                                    Spacer()
-                                    if let date = job.nextDate, !date.isEmpty { Text(String(date.prefix(10))) }
-                                }
-                                .font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
+                        PhoneListRow(title: job.company,
+                                     subtitle: job.role,
+                                     metadata: companyMetadata(job),
+                                     status: job.status)
                     }
                     .buttonStyle(.plain)
                 }
@@ -341,7 +322,7 @@ struct CompanyListView: View {
             .padding(.bottom, 24)
         }
         .refreshable { await model.sync() }
-        .searchable(text: $search, prompt: "搜索企业或职位")
+        .scrollDismissesKeyboard(.interactively)
         .background(PhoneStyle.canvas)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -356,7 +337,7 @@ struct CompanyDetailView: View {
         model.state.materials.filter { $0.jobId == job.id }
             .sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
     }
-    private var packs: [QuestionSet] { model.state.questionSets.filter { $0.jobId == job.id } }
+    private var packs: [QuestionSet] { model.state.questionSets.filter { $0.jobId == job.id && $0.hasPracticeQuestions } }
     private var attempts: [SavedAttempt] {
         let ids = Set(packs.map(\.id))
         return model.state.attempts.filter { ids.contains($0.questionSetId) }
@@ -454,14 +435,9 @@ struct CompanyDetailView: View {
             if materials.isEmpty { PhoneCard { Text("还没有这家公司的准备资料。").foregroundStyle(.secondary) } }
             ForEach(materials) { material in
                 NavigationLink(value: AppRoute.companyMaterial(material.id)) {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(material.title).font(.headline).foregroundStyle(.primary)
-                            Text([material.kind, material.reviewStatus ?? "待核对", String((material.createdAt ?? "").prefix(10))]
-                                .filter { !$0.isEmpty }.joined(separator: " · "))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
+                    PhoneListRow(title: material.title,
+                                 metadata: [material.kind, material.reviewStatus ?? "待核对", String((material.createdAt ?? "").prefix(10))]
+                                    .filter { !$0.isEmpty }.joined(separator: " · "))
                 }
                 .buttonStyle(.plain)
             }
@@ -473,18 +449,10 @@ struct CompanyDetailView: View {
             SectionHeading(title: "公司练习", detail: "\(packs.reduce(0) { $0 + $1.questions.count }) 道题")
             if packs.isEmpty { PhoneCard { Text("还没有这家公司的题组。").foregroundStyle(.secondary) } }
             ForEach(packs) { pack in
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(pack.title).font(.headline)
-                    Text("\(pack.questions.count) 道题 · 已回答 \(Set(attempts.filter { $0.questionSetId == pack.id }.map(\.questionId)).count) 道")
-                        .font(.caption).foregroundStyle(.secondary)
-                    if let scenario = pack.scenario, !scenario.isEmpty {
-                        Text(scenario).font(.caption).foregroundStyle(.secondary)
-                    }
-                    ForEach(Array(pack.questions.enumerated()), id: \.element.id) { index, question in
-                        PracticeQuestionLink(model: model, pack: pack, question: question, number: index + 1)
-                    }
-                }
-                .padding(.top, 6)
+                NavigationLink(value: AppRoute.questionSet(pack.id)) {
+                    PhoneListRow(title: pack.title,
+                                 metadata: "\(pack.questions.count) 道题 · 已回答 \(Set(attempts.filter { $0.questionSetId == pack.id }.map(\.questionId)).count) 道")
+                }.buttonStyle(.plain)
             }
         }
     }
@@ -512,7 +480,7 @@ struct CompanyDetailView: View {
                 SectionHeading(title: "相关分析", detail: "\(reports.count) 份")
                 ForEach(reports.sorted { $0.date > $1.date }) { report in
                     NavigationLink(value: AppRoute.report(report.id)) {
-                        PhoneCard { Text(report.title).foregroundStyle(.primary) }
+                        PhoneListRow(title: report.title, metadata: report.date)
                     }
                 }
             }
