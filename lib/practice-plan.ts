@@ -60,6 +60,11 @@ export type PracticePlan = PracticePlanInput & {
   content?: PracticePlanContent; createdAt: string; updatedAt: string;
 };
 
+/** A cleared set keeps only "占位" rows because saved sets need at least one question; it has nothing to practice. */
+export function hasPracticeQuestions(pack: { questions: { category?: string }[] }) {
+  return pack.questions.some(question => question.category !== '占位');
+}
+
 /** Source interview evidence alone does not make a general curriculum company-specific. */
 export function isCompanyPracticePlan(plan: PracticePlan, packs: {id: string; jobId?: string; questions: {id: string}[]}[]) {
   if (plan.jobId) return true;

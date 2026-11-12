@@ -8,7 +8,7 @@ const result = await build({
   stdin: {
     contents: `import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import ReviewWorkspace, {PracticeWorkspace} from './components/review-workspace';
  const q = (id,category,title)=>({id,category,title,questionJa:title});
- const data={today:'2026-11-06',questionSets:[{id:'general',jobId:'builtin:general',questions:[q('grammar','日语表达基础','Daily grammar fixture'),q('intro','自己紹介','Interview introduction fixture'),q('fair','フェア基本練習','Fair greeting fixture'),q('fair-full','総合練習','Fair full fixture')]}],practicePlans:[],practicePlanReviews:[],attempts:[],jobs:[],reviews:[],reports:[],tasks:[],materials:[]};
+ const data={today:'2026-11-06',questionSets:[{id:'general',jobId:'builtin:general',questions:[q('grammar','日语表达基础','Daily grammar fixture'),q('intro','自己紹介','Interview introduction fixture'),q('fair','フェア基本練習','Fair greeting fixture'),q('fair-full','総合練習','Fair full fixture')]},{id:'cleared',jobId:'job-cleared',title:'Cleared fixture',questions:[q('intro','占位','題組已清空')]},{id:'real',jobId:'job-real',title:'Real company fixture',questions:[q('intro','自己紹介','Real question')]}],practicePlans:[],practicePlanReviews:[],attempts:[],jobs:[],reviews:[],reports:[],tasks:[],materials:[]};
  export const practice=()=>renderToStaticMarkup(React.createElement(PracticeWorkspace,{data,reload:async()=>{}}));
  export const render=hash=>renderToStaticMarkup(React.createElement(ReviewWorkspace,{data,hash,reload:async()=>{},openMaterial(){},openReport(){}}));`,
     resolveDir: process.cwd(),
@@ -47,4 +47,11 @@ test('review separates company rehearsal from actual interviews; practice uses t
   assert.match(topics, /転職フェア练习 · 2 道题/);
   assert.ok(render('#interview-review/japanese').includes('专题计划与练习回顾'));
   assert.ok(render('#interview-review/interviews').includes('还没有面试记录'));
+});
+test('company rehearsal lists real question sets and offers to delete cleared ones', () => {
+  const page = render('#interview-review/preparation');
+  assert.ok(page.includes('Real company fixture'));
+  assert.ok(!page.includes('Cleared fixture'));
+  assert.ok(page.includes('删除 1 个已清空题组'));
+  assert.ok(!practice().includes('已清空题组'));
 });

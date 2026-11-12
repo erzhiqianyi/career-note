@@ -502,3 +502,16 @@ void test('stable question references resolve exact content and survive reorder,
  assert.ok((await read()).questions.find(q=>q.id==='new').questionNumber>number);
  for(const bad of ['0','-1','Q','1.1','Q9007199254740992']) assert.equal((await send('questions/by-number?number='+bad)).status,400);
 });
+void test('deleting cleared question sets keeps real practice and answered sets',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const jobs=['cleared','answered','real'].map(id=>({id,company:id,role:'Engineer'}));
+ const question=category=>({id:'intro',title:'Introduction',questionJa:'自己紹介をお願いします。',meaning:'Introduce yourself',why:'Practice',outline:'Experience',followUps:'Why?',category,targetSeconds:60});
+ const pack=(jobId,category)=>({id:'pack-'+jobId,jobId,title:'Practice',scenario:'Interview',plan:'Practice',sourceNotes:'Test source',questions:[question(category)]});
+ assert.equal((await send('import',{schemaVersion:1,jobs,questionSets:[pack('cleared','占位'),pack('answered','占位'),pack('real','Opening')],completeTaskIds:[]})).status,200);
+ assert.equal((await send('attempts',{questionSetId:'pack-answered',questionId:'intro',answer:'My answer',language:'日语',durationSeconds:45})).status,200);
+ assert.deepEqual(await (await send('question-sets/delete-cleared',{})).json(),{deleted:1});
+ const state=await (await send('state')).json();
+ assert.deepEqual(state.questionSets.map(item=>item.id).sort(),['pack-answered','pack-real']);
+ assert.equal(state.jobs.length,3);
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[pack('cleared','Opening')],completeTaskIds:[]})).status,200);
+});

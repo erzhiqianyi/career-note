@@ -6,6 +6,7 @@ import { useLocale } from '@/components/locale-provider';
 import StatusMark from '@/components/status-mark';
 import { workspaceDay } from '@/components/today-calendar';
 import type { Job, Material, Report, State } from '@/lib/career';
+import { hasPracticeQuestions } from '@/lib/practice-plan';
 
 /**
  * Everything that happened in the workspace on one day: what agents (scheduled or not) brought in,
@@ -39,7 +40,7 @@ export function collectBrief(data: State, date: string): Brief {
     addedJobs: data.jobs.filter((j) => onDay(j.history[0]?.at)),
     progressed: data.jobs.flatMap((job) => job.history.slice(1).filter((h) => onDay(h.at)).map((h) => ({ job, status: h.status }))),
     materials: data.materials.filter((m) => onDay(m.createdAt)),
-    questionSets: data.questionSets.filter((q) => onDay(q.updatedAt || q.createdAt)),
+    questionSets: data.questionSets.filter((q) => hasPracticeQuestions(q) && onDay(q.updatedAt || q.createdAt)),
     attempts: data.attempts.filter((a) => onDay(a.createdAt)),
     reviews: data.reviews.filter((r) => onDay(r.createdAt)),
     reports: data.reports.filter((r) => r.date === date && !r.sourceNotes?.startsWith('career-event-v1:')),

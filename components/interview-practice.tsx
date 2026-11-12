@@ -1,5 +1,5 @@
 'use client';
-import { practiceAgentPrompt } from '@/lib/practice-plan';
+import { hasPracticeQuestions, practiceAgentPrompt } from '@/lib/practice-plan';
 import { AnswerFlowView } from './answer-flow';
 import { interviewSessionHash, reportInterviewId, reviewPracticeContext } from '@/lib/interview-review-navigation';
 import { RecordBack, useRecordPage } from './record-page';
@@ -151,7 +151,7 @@ export default function InterviewPractice({
   const { t: tr, locale } = useLocale();
   const savedPacks = routeBase.endsWith('/japanese')
     ? data.questionSets.filter(pack => pack.jobId === BANK_JOB_ID).map(pack => ({ ...pack, questions: pack.questions.filter(q => q.category === '日语表达基础') })).filter(pack => pack.questions.length)
-    : data.questionSets;
+    : data.questionSets.filter(hasPracticeQuestions);
   const availablePacks = routeBase.endsWith('/japanese') ? savedPacks : [...builtinQuestionSets, ...savedPacks];
   const day = (v: string) => (v ? v.slice(0, 10).replaceAll('-', '.') : '—');
   // 准备资料（企业研究、志望动机、面试准备等）和练习题同属一家公司的面试准备，放在同一页。
@@ -437,7 +437,7 @@ export default function InterviewPractice({
   if (!company && !practiceRecord && !guide && !help) {
     const closed = ['未通过', '已撤回'];
     const progress = (jobId: string) => {
-      const latest = data.questionSets.filter(p => p.jobId === jobId).sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))[0];
+      const latest = data.questionSets.filter(p => p.jobId === jobId && hasPracticeQuestions(p)).sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))[0];
       const answered = latest ? new Set(data.attempts.filter(a => a.questionSetId === latest.id).map(a => a.questionId)).size : 0;
       return latest ? { answered, total: latest.questions.length } : null;
     };

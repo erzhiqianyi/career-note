@@ -117,6 +117,7 @@ import {
   signOutCareer,
 } from '@/lib/career-auth';
 import { setAuthToken } from '@/lib/career';
+import { hasPracticeQuestions } from '@/lib/practice-plan';
 const nav = [
   { label: '今日准备', icon: LayoutDashboard },
   { label: '日程', icon: CalendarDays },
@@ -772,7 +773,7 @@ export default function Home() {
     const firstJob = openJobs[0];
     const noNext = openJobs.find((j) => !j.nextAction);
     const practiced = new Set(data.attempts.map((a) => a.questionSetId));
-    const unpracticed = data.questionSets.find((q) => !practiced.has(q.id));
+    const unpracticed = data.questionSets.find((q) => hasPracticeQuestions(q) && !practiced.has(q.id));
     const todayReport = data.reports.some((r) => r.date === data.today && !r.sourceNotes?.startsWith('career-event-v1:'));
     const steps: [string, string, string, string?][] = [];
     if (!hasBasics || !hasEmployment)

@@ -1,4 +1,4 @@
-import { agentPracticeSchema } from '../lib/practice-plan';
+import { agentPracticeSchema, hasPracticeQuestions } from '../lib/practice-plan';
 import { SpeechTranscriptionError, type SpeechAI, ensureSpeechSchema, startSpeechJob, getSpeechJob, speechJobStatus, recognizeSpeechChunk, completeSpeechJob, speechUsage, SPEECH_MAX_WAV_BYTES } from './speech-transcription';
 import { answerFlowSchema, type AnswerFlow } from '../lib/answer-flow';
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
@@ -659,6 +659,19 @@ async function deleteJobs(db: Workspace, env: Env, uid: string, data: Record<str
     ]);
   }
   return { deleted: selected.size };
+}
+
+// Only sets with nothing left to practice and no saved answers qualify, so real work cannot be lost here.
+async function deleteClearedQuestionSets(db: Workspace, env: Env, uid: string) {
+  const answered = new Set((await records(db, 'attempts')).map(item => String(item.questionSetId)));
+  const ids = (await records(db, 'questionSets'))
+    .filter(pack => !hasPracticeQuestions(pack as unknown as { questions: { category?: string }[] }) && !answered.has(String(pack.id)))
+    .map(pack => String(pack.id));
+  if (ids.length) {
+    await db.connection.batch(ids.map(id => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(db, 'questionSets'), id)));
+    if (env.CAREER_AUDIO) await deleteReferenceSpeechForPacks(env.CAREER_AUDIO, uid, ids).catch(() => undefined);
+  }
+  return { deleted: ids.length };
 }
 
 async function requestTask(db: Workspace, data: Record<string, unknown>) {
@@ -2058,6 +2071,11 @@ const handler = async (
     case '/api/career/jobs/delete':
       ensureScopes(context, ['career:write']);
       result = await deleteJobs(db, env, context.uid, payload);
+      break;
+    case '/api/career/question-sets/delete-cleared':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '已清空题组只能由本人在应用中删除');
+      result = await deleteClearedQuestionSets(db, env, context.uid);
       break;
     case '/api/career/tasks':
       ensureScopes(context, ['agent:write']);

@@ -101,6 +101,7 @@ void test('MCP job deletion requires career:write, current revisions and explici
   const denied = await rpc(reader, 'tools/call', { name: 'career_delete_jobs', arguments: { jobs } });
   assert.ok(denied.error || denied.result?.isError);
   const writer = (await authorizeAgent(mf, { scopes: ['career:read', 'career:write'] })).issued.access_token;
+  assert.equal((await post(mf, '/api/career/question-sets/delete-cleared', {}, { Authorization: 'Bearer ' + writer })).status, 403);
   const tool = (await rpc(writer, 'tools/list')).result.tools.find(tool => tool.name === 'career_delete_jobs');
   assert.ok(tool);
   assert.equal(tool.annotations.destructiveHint, true);

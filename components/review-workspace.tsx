@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Material, Report, State } from '@/lib/career';
 import { api } from '@/lib/career';
 import {
+  hasPracticeQuestions,
   isCompanyPracticePlan,
   practiceAgentPrompt,
   practicePlanProgress,
@@ -55,7 +56,7 @@ export default function ReviewWorkspace({
         />
         <PracticeWorkspace data={data} reload={reload} companyOnly />
         {data.questionSets
-          .filter((p) => p.jobId !== 'builtin:general')
+          .filter((p) => p.jobId !== 'builtin:general' && hasPracticeQuestions(p))
           .map((p) => (
             <a
               className="panel review-entry"
@@ -115,6 +116,9 @@ export function PracticeWorkspace({
   const [minutes, setMinutes] = useState(20);
   const [purpose, setPurpose] = useState<'interview' | 'japanese'>('interview');
   const [jobId, setJobId] = useState('');
+  const clearedSets = companyOnly
+    ? data.questionSets.filter((pack) => !hasPracticeQuestions(pack)).length
+    : 0;
   const plans = (data.practicePlans || [])
     .filter(
       (plan) => isCompanyPracticePlan(plan, data.questionSets) === companyOnly,
@@ -304,6 +308,26 @@ export function PracticeWorkspace({
             取消
           </button>
         </form>
+      )}
+      {clearedSets > 0 && (
+        <button
+          className="secondary"
+          disabled={busy}
+          onClick={() => {
+            if (!window.confirm(`永久删除 ${clearedSets} 个已清空的题组？有回答记录的题组会保留。`))
+              return;
+            void run(async () => {
+              const { deleted } = await api<{ deleted: number }>(
+                'question-sets/delete-cleared',
+                {},
+              );
+              setNotice(`已删除 ${deleted} 个已清空的题组。`);
+              await reload();
+            });
+          }}
+        >
+          删除 {clearedSets} 个已清空题组
+        </button>
       )}
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
