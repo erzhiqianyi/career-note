@@ -505,15 +505,6 @@ export default function Home() {
       removeAuth();
     };
   }, [refreshAuth, reload, invalidateSession]);
-  useEffect(() => {
-    if (!auth) return;
-    const timer = setInterval(() => {
-      void refreshAuth().then((ok) => {
-        if (ok) void reload();
-      });
-    }, 30000);
-    return () => clearInterval(timer);
-  }, [auth, refreshAuth, reload]);
   const refreshMcpTokens = useCallback(async () => {
     const epoch = sessionEpoch.current;
     try {

@@ -4,6 +4,7 @@ import { answerFlowSchema, type AnswerFlow } from '../lib/answer-flow';
 import { ensurePersonalizedSchema, listPersonalized, savePersonalized, deletePersonalized, publishResume, revokePublication, publicResumeResponse } from './personalized-resume';
 import { ensureMaterialPublicationSchema, listMaterialPublications, publishMaterial, revokeMaterialPublication, publicMaterialResponse } from './material-publication';
 import { ensureMaterialFilesSchema, materialFileMeta, materialFileKey, saveMaterialFile, deleteMaterialFile, type MaterialFileKind } from './material-files';
+import { ensureStateRevision, ensureStateRevisionTriggers, stateRevision } from './state-revision';
 import { ensureResumeSchema, readResume, writeResume, deleteResumeDocument, resumeHistory, resumeVersion, resumeOverview, listResume, resumeDetails, resumeDocumentChunk } from './resume';
 import { ensureArticleSchema, listArticles, getArticle, saveArticle, articleHtml, articleSitemap } from './articles';
 import { createMcpAppServer, AppServerError, type McpAppServer, type Origins, type ToolContext } from '@ninomae/mcp-app-server';
@@ -175,12 +176,35 @@ async function ensureSchema(db: D1Database, gateway: McpAppServer): Promise<void
   await db.exec(
     `CREATE TABLE IF NOT EXISTS records (kind TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (kind,id));`,
   );
+  await db.exec(
+    `CREATE INDEX IF NOT EXISTS records_missing_company_number ON records(kind) WHERE json_type(body, '$.companyNumber') IS NULL OR json_type(body, '$.companyNumber') = 'null';`,
+  );
+  await ensureStateRevision(db);
   await db.exec(`CREATE TABLE IF NOT EXISTS question_numbers (workspace TEXT NOT NULL, number INTEGER NOT NULL, pack_id TEXT NOT NULL, question_id TEXT NOT NULL, PRIMARY KEY (workspace, number), UNIQUE (workspace, pack_id, question_id));`);
   await db.exec(`CREATE TABLE IF NOT EXISTS meta (id TEXT PRIMARY KEY, body TEXT NOT NULL);`);
+  await ensureStateRevisionTriggers(db, ['records', 'question_numbers', 'meta']);
   // Who each MCP grant belongs to, in human terms: refreshed at every consent so career_get_connection_info can name the account.
   await db.exec(`CREATE TABLE IF NOT EXISTS mcp_owners (uid TEXT PRIMARY KEY, email TEXT, display_name TEXT, provider TEXT, updated_at TEXT NOT NULL);`);
   await gateway.ensureSchema();
   await ensureActivitySchema(db);
+}
+
+const STATE_CACHE_LIMIT = 8;
+const stateCache = new Map<string, { revision: string; day: string; body: string }>();
+async function cachedState(db: Workspace, uid: string, resumeSummary: boolean): Promise<string> {
+  const key = JSON.stringify([db.namespace, uid, resumeSummary]);
+  const revision = await stateRevision(db.connection);
+  const day = today();
+  const hit = stateCache.get(key);
+  if (hit && revision && hit.revision === revision && hit.day === day) return hit.body;
+  const body = JSON.stringify(await state(db, uid, resumeSummary));
+  // state() may itself write (first company/question numbers); cache only a snapshot nothing changed under.
+  if (revision && (await stateRevision(db.connection)) === revision) {
+    stateCache.delete(key);
+    stateCache.set(key, { revision, day, body });
+    while (stateCache.size > STATE_CACHE_LIMIT) stateCache.delete(stateCache.keys().next().value as string);
+  }
+  return body;
 }
 
 // Request-local scope derived only from the verified identity, never from input.
@@ -237,6 +261,8 @@ async function nextCompanyNumber(db: Workspace): Promise<number> {
   return Number(row.body);
 }
 
+// The WHERE clause must match records_missing_company_number exactly so SQLite answers it from that
+// partial index (normally empty) instead of reading every job row on every state request.
 async function ensureCompanyNumbers(db: Workspace): Promise<void> {
   const kind = workspaceKey(db, 'jobs');
   const missing = await db.connection.prepare(`
@@ -349,7 +375,7 @@ function validateTaskKind(kind: string): kind is TaskKind {
 }
 
 async function saveProfile(db: Workspace, data: Record<string, unknown>) {
-  const old = (await state(db)).profile;
+  const old = await getProfile(db);
   if (data.revision !== old.revision) throw new AppError(400, '资料已更新，请刷新后重新编辑');
   const result = {
     summary: validateString(data.summary, 'summary', { max: 100000 }),
@@ -622,7 +648,8 @@ async function deleteJobs(db: Workspace, env: Env, uid: string, data: Record<str
     ...materials.map(item => db.connection.prepare("DELETE FROM material_files WHERE owner=? AND material_id=? AND kind='pdf'").bind(db.namespace, item.id)),
   ];
   const results = await db.connection.batch(statements);
-  if (results.slice(0, selected.size).some(result => result.meta.changes !== 1))
+  // D1 counts trigger writes (state_revision) in meta.changes, so test for "deleted nothing" rather than exactly 1.
+  if (results.slice(0, selected.size).some(result => !result.meta.changes))
     throw new AppError(409, '职位已更新，请刷新后重新选择');
   if (env.CAREER_AUDIO) {
     await Promise.allSettled([
@@ -1807,7 +1834,8 @@ const handler = async (
 
   if (pathname === '/api/career/state' && method === 'GET') {
     ensureScopes(context, ['career:read']);
-    return jsonResponse(await state(db, context.uid, url.searchParams.get('resumeView') === 'summary'));
+    const body = await cachedState(db, context.uid, url.searchParams.get('resumeView') === 'summary');
+    return new Response(body, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
   }
 
   if (method === 'GET' && pathname === '/api/career/personalized-resumes') {

@@ -245,6 +245,22 @@ void test('existing companies receive numbers in insertion order before another 
  assert.equal(after.find(j=>j.id==='new-job').companyNumber,3);
  assert.equal(after.find(j=>j.id==='legacy-a').companyNumber,1);
 });
+void test('cached state follows every write, including ones made outside the app',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const first=await (await send('state')).text();
+ assert.equal(await (await send('state')).text(),first);
+ const db=await mf.getD1Database('CAREER_DB');
+ const revision=async()=>(await db.prepare('SELECT n FROM state_revision WHERE id=1').first()).n;
+ const before=await revision();
+ assert.equal(await (await send('state')).text(),first,'reading state must not bump the revision');
+ assert.equal(await revision(),before);
+ await db.prepare('INSERT INTO records(kind,id,body) VALUES (?1,?2,?3)').bind('tasks','direct-task',JSON.stringify({id:'direct-task',title:'Direct'})).run();
+ assert.ok((await (await send('state')).json()).tasks.some(item=>item.id==='direct-task'));
+ await db.prepare("INSERT INTO meta(id,body) VALUES ('profile',?1) ON CONFLICT(id) DO UPDATE SET body=excluded.body").bind(JSON.stringify({summary:'direct profile',revision:5})).run();
+ assert.equal((await (await send('state')).json()).profile.summary,'direct profile');
+ await db.prepare("DELETE FROM records WHERE kind='tasks' AND id='direct-task'").run();
+ assert.ok(!(await (await send('state')).json()).tasks.some(item=>item.id==='direct-task'));
+});
 void test('configured Google mode exposes only public config and rejects anonymous/forged access',async t=>{
  const mf=await worker(t,{FIREBASE_PROJECT_ID:'test-project',FIREBASE_API_KEY:'public-key',FIREBASE_AUTH_DOMAIN:'test.firebaseapp.com',FIREBASE_APP_ID:'app',CAREER_ALLOWED_EMAILS:'private@example.com'});
  const response=await mf.dispatchFetch('http://local/api/career/auth/config');const config=await response.json();

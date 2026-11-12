@@ -1,3 +1,4 @@
+import { ensureStateRevisionTriggers } from './state-revision';
 import { resumeKinds, validateResume, type ResumeEntry } from '../lib/resume';
 // Must stay byte-identical to what SQLite stores in sqlite_master, which is how an up-to-date index is recognised.
 const RESUME_SINGLETON_INDEX = `CREATE UNIQUE INDEX resume_singleton_language ON resume_entries(owner,kind,coalesce(json_extract(body,'$.language'),'ja')) WHERE archived=0 AND kind IN ('basics')`;
@@ -18,6 +19,9 @@ export async function ensureResumeSchema(db: D1Database) {
     if (current) await db.exec(`DROP INDEX resume_singleton_language;`);
     await db.exec(`${RESUME_SINGLETON_INDEX};`);
   }
+  // Lets readResume walk one owner's rows in display order instead of scanning and sorting the table.
+  await db.exec(`CREATE INDEX IF NOT EXISTS resume_entries_owner_order ON resume_entries(owner,kind,updated_at,id);`);
+  await ensureStateRevisionTriggers(db, ['resume_entries']);
   await db.exec(
     `CREATE TABLE IF NOT EXISTS resume_history (owner TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(owner,id,revision));`,
   );
