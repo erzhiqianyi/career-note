@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import type { Material } from '@/lib/career';
 import { plainFormText, plainJapanese } from '@/lib/japanese-readings';
@@ -34,4 +34,24 @@ export function ApplicationReason({ material }: { material: Material }) {
     {button('body', '复制全文（无假名）', plainFormText(material.content))}
   </div>
   </>;
+}
+
+/** One-click copy of a job's ご応募理由 from a list row, next to the posting it gets pasted into. */
+export function ReasonCopyButton({ reason, company }: { reason: string; company: string }) {
+  const { t: tr } = useLocale();
+  const [state, setState] = useState<'' | 'copied' | 'failed'>('');
+  useEffect(() => {
+    if (!state) return;
+    const timer = setTimeout(() => setState(''), 2000);
+    return () => clearTimeout(timer);
+  }, [state]);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(reason); setState('copied'); }
+    catch { setState('failed'); }
+  };
+  const label = tr(state === 'copied' ? '已复制' : state === 'failed' ? '复制失败' : '复制应募理由');
+  return <button type="button" className="text-button reason-copy-button" lang="ja" title={reason} aria-label={label + ' · ' + company} onClick={() => void copy()}>
+    {state === 'copied' ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+    <span>{label}</span>
+  </button>;
 }
