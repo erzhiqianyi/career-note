@@ -50,8 +50,9 @@ export function ReasonCopyButton({ reason, company }: { reason: string; company:
     catch { setState('failed'); }
   };
   const label = tr(state === 'copied' ? '已复制' : state === 'failed' ? '复制失败' : '复制应募理由');
+  // The visible label stays the form field's own name; the icon carries the copy action and its result.
   return <button type="button" className="text-button reason-copy-button" lang="ja" title={reason} aria-label={label + ' · ' + company} onClick={() => void copy()}>
+    <span>{state === 'failed' ? label : '応募理由'}</span>
     {state === 'copied' ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-    <span>{label}</span>
   </button>;
 }

@@ -598,7 +598,7 @@ export default function InterviewPractice({
           { key: 'status', label: tr('投递状态'), width: 'minmax(96px,0.8fr)', sortable: true },
           { key: 'schedule', label: tr('面试 / 跟进'), width: 'minmax(0,1.2fr)', sortable: true },
           { key: 'prep', label: tr('准备阶段'), width: 'minmax(120px,1.2fr)', sortable: true },
-          { key: 'posting' as PrepColumn, label: tr('招聘原文'), width: '132px' },
+          { key: 'posting' as PrepColumn, label: tr('招聘原文'), width: '112px' },
         ]}>{pageJobs.map(job => {
           const prep = prepOf(job);
           const stage = prepStage(prep);
