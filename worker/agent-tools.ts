@@ -10,6 +10,7 @@ import { preferenceGroups } from '../lib/job-preferences';
 import { jobStatuses } from '../lib/job-status';
 import { INTERVIEW_GUIDE, interviewUpdateSchema } from '../lib/interview-session';
 import { PRACTICE_PLAN_GUIDE, agentPracticeSchema, practiceContextSchema, practicePlanInputSchema, practicePlanContentSchema, practicePlanReviewSchema } from '../lib/practice-plan';
+import { MAX_QUESTIONS_PER_SET } from '../lib/question-set-limits';
 
 export const CAREER_SCOPES = {
   'career:read': { description: 'Read profile, resume, jobs, materials, tasks and practice records', required: true },
@@ -46,15 +47,15 @@ const questionSet = z.object({
   sourceNotes: z.string(),
   candidateContext: z.string().optional(),
   communicationGuide: z.string().optional(),
-  questions: z.array(question).min(1).max(40),
+  questions: z.array(question).min(1).max(MAX_QUESTIONS_PER_SET),
 }).passthrough();
 
 // Patch questions of an existing set by id; omitted questions and set fields stay as saved.
 const questionSetPatch = z.object({
   id: z.string().describe('Existing question set id.'),
-  questions: z.array(question.partial().required({ id: true })).max(40).optional()
+  questions: z.array(question.partial().required({ id: true })).max(MAX_QUESTIONS_PER_SET).optional()
     .describe('Fields merge over the saved question with the same id; a new id appends and needs every required field.'),
-  removeQuestionIds: z.array(z.string()).max(40).optional().describe('Questions to drop; answered question ids cannot be removed.'),
+  removeQuestionIds: z.array(z.string()).max(MAX_QUESTIONS_PER_SET).optional().describe('Questions to drop; answered question ids cannot be removed.'),
 }).strict();
 
 const bundle = z

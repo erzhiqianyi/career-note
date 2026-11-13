@@ -30,6 +30,7 @@ import { InterviewError, listInterviews, getInterview, getInterviewVersion, crea
 import { interviewSummary } from '../lib/interview-session';
 import { PracticePlanError, createPracticePlan, editPracticePlan, getPracticePlan, listPracticePlans, practicePlanDetail,
   requestPracticePlanTask, savePracticePlan, savePracticePlanReview, setPracticePlanStatus, validatePracticeContext, type PracticePlanStore } from './practice-plans';
+import { MAX_QUESTIONS_PER_SET } from '../lib/question-set-limits';
 
 type JobPriority = '高' | '普通' | '低';
 type McpScope = 'career:read' | 'career:write' | 'agent:write' | 'admin';
@@ -739,8 +740,8 @@ type ParsedQuestion = {
 function parseQuestionSetQuestions(questions: unknown[]) {
   const parsed: ParsedQuestion[] = [];
   const seen = new Set<string>();
-  if (!Array.isArray(questions) || questions.length < 1 || questions.length > 40)
-    throw new AppError(400, '题组需要 1–40 个问题');
+  if (!Array.isArray(questions) || questions.length < 1 || questions.length > MAX_QUESTIONS_PER_SET)
+    throw new AppError(400, `题组需要 1–${MAX_QUESTIONS_PER_SET} 个问题`);
 
   for (const question of questions) {
     if (typeof question !== 'object' || question === null) throw new AppError(400, '问题必须是对象');
@@ -836,8 +837,10 @@ async function patchQuestionSet(db: Workspace, data: Record<string, unknown>, pr
   if (!existing) throw new AppError(400, '要修改的题组不存在；新题组请用 questionSets 创建');
   const patches = data.questions ?? [];
   const removals = data.removeQuestionIds ?? [];
-  if (!Array.isArray(patches) || patches.length > 40) throw new AppError(400, 'questions 必须是最多 40 条的数组');
-  if (!Array.isArray(removals) || removals.length > 40) throw new AppError(400, 'removeQuestionIds 必须是最多 40 条的数组');
+  if (!Array.isArray(patches) || patches.length > MAX_QUESTIONS_PER_SET)
+    throw new AppError(400, `questions 必须是最多 ${MAX_QUESTIONS_PER_SET} 条的数组`);
+  if (!Array.isArray(removals) || removals.length > MAX_QUESTIONS_PER_SET)
+    throw new AppError(400, `removeQuestionIds 必须是最多 ${MAX_QUESTIONS_PER_SET} 条的数组`);
   if (patches.length + removals.length === 0) throw new AppError(400, '题目修改至少需要一条 questions 或 removeQuestionIds');
   const removeIds = new Set(removals.map((value) => validateString(value, 'removeQuestionIds', { required: true, max: 120 })));
   const current = (Array.isArray(existing.questions) ? existing.questions : []) as Record<string, unknown>[];

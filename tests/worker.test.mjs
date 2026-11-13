@@ -348,6 +348,18 @@ void test('one company question set is updated in place while answers keep their
  assert.equal(state.attempts.find(a=>a.id===attempt.id).question.title,'Introduction');
  assert.equal(state.attempts.find(a=>a.id===attempt.id).question.sampleAnswer,question.sampleAnswer);
 });
+void test('a personal question set can grow past the former 40-question limit up to 200',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const base={title:'Question',questionJa:'質問です。',meaning:'Question',why:'Fixture',outline:'Outline',followUps:'Follow up',category:'General',targetSeconds:60};
+ const pack={id:'large-general-pack',jobId:'builtin:general',title:'Large practice bank',scenario:'General practice',plan:'Practice by topic',sourceNotes:'Disposable test data'};
+ const questions=(count)=>Array.from({length:count},(_,index)=>({...base,id:`q-${index+1}`,title:`Question ${index+1}`}));
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[{...pack,questions:questions(41)}],completeTaskIds:[]})).status,200);
+ const state=await (await send('state')).json();
+ assert.equal(state.questionSets[0].questions.length,41);
+ const tooLarge=await send('import',{schemaVersion:1,questionSets:[{...pack,questions:questions(201)}],completeTaskIds:[]});
+ assert.equal(tooLarge.status,400);
+ assert.match((await tooLarge.json()).error,/1–200/);
+});
 void test('question set patches change one question and keep the rest of the set',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  const patch=(item)=>send('import',{schemaVersion:1,questionSetPatches:[item],completeTaskIds:[]});

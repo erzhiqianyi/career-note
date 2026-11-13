@@ -259,11 +259,15 @@ void test('MCP schema is public and scope-annotated without exposing user data',
   assert.equal(history.inputSchema.properties.id.type, 'string');
   for (const name of ['career_preview_import', 'career_import']) {
     const input = schema.tools.find((tool) => tool.name === name).inputSchema;
-    const answer = input.properties.bundle.properties.questionSets.items.properties.questions.items.properties.sampleAnswer;
+    const questions = input.properties.bundle.properties.questionSets.items.properties.questions;
+    assert.equal(questions.maxItems, 200);
+    const answer = questions.items.properties.sampleAnswer;
     assert.equal(answer.type, 'string');
     assert.equal(answer.maxLength, 30000);
     const patch = input.properties.bundle.properties.questionSetPatches.items;
     assert.deepEqual(patch.required, ['id']);
+    assert.equal(patch.properties.questions.maxItems, 200);
+    assert.equal(patch.properties.removeQuestionIds.maxItems, 200);
     assert.deepEqual(patch.properties.questions.items.required, ['id']);
     const flow = patch.properties.questions.items.properties.answerFlow;
     assert.equal(flow.properties.version.const, 1);
