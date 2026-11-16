@@ -10,16 +10,16 @@ const snapshot = () => window.location.hash;
 const serverSnapshot = () => '';
 
 /** Record views have browser history while unsaved edits remain local. */
-export function useRecordPage<T>(base: string, view: string, resolve: (id: string) => T | null, identify: (value: T) => string) {
+export function useRecordPage<T>(base: string, view: string, resolve: (id: string) => T | null, identify: (value: T) => string, fallbackReturnTo?: (value: T) => string) {
   const prefix = `${base}/${view}/`;
   const hash = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
   const [cache, setCache] = useState<Map<string, T>>(() => new Map());
-  const [returnTo, setReturnTo] = useState(base);
   let id: string | null = null;
   if (hash.startsWith(prefix)) {
     try { id = decodeURIComponent(hash.slice(prefix.length)); } catch { /* malformed route */ }
   }
   const value = id === null ? null : cache.get(id) ?? resolve(id);
+  const [returnTo, setReturnTo] = useState(() => value && fallbackReturnTo ? fallbackReturnTo(value) : base);
   const setValue = (action: SetStateAction<T | null>) => {
     const next = typeof action === 'function' ? (action as (v: T | null) => T | null)(value) : action;
     if (next) {

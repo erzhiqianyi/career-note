@@ -114,6 +114,16 @@ export function interviewFlowOf(question: Pick<Question, 'id' | 'title' | 'categ
   if (/経験|经历|项目|プロジェクト|職歴|前職|上流|work-style|story/.test(text)) return 'experience';
   return 'general';
 }
+export function interviewQuestionReturnHash(
+  routeBase: string,
+  jobId: string | undefined,
+  jobs: Array<Pick<Job, 'id' | 'companyNumber'>>,
+) {
+  const job = jobs.find(item => item.id === jobId);
+  return routeBase === '#interview-review' && job
+    ? routeBase + '/company/' + encodeURIComponent(String(job.companyNumber || job.id))
+    : routeBase;
+}
 const RECORD_MAX_SECONDS = 600;
 const JOB_PAGE_SIZE = 20;
 const fmtClock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -233,7 +243,10 @@ export default function InterviewPractice({
   const [practiceRecord, setPracticeRecord] = useRecordPage<string>(routeBase, 'question', id => {
     const [p, q] = id.split('|');
     return availablePacks.some(pack => pack.id === p && pack.questions.some(question => question.id === q)) ? id : null;
-  }, id => id);
+  }, id => id, id => {
+    const questionPack = availablePacks.find(pack => pack.id === id.split('|')[0]);
+    return interviewQuestionReturnHash(routeBase, questionPack?.jobId, data.jobs);
+  });
   const [guide, setGuide] = useRecordPage<string>(routeBase, 'guide', id => availablePacks.some(p => p.id === id) ? id : null, id => id);
   const routePack = help ? availablePacks.find(p => p.id === help.split('|')[0]) : guide ? availablePacks.find(p => p.id === guide) : practiceRecord ? availablePacks.find(p => p.id === practiceRecord.split('|')[0]) : undefined;
   const jobId = routePack ? (routePack.jobId || BANK_JOB_ID) : company || BANK_JOB_ID;
@@ -951,7 +964,16 @@ export default function InterviewPractice({
           }}
         />
       )}
-      {routeBase.startsWith('#interview-review') && <RecordBack title={routeBase.endsWith('/japanese') ? '日语练习' : tr('针对性练习')} onBack={() => { window.location.hash = routeBase.endsWith('/japanese') ? routeBase : linkedPlan?.interviewId ? interviewSessionHash(linkedPlan.interviewId) : '#interview-review'; }} />}
+      {routeBase.startsWith('#interview-review') && <RecordBack
+        title={routeBase.endsWith('/japanese') ? '日语练习' : tr('针对性练习')}
+        backLabel={currentJob ? currentJob.company : routeBase.endsWith('/japanese') ? '日语练习' : tr('复盘')}
+        onBack={() => {
+          if (practiceRecord) setPracticeRecord(null);
+          else if (help) setHelp(null);
+          else if (guide) setGuide(null);
+          else window.location.hash = routeBase.endsWith('/japanese') ? routeBase : linkedPlan?.interviewId ? interviewSessionHash(linkedPlan.interviewId) : '#interview-review';
+        }}
+      />}
       {linkedPlan && <div className="inline-note"><b><Ja text={linkedPlan.title} /></b><p>{linkedPlan.content?.schedule.find(s => s.id === plannedContext?.scheduleId)?.date} · {tr('先独立回答，再只改一个重点重答。')}</p></div>}
       {!pack || !question ? (
         <section className="panel"><div className="empty"><p>{tr('题目不存在')}</p></div></section>

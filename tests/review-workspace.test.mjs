@@ -6,11 +6,11 @@ import { runInNewContext } from 'node:vm';
 const require = createRequire(import.meta.url);
 const result = await build({
   stdin: {
-    contents: `import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import ReviewWorkspace, {PracticeWorkspace} from './components/review-workspace'; import {interviewFlowOf} from './components/interview-practice';
+    contents: `import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import ReviewWorkspace, {PracticeWorkspace} from './components/review-workspace'; import {interviewFlowOf,interviewQuestionReturnHash} from './components/interview-practice';
  const q = (id,category,title,questionNumber)=>({id,category,title,questionJa:title,questionNumber,targetSeconds:60});
  const data={today:'2026-11-06',platforms:[],questionSets:[{id:'general',jobId:'builtin:general',questions:[q('grammar','日语表达基础','Daily grammar fixture',102),...Array.from({length:8},(_,i)=>q('grammar-'+i,'日语表达基础','Grammar fixture '+i,103+i)),q('intro','自己紹介','Interview introduction fixture',101),q('fair','フェア基本練習','Fair greeting fixture',111),q('fair-full','総合練習','Fair full fixture',112)]},{id:'cleared',jobId:'job-cleared',title:'Cleared fixture',questions:[q('intro','占位','題組已清空')]},{id:'real',jobId:'job-real',title:'Real company fixture',questions:[q('intro','自己紹介','Real question'),q('why-company','先练必答','志望動機'),q('project','经历说明','Project introduction'),q('tech','技术追问','Spark details'),q('salary','条件确认','希望年収'),q('reverse','逆質問','逆質問')]}],practicePlans:[],practicePlanReviews:[],attempts:[],jobs:[{id:'job-real',company:'Real company',role:'Engineer',status:'面试中',history:[],rating:0,nextDate:'2026-11-20',nextAction:'最終面接',companyNumber:1,url:''},{id:'job-other',company:'Other company',role:'Engineer',status:'关注中',history:[],rating:0,nextDate:'',nextAction:'',companyNumber:2,url:''}],reviews:[],reports:[],tasks:[],materials:[],profile:{},resume:[]};
  export const practice=()=>renderToStaticMarkup(React.createElement(PracticeWorkspace,{data,reload:async()=>{}}));
- export const render=hash=>renderToStaticMarkup(React.createElement(ReviewWorkspace,{data,hash,reload:async()=>{},openMaterial(){},openReport(){}})); export const phase=q=>interviewFlowOf(q);`,
+ export const render=hash=>renderToStaticMarkup(React.createElement(ReviewWorkspace,{data,hash,reload:async()=>{},openMaterial(){},openReport(){}})); export const phase=q=>interviewFlowOf(q); export const questionBack=(base,jobId)=>interviewQuestionReturnHash(base,jobId,data.jobs);`,
     resolveDir: process.cwd(),
     loader: 'tsx',
   },
@@ -27,7 +27,7 @@ runInNewContext(result.outputFiles[0].text, {
   exports: module.exports,
   require,
 });
-const { render, practice, phase } = module.exports;
+const { render, practice, phase, questionBack } = module.exports;
 test('review separates company rehearsal from actual interviews; practice uses a paginated topic table', () => {
   const home = render('#interview-review');
   assert.match(home, /href="#interview-review\/interviews"/);
@@ -70,4 +70,9 @@ test('company questions are classified in interview-process order', () => {
   assert.equal(phase(item('spark', '技术追问', 'Spark details')), 'technical');
   assert.equal(phase(item('salary', '条件确认', '希望年収')), 'conditions');
   assert.equal(phase(item('reverse', '逆質問', '逆質問')), 'questions');
+});
+test('company question detail returns to the company practice page', () => {
+  assert.equal(questionBack('#interview-review', 'job-real'), '#interview-review/company/1');
+  assert.equal(questionBack('#interview-review', 'missing'), '#interview-review');
+  assert.equal(questionBack('#practice', 'job-real'), '#practice');
 });
