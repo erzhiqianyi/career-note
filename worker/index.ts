@@ -28,7 +28,7 @@ import { jobStatuses, type JobStatus } from '../lib/job-status';
 import { InterviewError, listInterviews, getInterview, getInterviewVersion, createInterview, updateInterview, requestInterviewAnalysis,
   importInterviewSource, beginInterviewAudio, uploadInterviewPart, completeInterviewAudio, interviewAudioResponse, readInterviewBytes } from './interviews';
 import { interviewSummary } from '../lib/interview-session';
-import { PracticePlanError, createPracticePlan, editPracticePlan, getPracticePlan, listPracticePlans, practicePlanDetail,
+import { PracticePlanError, createPracticePlan, deletePracticePlan, editPracticePlan, getPracticePlan, listPracticePlans, practicePlanDetail,
   requestPracticePlanTask, savePracticePlan, savePracticePlanReview, setPracticePlanStatus, validatePracticeContext, type PracticePlanStore } from './practice-plans';
 import { MAX_QUESTIONS_PER_SET } from '../lib/question-set-limits';
 
@@ -1629,6 +1629,14 @@ const handler = async (
         return jsonResponse({ versions: (await records(db, 'practicePlanVersions')).filter(item => item.id === id).map(item => ({ revision: item.revision, updatedAt: item.updatedAt, status: item.status, goal: item.goal })) });
       }
       throw new PracticePlanError(404, '计划接口不存在');
+    }
+    if (method === 'DELETE') {
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new PracticePlanError(403, '练习计划只能由本人在应用中删除');
+      return jsonResponse(await deletePracticePlan(store, {
+        id: url.searchParams.get('id') || '',
+        revision: Number(url.searchParams.get('revision')),
+      }));
     }
     if (method !== 'POST') throw new PracticePlanError(405, '请求方法不支持');
     if (['/edit', '/status'].includes(action)) {

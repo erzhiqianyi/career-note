@@ -39,7 +39,7 @@ import {
 import StatusMark from '@/components/status-mark';
 import { postingSource } from '@/lib/job-platforms';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Report, type State } from '@/lib/career';
+import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Question, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
 import { buildHints, type Hints } from '@/lib/interview-hints';
 import { resumeSections } from '@/lib/resume';
@@ -92,6 +92,28 @@ const PREP_TABS: Array<[PrepTab, string]> = [
   ['practice', '练习'],
   ['summary', '总结'],
 ];
+type InterviewFlowId = 'introduction' | 'motivation' | 'experience' | 'technical' | 'general' | 'conditions' | 'questions';
+const INTERVIEW_FLOW: Array<{ id: InterviewFlowId; label: string }> = [
+  { id: 'introduction', label: '自我介绍' },
+  { id: 'motivation', label: '志望动机' },
+  { id: 'experience', label: '经历与项目' },
+  { id: 'technical', label: '技术细节' },
+  { id: 'general', label: '一般问题' },
+  { id: 'conditions', label: '条件确认' },
+  { id: 'questions', label: '逆質問' },
+];
+
+/** Stable interview order for company questions; original order is kept inside each phase. */
+export function interviewFlowOf(question: Pick<Question, 'id' | 'title' | 'category'>): InterviewFlowId {
+  const text = `${question.id}\n${question.title}\n${question.category}`.toLocaleLowerCase();
+  if (/逆質問|reverse/.test(text)) return 'questions';
+  if (/条件|年収|給与|salary|入社|在留資格|visa/.test(text)) return 'conditions';
+  if (/技術|技术|oracle|c#|spark|etl|性能|実装|設計|technical/.test(text)) return 'technical';
+  if (/志望|動機|动机|なぜ|why-|意思表明|来日/.test(text)) return 'motivation';
+  if (/自己紹介|自我介绍|経歴概述|经历概述|career-summary|self-intro/.test(text)) return 'introduction';
+  if (/経験|经历|项目|プロジェクト|職歴|前職|上流|work-style|story/.test(text)) return 'experience';
+  return 'general';
+}
 const RECORD_MAX_SECONDS = 600;
 const JOB_PAGE_SIZE = 20;
 const fmtClock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -138,6 +160,7 @@ export default function InterviewPractice({
   onEditJob,
   onOpenEvent,
   routeBase = '#jobs',
+  companyPracticeOnly = false,
 }: {
   routeBase?: string;
   data: State;
@@ -153,6 +176,8 @@ export default function InterviewPractice({
   onImport?: () => void;
   onEditJob?: (job: Job) => void;
   onOpenEvent?: (event: CareerEvent) => void;
+  /** Review directory: show only companies with a saved question set or company practice plan. */
+  companyPracticeOnly?: boolean;
 }) {
   const { t: tr, locale } = useLocale();
   const savedPacks = routeBase.endsWith('/japanese')
@@ -470,9 +495,25 @@ export default function InterviewPractice({
         case 'number': return job.companyNumber ?? (sort.desc ? 0 : Infinity);
       }
     };
+    const practiceCompanyIds = new Set(
+      data.questionSets
+        .filter(pack => pack.jobId !== BANK_JOB_ID && hasPracticeQuestions(pack))
+        .map(pack => pack.jobId),
+    );
+    (data.practicePlans || []).forEach(plan => {
+      if (plan.jobId) practiceCompanyIds.add(plan.jobId);
+      plan.content?.exercises.forEach(exercise => {
+        const exercisePack = data.questionSets.find(item => item.id === exercise.questionSetId);
+        if (exercisePack?.jobId && exercisePack.jobId !== BANK_JOB_ID)
+          practiceCompanyIds.add(exercisePack.jobId);
+      });
+    });
+    const directoryJobs = companyPracticeOnly
+      ? data.jobs.filter(job => practiceCompanyIds.has(job.id))
+      : data.jobs;
     const platformOf = (job: Job) => postingSource(job, data.platforms) || '未记录';
-    const platformOptions = [...new Set(data.jobs.map(platformOf))].sort((a, b) => a.localeCompare(b));
-    const jobs = data.jobs
+    const platformOptions = [...new Set(directoryJobs.map(platformOf))].sort((a, b) => a.localeCompare(b));
+    const jobs = directoryJobs
       .filter(j => (j.company + ' ' + j.role + ' ' + (j.companyNumber || '')).toLowerCase().includes(search.toLowerCase()))
       .filter(j => !statusFilter.length || statusFilter.some(status => status === '进行中' ? !closed.includes(j.status) : status === '有面试' ? isInterview(j) : status === SCREENING_ARCHIVE ? isScreeningRejection(j) : j.status === status))
       .filter(j => !platformFilter.length || platformFilter.includes(platformOf(j)))
@@ -481,7 +522,7 @@ export default function InterviewPractice({
         const c = x < y ? -1 : x > y ? 1 : 0;
         return (sort.desc ? -c : c) || a.company.localeCompare(b.company);
       });
-    const screeningArchived = data.jobs.filter(isScreeningRejection).length;
+    const screeningArchived = directoryJobs.filter(isScreeningRejection).length;
     const viewingArchive = statusFilter.length === 1 && statusFilter[0] === SCREENING_ARCHIVE;
     const pageCount = Math.max(1, Math.ceil(jobs.length / JOB_PAGE_SIZE));
     const currentPage = Math.min(listPage, pageCount);
@@ -495,7 +536,9 @@ export default function InterviewPractice({
       else visibleIds.forEach(id => next.add(id));
       return next;
     });
-    const companyHref = (job: Job) => '#jobs/company/' + encodeURIComponent(String(job.companyNumber || job.id));
+    const companyHref = (job: Job) =>
+      (routeBase === '#jobs' ? '#jobs/company/' : routeBase + '/company/') +
+      encodeURIComponent(String(job.companyNumber || job.id));
     const toggleSort = (key: PrepColumn) => setSort(s => ({ key, desc: s.key === key ? !s.desc : false }));
     const bankPacks = data.questionSets.filter(p => p.jobId === BANK_JOB_ID);
     const bankAnswered = new Set(data.attempts.filter(a => bankPacks.some(p => p.id === a.questionSetId)).map(a => a.questionSetId + '|' + a.questionId)).size;
@@ -551,11 +594,11 @@ export default function InterviewPractice({
         {screeningArchived > 0 && <button type="button" className={'secondary job-archive-button' + (viewingArchive ? ' is-active' : '')} aria-pressed={viewingArchive} title={tr('书类选考未通过的公司')} onClick={() => setStatusFilter(viewingArchive ? ['进行中'] : [SCREENING_ARCHIVE])}>
           <Archive size={16} aria-hidden="true" /><span className="phone-hidden">{tr('书类未通过')}</span><span className="job-archive-count">{screeningArchived}</span>
         </button>}
-        <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(data.jobs.length)])}</span>
-        {data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
+        <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(directoryJobs.length)])}</span>
+        {!companyPracticeOnly && data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
           <ListChecks size={20} aria-hidden="true" />
         </button>}
-        <button className="secondary icon-only" onClick={() => setCompany(BANK_JOB_ID)} title={tr('通用练习') + ' · ' + tr('练习 {0} / {1} 题', [String(bankAnswered), String(bankTotal)])} aria-label={tr('通用练习')}><BookOpen size={21} /></button>
+        {!companyPracticeOnly && <button className="secondary icon-only" onClick={() => setCompany(BANK_JOB_ID)} title={tr('通用练习') + ' · ' + tr('练习 {0} / {1} 题', [String(bankAnswered), String(bankTotal)])} aria-label={tr('通用练习')}><BookOpen size={21} /></button>}
         {onImport && <button className="secondary phone-hidden" onClick={onImport}><Upload size={16} />{tr('导入')}</button>}
         {onAddJob && <button className="primary" onClick={onAddJob}><Plus size={18} />{tr('添加职位')}</button>}
       </div>
@@ -591,7 +634,7 @@ export default function InterviewPractice({
         </div>
       </dialog>
       <section className="panel dt-panel prep-list">
-        {jobs.length ? <DataTable<PrepColumn> label={tr('面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
+        {jobs.length ? <DataTable<PrepColumn> label={tr(companyPracticeOnly ? '公司预先练习' : '面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
           ...(managing ? [{ key: 'select' as PrepColumn, label: <input type="checkbox" aria-label={tr('选择当前列表')} checked={allVisibleSelected} onChange={toggleVisible} />, width: '32px' }] : []),
           { key: 'company', label: tr('公司 / 职位'), width: 'minmax(0,2fr)', sortable: true },
           { key: 'rating', label: tr('个人评分'), width: '100px', sortable: true },
@@ -627,7 +670,7 @@ export default function InterviewPractice({
             </DataCell>
             <DataCell label={tr('招聘原文')} className="prep-posting">{job.url ? <a className="text-button" href={job.url} target="_blank" rel="noreferrer" title={job.url} aria-label={tr('招聘原文') + ' · ' + job.company}><span>{tr(postingSource(job, data.platforms)) || tr('打开')}</span><ExternalLink size={14} aria-hidden="true" /></a> : <span className="muted">—</span>}{reason && <ReasonCopyButton reason={reason} company={job.company} />}</DataCell>
           </DataRow>;
-        })}</DataTable> : <div className="empty"><p>{tr(data.jobs.length ? '没有符合条件的职位' : '还没有保存职位')}</p></div>}
+        })}</DataTable> : <div className="empty"><p>{tr(directoryJobs.length ? '没有符合条件的职位' : companyPracticeOnly ? '还没有公司专项练习' : '还没有保存职位')}</p></div>}
         {pageCount > 1 && <nav className="list-pagination" aria-label={tr('分页')}>
           <span>{tr('第 {0} / {1} 页', [currentPage, pageCount])}</span>
           <button type="button" className="secondary" disabled={currentPage === 1} onClick={() => turnPage(currentPage - 1)}>{tr('上一页')}</button>
@@ -770,32 +813,41 @@ export default function InterviewPractice({
       ) : (
         <>
           <div className="section-head prep-practice-head"><h2>{tr('练习题目')}</h2><span className="muted">{tr('已练问题')} {practiced.size} / {pack.questions.length}</span></div>
-          <section className="panel question-list prep-tab-panel">
-            {pack.questions.filter(q => routeBase.endsWith('/japanese') ? q.category === '日语表达基础' : q.category !== '日语表达基础').map((q, i) => (
-              <button
-                disabled={busy}
-                className="question-option"
-                key={q.id}
-                onClick={() => {
-                  stopRecording();
-                  setQuestionId(q.id);
-                  setPracticeRecord(pack.id + '|' + q.id);
-                  setNotice('');
-                  setError('');
-                }}
-              >
-                <span className="question-number">
-                  {practiced.has(q.id) ? <Check size={16} /> : String(i + 1).padStart(2, '0')}
-                </span>
-                <span>
-                  <b>{q.questionNumber && <span>Q{q.questionNumber} · </span>}<Ja text={bt(q.title)} /></b>
-                  <small>
-                    {tr(q.category)} · {q.targetSeconds}
-                    {tr('秒')}
-                  </small>
-                </span>
-              </button>
-            ))}
+          <section className="panel question-list prep-tab-panel interview-flow-list">
+            {INTERVIEW_FLOW.map((phase, phaseIndex) => {
+              const questions = pack.questions
+                .filter(q => routeBase.endsWith('/japanese') ? q.category === '日语表达基础' : q.category !== '日语表达基础')
+                .filter(q => interviewFlowOf(q) === phase.id);
+              if (!questions.length) return null;
+              return <section className="interview-flow-group" key={phase.id}>
+                <h3><span>{String(phaseIndex + 1).padStart(2, '0')}</span>{tr(phase.label)}<small>{questions.length}</small></h3>
+                {questions.map((q, i) => (
+                  <button
+                    disabled={busy}
+                    className="question-option"
+                    key={q.id}
+                    onClick={() => {
+                      stopRecording();
+                      setQuestionId(q.id);
+                      setPracticeRecord(pack.id + '|' + q.id);
+                      setNotice('');
+                      setError('');
+                    }}
+                  >
+                    <span className="question-number">
+                      {practiced.has(q.id) ? <Check size={16} /> : String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span>
+                      <b>{q.questionNumber && <span>Q{q.questionNumber} · </span>}<Ja text={bt(q.title)} /></b>
+                      <small>
+                        {tr(q.category)} · {q.targetSeconds}
+                        {tr('秒')}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </section>;
+            })}
           </section>
         </>
       ))}

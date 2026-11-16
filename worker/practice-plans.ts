@@ -103,6 +103,27 @@ export async function listPracticePlans(store: PracticePlanStore) {
     return { ...summary, skillCount: content?.skills.length ?? 0, exerciseCount: content?.exercises.length ?? 0, progress: practicePlanProgress(plan, attempts) };
   }) };
 }
+export async function deletePracticePlan(store: PracticePlanStore, input: unknown) {
+  const data = parse(z.object({ id: practiceIdSchema, revision: z.number().int().positive() }).strict(), input);
+  const old = await getPracticePlan(store, data.id);
+  if (old.revision !== data.revision) throw new PracticePlanError(409, '计划已更新，请重新读取');
+  const attempts = (await store.list('attempts')).filter(item =>
+    (item.practiceContext as PracticeContext | undefined)?.planId === old.id,
+  );
+  if (attempts.length) throw new PracticePlanError(409, '计划已有真实回答，不能删除；请暂停或完成计划以保留练习证据');
+  const results = await store.connection.batch([
+    store.connection.prepare("DELETE FROM records WHERE kind=?1 AND id=?2 AND json_extract(body,'$.revision')=?3")
+      .bind(key(store, 'practicePlans'), old.id, old.revision),
+    store.connection.prepare("DELETE FROM records WHERE kind=?1 AND id LIKE ?2")
+      .bind(key(store, 'practicePlanVersions'), `${old.id}:%`),
+    store.connection.prepare("DELETE FROM records WHERE kind=?1 AND json_extract(body,'$.planId')=?2")
+      .bind(key(store, 'practicePlanReviews'), old.id),
+    store.connection.prepare("DELETE FROM records WHERE kind=?1 AND json_extract(body,'$.planId')=?2")
+      .bind(key(store, 'tasks'), old.id),
+  ]);
+  if (!results[0].meta.changes) throw new PracticePlanError(409, '计划已更新，请重新读取');
+  return { id: old.id, deleted: true };
+}
 export async function practicePlanDetail(store: PracticePlanStore, id: string, revision?: number) {
   const plan = await getPracticePlan(store, id, revision);
   const attempts = (await store.list('attempts')).filter(item => (item.practiceContext as PracticeContext | undefined)?.planId === id);

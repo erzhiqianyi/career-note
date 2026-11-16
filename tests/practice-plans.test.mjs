@@ -64,6 +64,28 @@ test('goal-based plans validate arbitrary dates, skill/exercise links, daily bud
   await send('practice-plans/save', change(plan), 409);
 });
 
+test('owners can delete an empty plan with revision protection but plans with real answers are preserved', async t => {
+  const mf = await host(t);
+  const send = api(mf);
+  const remove = async (id, revision, status = 200) => {
+    const response = await mf.dispatchFetch(`${root}practice-plans?id=${encodeURIComponent(id)}&revision=${revision}`, { method: 'DELETE' });
+    const data = await response.json();
+    assert.equal(response.status, status, JSON.stringify(data));
+    return data;
+  };
+  const empty = await send('practice-plans', { id: 'delete-empty-plan', input });
+  await remove(empty.id, empty.revision + 1, 409);
+  assert.equal((await remove(empty.id, empty.revision)).deleted, true);
+  assert.ok(!(await send('state')).practicePlans.some(item => item.id === empty.id));
+  assert.ok(!(await send('state')).tasks.some(item => item.planId === empty.id));
+
+  let used = await send('practice-plans', { id: 'keep-evidence-plan', input });
+  used = await send('practice-plans/save', change(used));
+  await send('attempts', answer(used, 'delete-evidence'));
+  await remove(used.id, used.revision, 409);
+  assert.ok((await send('state')).practicePlans.some(item => item.id === used.id));
+});
+
 test('real planned answers and offline retries drive progress; adaptations preserve evidence without automatic achievement', async t => {
   const send = api(await host(t));
   let plan = await send('practice-plans', { id: 'progress-plan', input });

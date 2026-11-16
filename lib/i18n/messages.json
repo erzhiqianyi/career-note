@@ -5960,5 +5960,11 @@
   "日语提升": {"ja": "日本語力アップ", "en": "Japanese improvement"},
   "転職フェア练习": {"ja": "転職フェア練習", "en": "Career fair practice"},
   "还没有专题练习": {"ja": "テーマ別練習はまだありません", "en": "No practice topics yet"},
-  "题目详情": {"ja": "質問の詳細", "en": "Question details"}
+  "题目详情": {"ja": "質問の詳細", "en": "Question details"},
+  "还没有公司专项练习": {"ja": "会社別の面接練習はまだありません", "en": "No company-specific interview practice yet"},
+  "经历与项目": {"ja": "経歴・プロジェクト", "en": "Experience and projects"},
+  "技术细节": {"ja": "技術詳細", "en": "Technical details"},
+  "一般问题": {"ja": "一般質問", "en": "General questions"},
+  "条件确认": {"ja": "条件確認", "en": "Conditions"},
+  "逆質問": {"ja": "逆質問", "en": "Questions for the interviewer"}
 }

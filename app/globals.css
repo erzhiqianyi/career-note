@@ -3862,6 +3862,17 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .practice-workspace > .practice-materials { margin-top: 0; }
 .prep-practice-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 .prep-practice-head h2 { margin: 0; flex: 1; min-width: 0; }
+.company-practice-directory-heading { align-items: flex-end; margin-bottom: 18px; }
+.company-practice-directory-heading h2 { margin: 0 0 6px; }
+.company-practice-directory-heading p { margin: 0; }
+.interview-flow-list { padding: 0; overflow: hidden; }
+.interview-flow-group + .interview-flow-group { border-top: 1px solid var(--line); }
+.interview-flow-group > h3 { display: flex; align-items: center; gap: 10px; margin: 0; padding: 13px 18px; background: var(--canvas); color: var(--ink-2); font-size: .8125rem; }
+.interview-flow-group > h3 > span { color: var(--accent); font-variant-numeric: tabular-nums; }
+.interview-flow-group > h3 > small { margin-left: auto; min-width: 24px; padding: 2px 7px; border-radius: 999px; background: var(--surface); color: var(--ink-3); text-align: center; }
+.interview-flow-group .question-option { padding-inline: 18px; }
+.text-button.danger { color: #b42318; }
+.text-button.danger:hover:not(:disabled) { color: #8f1d15; text-decoration: underline; }
 @media (max-width: 640px) {
   .prep-practice-head { flex-direction: column; align-items: stretch; gap: 10px; }
   .prep-practice-head h2 { display: block; overflow-wrap: anywhere; line-height: 1.45; }
@@ -3869,6 +3880,9 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
   .prep-tab-panel.question-list .question-option { width: 100%; min-width: 0; min-height: 64px; }
   .prep-tab-panel.question-list .question-option > span:nth-child(2) { min-width: 0; }
   .prep-tab-panel.question-list .question-option small { padding: 0; border: 0; }
+  .company-practice-directory-heading { align-items: flex-start; }
+  .interview-flow-group > h3 { padding-inline: 14px; }
+  .interview-flow-group .question-option { padding-inline: 10px; }
 }
 .prep-summary h3 { margin: 22px 0 10px; font-size: 0.9375rem; }
 .prep-stats { grid-template-columns: repeat(4, 1fr); padding: 18px 0; margin-bottom: 0; }

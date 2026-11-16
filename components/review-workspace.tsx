@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import type { Material, Question, QuestionSet, Report, State } from '@/lib/career';
-import { api } from '@/lib/career';
+import { api, apiDelete } from '@/lib/career';
 import {
   hasPracticeQuestions,
   isCompanyPracticePlan,
@@ -205,6 +205,7 @@ export default function ReviewWorkspace({
         reload={reload}
         openMaterial={openMaterial}
         openReport={openReport}
+        companyPracticeOnly={!hash.startsWith(base + '/japanese/')}
         routeBase={
           hash.startsWith(base + '/japanese/') ? base + '/japanese' : base
         }
@@ -219,19 +220,20 @@ export default function ReviewWorkspace({
             window.location.hash = base;
           }}
         />
-        <PracticeWorkspace data={data} reload={reload} companyOnly />
-        {data.questionSets
-          .filter((p) => p.jobId !== 'builtin:general' && hasPracticeQuestions(p))
-          .map((p) => (
-            <a
-              className="panel review-entry"
-              key={p.id}
-              href={base + '/company/' + encodeURIComponent(p.jobId)}
-            >
-              <Ja text={p.title} />
-              <p>预先练习与历史回答</p>
-            </a>
-          ))}
+        <div className="section-head company-practice-directory-heading">
+          <div>
+            <h2>公司预先练习</h2>
+            <p className="muted">按公司查找面试练习，进入后只查看该公司的题目与历史回答。</p>
+          </div>
+        </div>
+        <InterviewPractice
+          data={data}
+          reload={reload}
+          openMaterial={openMaterial}
+          openReport={openReport}
+          routeBase={base}
+          companyPracticeOnly
+        />
       </>
     );
   if (hash.startsWith(base + '/'))
@@ -464,9 +466,24 @@ export function PracticeWorkspace({
       )}
       {plans.map((plan) => (
         <section className="panel" key={plan.id}>
-          <h3>
-            <Ja text={plan.title} />
-          </h3>
+          <div className="section-head">
+            <h3><Ja text={plan.title} /></h3>
+            <button
+              type="button"
+              className="text-button danger"
+              disabled={busy}
+              onClick={() => {
+                if (!window.confirm(`删除练习计划「${plan.title}」？没有真实回答的计划会永久删除。`)) return;
+                void run(async () => {
+                  await apiDelete(`practice-plans?id=${encodeURIComponent(plan.id)}&revision=${plan.revision}`);
+                  setNotice('已删除练习计划。');
+                  await reload();
+                });
+              }}
+            >
+              删除计划
+            </button>
+          </div>
           <p>
             <Ja text={plan.goal} />
           </p>
