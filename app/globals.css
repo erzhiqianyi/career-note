@@ -4340,3 +4340,14 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .japanese-practice-hub { display: grid; gap: 16px; }
 .japanese-practice-form { display: grid; gap: 16px; }
 .japanese-practice-form label { display: grid; gap: 6px; }
+.practice-topic-heading { align-items: flex-end; margin-bottom: 2px; }
+.practice-topic-heading p { margin: 6px 0 0; }
+.practice-topic-count { white-space: nowrap; }
+.practice-topic-list .dt-main .record-meta { color: var(--ink-3); }
+.practice-topic-list .badge { min-width: 106px; text-align: center; }
+@media (max-width: 700px) {
+  .practice-topic-heading { align-items: flex-start; }
+  .practice-topic-count { margin-top: 4px; }
+  .practice-topic-list .list-pagination { justify-content: space-between; flex-wrap: wrap; }
+  .practice-topic-list .list-pagination > span { flex-basis: 100%; }
+}

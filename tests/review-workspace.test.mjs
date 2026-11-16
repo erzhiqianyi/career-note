@@ -8,7 +8,7 @@ const result = await build({
   stdin: {
     contents: `import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import ReviewWorkspace, {PracticeWorkspace} from './components/review-workspace';
  const q = (id,category,title)=>({id,category,title,questionJa:title});
- const data={today:'2026-11-06',questionSets:[{id:'general',jobId:'builtin:general',questions:[q('grammar','日语表达基础','Daily grammar fixture'),q('intro','自己紹介','Interview introduction fixture'),q('fair','フェア基本練習','Fair greeting fixture'),q('fair-full','総合練習','Fair full fixture')]},{id:'cleared',jobId:'job-cleared',title:'Cleared fixture',questions:[q('intro','占位','題組已清空')]},{id:'real',jobId:'job-real',title:'Real company fixture',questions:[q('intro','自己紹介','Real question')]}],practicePlans:[],practicePlanReviews:[],attempts:[],jobs:[],reviews:[],reports:[],tasks:[],materials:[]};
+ const data={today:'2026-11-06',questionSets:[{id:'general',jobId:'builtin:general',questions:[q('grammar','日语表达基础','Daily grammar fixture'),...Array.from({length:8},(_,i)=>q('grammar-'+i,'日语表达基础','Grammar fixture '+i)),q('intro','自己紹介','Interview introduction fixture'),q('fair','フェア基本練習','Fair greeting fixture'),q('fair-full','総合練習','Fair full fixture')]},{id:'cleared',jobId:'job-cleared',title:'Cleared fixture',questions:[q('intro','占位','題組已清空')]},{id:'real',jobId:'job-real',title:'Real company fixture',questions:[q('intro','自己紹介','Real question')]}],practicePlans:[],practicePlanReviews:[],attempts:[],jobs:[],reviews:[],reports:[],tasks:[],materials:[]};
  export const practice=()=>renderToStaticMarkup(React.createElement(PracticeWorkspace,{data,reload:async()=>{}}));
  export const render=hash=>renderToStaticMarkup(React.createElement(ReviewWorkspace,{data,hash,reload:async()=>{},openMaterial(){},openReport(){}}));`,
     resolveDir: process.cwd(),
@@ -28,24 +28,24 @@ runInNewContext(result.outputFiles[0].text, {
   require,
 });
 const { render, practice } = module.exports;
-test('review separates company rehearsal from actual interviews; practice uses topic plans and Agent handoff', () => {
+test('review separates company rehearsal from actual interviews; practice uses a paginated topic table', () => {
   const home = render('#interview-review');
   assert.match(home, /href="#interview-review\/interviews"/);
   assert.match(home, /href="#interview-review\/preparation"/);
   assert.ok(!home.includes('日语练习'));
   const topics = practice();
-  assert.ok(topics.includes('专题计划与练习回顾'));
+  assert.ok(topics.includes('practice-topic-list'));
   assert.ok(topics.includes('面试基本问题'));
   assert.ok(topics.includes('日语提升'));
-  assert.ok(topics.includes('転職フェア练习'));
-  assert.ok(topics.includes('制定计划'));
-  assert.ok(!topics.includes('按专题计划练习'));
-  assert.match(topics, /href="#practice\/question\//);
+  assert.match(topics, /badge blue/);
+  assert.match(topics, /badge green/);
+  assert.ok(!topics.includes('制定计划'));
+  assert.ok(!topics.includes('专题计划与练习回顾'));
+  assert.match(topics, /第 1 \/ 2 页/);
   assert.ok(topics.includes('Daily grammar fixture'));
   assert.ok(topics.includes('Interview introduction fixture'));
-  assert.ok(topics.includes('Fair greeting fixture'));
-  assert.match(topics, /転職フェア练习 · 2 道题/);
-  assert.ok(render('#interview-review/japanese').includes('专题计划与练习回顾'));
+  assert.ok(!topics.includes('Fair greeting fixture'));
+  assert.ok(render('#interview-review/japanese').includes('practice-topic-list'));
   assert.ok(render('#interview-review/interviews').includes('还没有面试记录'));
 });
 test('company rehearsal lists real question sets and offers to delete cleared ones', () => {

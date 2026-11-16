@@ -878,6 +878,16 @@ export default function InterviewPractice({
   }
   return (
     <div className="practice-workspace">
+      {routeBase === '#practice' && (practiceRecord || help || guide) && (
+        <RecordBack
+          title={tr('题目详情')}
+          onBack={() => {
+            if (practiceRecord) setPracticeRecord(null);
+            else if (help) setHelp(null);
+            else setGuide(null);
+          }}
+        />
+      )}
       {routeBase.startsWith('#interview-review') && <RecordBack title={routeBase.endsWith('/japanese') ? '日语练习' : tr('针对性练习')} onBack={() => { window.location.hash = routeBase.endsWith('/japanese') ? routeBase : linkedPlan?.interviewId ? interviewSessionHash(linkedPlan.interviewId) : '#interview-review'; }} />}
       {linkedPlan && <div className="inline-note"><b><Ja text={linkedPlan.title} /></b><p>{linkedPlan.content?.schedule.find(s => s.id === plannedContext?.scheduleId)?.date} · {tr('先独立回答，再只改一个重点重答。')}</p></div>}
       {!pack || !question ? (

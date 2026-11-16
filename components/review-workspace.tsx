@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import type { Material, Report, State } from '@/lib/career';
+import type { Material, Question, QuestionSet, Report, State } from '@/lib/career';
 import { api } from '@/lib/career';
 import {
   hasPracticeQuestions,
@@ -12,7 +12,172 @@ import InterviewReviewHub from './interview-review-hub';
 import InterviewPractice from './interview-practice';
 import { RecordBack } from './record-page';
 import { Ja } from './japanese-text';
+import { DataCell, DataRow, DataTable, DataTitle } from './data-table';
+import { useLocale } from './locale-provider';
 const base = '#interview-review';
+const TOPIC_PAGE_SIZE = 10;
+
+type PracticeTopic = '面试基本问题' | '日语提升' | '転職フェア练习';
+type TopicQuestion = {
+  pack: QuestionSet;
+  question: Question;
+  topic: PracticeTopic;
+  order: number;
+};
+
+function practiceTopic(question: Question): PracticeTopic | '复盘' {
+  if (question.category === '日语表达基础') return '日语提升';
+  if (
+    question.category === 'フェア基本練習' ||
+    (question.category === '総合練習' && question.id.startsWith('fair-'))
+  )
+    return '転職フェア练习';
+  if (question.category === '面试复盘专项') return '复盘';
+  return '面试基本问题';
+}
+
+function topicQuestions(data: State): TopicQuestion[] {
+  const rank: Record<PracticeTopic, number> = {
+    面试基本问题: 0,
+    日语提升: 1,
+    転職フェア练习: 2,
+  };
+  return data.questionSets
+    .filter((pack) => pack.jobId === 'builtin:general')
+    .flatMap((pack, packIndex) =>
+      pack.questions.flatMap((question, questionIndex) => {
+        const topic = practiceTopic(question);
+        return topic === '复盘'
+          ? []
+          : [{ pack, question, topic, order: packIndex * 1000 + questionIndex }];
+      }),
+    )
+    .sort((a, b) => rank[a.topic] - rank[b.topic] || a.order - b.order);
+}
+
+function PracticeTopicTable({ data }: { data: State }) {
+  const { t } = useLocale();
+  const [page, setPage] = useState(1);
+  const rows = topicQuestions(data);
+  const pageCount = Math.max(1, Math.ceil(rows.length / TOPIC_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visible = rows.slice(
+    (currentPage - 1) * TOPIC_PAGE_SIZE,
+    currentPage * TOPIC_PAGE_SIZE,
+  );
+  const attemptsByQuestion = new Map<string, number>();
+  data.attempts.forEach((attempt) => {
+    const key = attempt.questionSetId + '|' + attempt.questionId;
+    attemptsByQuestion.set(key, (attemptsByQuestion.get(key) || 0) + 1);
+  });
+  const open = (row: TopicQuestion) => {
+    window.location.assign(
+      '#practice/question/' +
+        encodeURIComponent(row.pack.id + '|' + row.question.id),
+    );
+  };
+  const topicTone: Record<PracticeTopic, string> = {
+    面试基本问题: 'blue',
+    日语提升: 'green',
+    転職フェア练习: 'amber',
+  };
+
+  return (
+    <section className="japanese-practice-hub practice-topic-page">
+      <div className="section-head practice-topic-heading">
+        <div>
+          <h2>{t('专题练习')}</h2>
+          <p className="muted">{t('选择题目查看详情，随时开始对应专题的练习。')}</p>
+        </div>
+        <span className="muted practice-topic-count">
+          {t('共 {0} 道题', [String(rows.length)])}
+        </span>
+      </div>
+      <section className="panel dt-panel practice-topic-list">
+        {rows.length ? (
+          <DataTable
+            label={t('专题练习')}
+            columns={[
+              { key: 'question', label: t('题目'), width: 'minmax(0, 2fr)' },
+              { key: 'topic', label: t('专题'), width: '150px' },
+              {
+                key: 'category',
+                label: t('题型'),
+                width: 'minmax(120px, 1fr)',
+                hide: 'tablet',
+              },
+              {
+                key: 'attempts',
+                label: t('练习次数'),
+                width: '90px',
+                align: 'end',
+              },
+              {
+                key: 'time',
+                label: t('建议时长'),
+                width: '90px',
+                hide: 'phone',
+                align: 'end',
+              },
+            ]}
+          >
+            {visible.map((row) => {
+              const key = row.pack.id + '|' + row.question.id;
+              return (
+                <DataRow key={key} onOpen={() => open(row)}>
+                  <DataTitle
+                    title={<Ja text={row.question.title} />}
+                    meta={<Ja text={row.question.questionJa} mode="ja" />}
+                    onClick={() => open(row)}
+                  />
+                  <DataCell label={t('专题')} corner>
+                    <span className={'badge ' + topicTone[row.topic]}>
+                      {t(row.topic)}
+                    </span>
+                  </DataCell>
+                  <DataCell label={t('题型')} hide="tablet" className="ellipsis">
+                    <Ja text={row.question.category} />
+                  </DataCell>
+                  <DataCell label={t('练习次数')} align="end" className="num">
+                    {attemptsByQuestion.get(key) || 0}
+                  </DataCell>
+                  <DataCell label={t('建议时长')} hide="phone" align="end" className="num">
+                    {row.question.targetSeconds ? `${row.question.targetSeconds} ${t('秒')}` : '—'}
+                  </DataCell>
+                </DataRow>
+              );
+            })}
+          </DataTable>
+        ) : (
+          <div className="empty">
+            <p>{t('还没有专题练习')}</p>
+          </div>
+        )}
+        {pageCount > 1 && (
+          <nav className="list-pagination" aria-label={t('分页')}>
+            <span>{t('第 {0} / {1} 页', [String(currentPage), String(pageCount)])}</span>
+            <button
+              type="button"
+              className="secondary"
+              disabled={currentPage === 1}
+              onClick={() => setPage(currentPage - 1)}
+            >
+              {t('上一页')}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={currentPage === pageCount}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              {t('下一页')}
+            </button>
+          </nav>
+        )}
+      </section>
+    </section>
+  );
+}
 
 export default function ReviewWorkspace({
   data,
@@ -116,6 +281,7 @@ export function PracticeWorkspace({
   const [minutes, setMinutes] = useState(20);
   const [purpose, setPurpose] = useState<'interview' | 'japanese'>('interview');
   const [jobId, setJobId] = useState('');
+  if (!companyOnly) return <PracticeTopicTable data={data} />;
   const clearedSets = companyOnly
     ? data.questionSets.filter((pack) => !hasPracticeQuestions(pack)).length
     : 0;
@@ -151,47 +317,6 @@ export function PracticeWorkspace({
           制定计划
         </button>
       </div>
-      {!companyOnly &&
-        ['面试基本问题', '日语提升', '転職フェア练习'].map((topic) => {
-          const rows = data.questionSets
-            .filter((p) => p.jobId === 'builtin:general')
-            .flatMap((pack) =>
-              pack.questions
-                .filter((q) => {
-                  const group =
-                    q.category === '日语表达基础'
-                      ? '日语提升'
-                      : q.category === 'フェア基本練習' ||
-                          (q.category === '総合練習' &&
-                            q.id.startsWith('fair-'))
-                        ? '転職フェア练习'
-                        : q.category === '面试复盘专项'
-                          ? '复盘'
-                          : '面试基本问题';
-                  return group === topic;
-                })
-                .map((question) => ({ pack, question })),
-            );
-          return rows.length ? (
-            <details className="panel" key={topic}>
-              <summary>
-                {topic} · {rows.length} 道题
-              </summary>
-              {rows.map(({ pack, question }) => (
-                <a
-                  className="panel review-entry"
-                  key={pack.id + question.id}
-                  href={
-                    '#practice/question/' +
-                    encodeURIComponent(pack.id + '|' + question.id)
-                  }
-                >
-                  <Ja text={question.title} />
-                </a>
-              ))}
-            </details>
-          ) : null;
-        })}
       {creating && (
         <form
           className="panel japanese-practice-form"

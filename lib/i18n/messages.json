@@ -5948,5 +5948,17 @@
   "专注 IT 工程师和创意人才的转职中介，由顾问提供职位匹配与求职支持。": {
     "ja": "ITエンジニア・クリエイターに特化し、アドバイザーが求人紹介や転職支援を行うエージェント。",
     "en": "Recruitment agency specializing in IT engineers and creators, with advisor-led job matching and career support."
-  }
+  },
+  "专题练习": {"ja": "テーマ別練習", "en": "Practice topics"},
+  "选择题目查看详情，随时开始对应专题的练习。": {"ja": "質問を選んで詳細を確認し、いつでもテーマ別の練習を始められます。", "en": "Choose a question to view its details and practise that topic anytime."},
+  "共 {0} 道题": {"ja": "全 {0} 問", "en": "{0} questions"},
+  "专题": {"ja": "テーマ", "en": "Topic"},
+  "题型": {"ja": "種類", "en": "Question type"},
+  "练习次数": {"ja": "練習回数", "en": "Attempts"},
+  "建议时长": {"ja": "目安時間", "en": "Suggested time"},
+  "面试基本问题": {"ja": "面接の基本質問", "en": "Interview basics"},
+  "日语提升": {"ja": "日本語力アップ", "en": "Japanese improvement"},
+  "転職フェア练习": {"ja": "転職フェア練習", "en": "Career fair practice"},
+  "还没有专题练习": {"ja": "テーマ別練習はまだありません", "en": "No practice topics yet"},
+  "题目详情": {"ja": "質問の詳細", "en": "Question details"}
 }
