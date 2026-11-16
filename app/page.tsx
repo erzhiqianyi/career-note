@@ -935,7 +935,7 @@ export default function Home() {
               <button
                 className="icon-button header-back"
                 aria-label={tr('返回 {0}', [
-                  recordView ? tr(activePage === '面试复盘' ? '复盘' : activePage) : tr(subPages[active]?.back ?? subPages[active]?.parent ?? active),
+                  recordView ? tr(recordView.backLabel ?? (activePage === '面试复盘' ? '复盘' : activePage)) : tr(subPages[active]?.back ?? subPages[active]?.parent ?? active),
                 ])}
                 onClick={() => {
                   if (recordView) recordView.onBack();

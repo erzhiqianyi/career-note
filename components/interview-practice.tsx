@@ -715,7 +715,18 @@ export default function InterviewPractice({
       </details>
     ));
     return <div className="practice-workspace practice-company-page">
-      <RecordBack onBack={() => setCompany(null)} title={currentJob ? `${tr('公司')}${currentJob.companyNumber ? ` #${currentJob.companyNumber}` : ''} · ${currentJob.company}` : tr('面试准备')} action={{ label: tr('操作'), onClick: () => setActionOpen(true) }} />
+      <RecordBack
+        backLabel={companyPracticeOnly && routeBase === '#interview-review' ? tr('公司预先练习') : undefined}
+        onBack={() => {
+          if (companyPracticeOnly && routeBase === '#interview-review') {
+            window.location.hash = routeBase + '/preparation';
+            return;
+          }
+          setCompany(null);
+        }}
+        title={currentJob ? `${tr('公司')}${currentJob.companyNumber ? ` #${currentJob.companyNumber}` : ''} · ${currentJob.company}` : tr('面试准备')}
+        action={{ label: tr('操作'), onClick: () => setActionOpen(true) }}
+      />
       {/* Where the application stands, visible from every tab; the 进度 tab holds the full timeline. */}
       {currentJob && !isBank && activeTab !== 'progress' && <ProgressStepper job={currentJob} today={data.today} />}
       <div className="prep-tabs" role="tablist" aria-label={tr('面试准备')}>
