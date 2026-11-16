@@ -14,6 +14,7 @@ import { RecordBack } from './record-page';
 import { Ja } from './japanese-text';
 import { DataCell, DataRow, DataTable, DataTitle } from './data-table';
 import { useLocale } from './locale-provider';
+import { Search } from 'lucide-react';
 const base = '#interview-review';
 const TOPIC_PAGE_SIZE = 10;
 
@@ -58,18 +59,50 @@ function topicQuestions(data: State): TopicQuestion[] {
 function PracticeTopicTable({ data }: { data: State }) {
   const { t } = useLocale();
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState('');
+  const [topicFilter, setTopicFilter] = useState<PracticeTopic | '全部'>('全部');
+  const [categoryFilter, setCategoryFilter] = useState('全部');
+  const [practiceFilter, setPracticeFilter] = useState<'全部' | '已练习' | '未练习'>('全部');
   const rows = topicQuestions(data);
-  const pageCount = Math.max(1, Math.ceil(rows.length / TOPIC_PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const visible = rows.slice(
-    (currentPage - 1) * TOPIC_PAGE_SIZE,
-    currentPage * TOPIC_PAGE_SIZE,
-  );
   const attemptsByQuestion = new Map<string, number>();
   data.attempts.forEach((attempt) => {
     const key = attempt.questionSetId + '|' + attempt.questionId;
     attemptsByQuestion.set(key, (attemptsByQuestion.get(key) || 0) + 1);
   });
+  const categories = [...new Set(rows.map((row) => row.question.category))];
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filteredRows = rows.filter((row) => {
+    const key = row.pack.id + '|' + row.question.id;
+    const attempts = attemptsByQuestion.get(key) || 0;
+    const number = row.question.questionNumber
+      ? 'q' + row.question.questionNumber
+      : '';
+    const searchable = [
+      number,
+      row.question.title,
+      row.question.questionJa,
+      row.question.category,
+      row.topic,
+    ]
+      .join('\n')
+      .toLocaleLowerCase();
+    return (
+      (!normalizedQuery || searchable.includes(normalizedQuery)) &&
+      (topicFilter === '全部' || row.topic === topicFilter) &&
+      (categoryFilter === '全部' || row.question.category === categoryFilter) &&
+      (practiceFilter === '全部' ||
+        (practiceFilter === '已练习' ? attempts > 0 : attempts === 0))
+    );
+  });
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredRows.length / TOPIC_PAGE_SIZE),
+  );
+  const currentPage = Math.min(page, pageCount);
+  const visible = filteredRows.slice(
+    (currentPage - 1) * TOPIC_PAGE_SIZE,
+    currentPage * TOPIC_PAGE_SIZE,
+  );
   const open = (row: TopicQuestion) => {
     window.location.assign(
       '#practice/question/' +
@@ -84,17 +117,67 @@ function PracticeTopicTable({ data }: { data: State }) {
 
   return (
     <section className="japanese-practice-hub practice-topic-page">
-      <div className="section-head practice-topic-heading">
-        <div>
-          <h2>{t('专题练习')}</h2>
-          <p className="muted">{t('选择题目查看详情，随时开始对应专题的练习。')}</p>
-        </div>
-        <span className="muted practice-topic-count">
-          {t('共 {0} 道题', [String(rows.length)])}
+      <div className="list-toolbar practice-topic-toolbar">
+        <label className="search">
+          <Search size={17} />
+          <input
+            aria-label={t('搜索题目或编号')}
+            placeholder={t('搜索题目或编号')}
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+          />
+        </label>
+        <select
+          aria-label={t('筛选专题')}
+          value={topicFilter}
+          onChange={(event) => {
+            setTopicFilter(event.target.value as PracticeTopic | '全部');
+            setPage(1);
+          }}
+        >
+          <option value="全部">{t('全部专题')}</option>
+          <option value="面试基本问题">{t('面试基本问题')}</option>
+          <option value="日语提升">{t('日语提升')}</option>
+          <option value="転職フェア练习">{t('転職フェア练习')}</option>
+        </select>
+        <select
+          aria-label={t('筛选题型')}
+          value={categoryFilter}
+          onChange={(event) => {
+            setCategoryFilter(event.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="全部">{t('全部题型')}</option>
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {t(category)}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label={t('筛选练习状态')}
+          value={practiceFilter}
+          onChange={(event) => {
+            setPracticeFilter(
+              event.target.value as '全部' | '已练习' | '未练习',
+            );
+            setPage(1);
+          }}
+        >
+          <option value="全部">{t('全部练习状态')}</option>
+          <option value="已练习">{t('已练习')}</option>
+          <option value="未练习">{t('未练习')}</option>
+        </select>
+        <span className="muted list-count">
+          {t('{0} / {1} 条', [String(filteredRows.length), String(rows.length)])}
         </span>
       </div>
       <section className="panel dt-panel practice-topic-list">
-        {rows.length ? (
+        {filteredRows.length ? (
           <DataTable
             label={t('专题练习')}
             columns={[
@@ -126,7 +209,14 @@ function PracticeTopicTable({ data }: { data: State }) {
               return (
                 <DataRow key={key} onOpen={() => open(row)}>
                   <DataTitle
-                    title={<Ja text={row.question.title} />}
+                    title={
+                      <>
+                        <span className="company-number">
+                          Q{row.question.questionNumber || '—'}
+                        </span>
+                        <Ja text={row.question.title} />
+                      </>
+                    }
                     meta={<Ja text={row.question.questionJa} mode="ja" />}
                     onClick={() => open(row)}
                   />
@@ -150,7 +240,7 @@ function PracticeTopicTable({ data }: { data: State }) {
           </DataTable>
         ) : (
           <div className="empty">
-            <p>{t('还没有专题练习')}</p>
+            <p>{t(rows.length ? '没有符合条件的练习题' : '还没有专题练习')}</p>
           </div>
         )}
         {pageCount > 1 && (

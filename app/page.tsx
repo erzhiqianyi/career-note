@@ -18,6 +18,7 @@ import {
 import ScheduledTemplates from '@/components/scheduled-templates';
 import TodayCalendar, { EventDetail, collectActivity, isFollowingJob, type CalendarMark } from '@/components/today-calendar';
 import { eventsFromReports, type CareerEvent } from '@/lib/calendar-events';
+import { applicationFunnelCounts } from '@/lib/company-timeline';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
 import { Ja, JaChildren } from '@/components/japanese-text';
@@ -759,11 +760,11 @@ export default function Home() {
   const applicationContent = applicationDoc ? prepareMaterialPrint(applicationDoc.content, applicationDoc.kind as ApplicationKind).printableContent : '';
   const isSubPage = !!(recordView || jobEdit || subPages[active] || prepRoute || briefOpen);
   const due = openJobs.filter(
-      (j) => j.nextDate && j.nextDate <= (data?.today || ''),
-    ),
-    interviews = openJobs.filter((j) => j.status === '面试中');
+    (j) => j.nextDate && j.nextDate <= (data?.today || ''),
+  );
   const canManageArticles = Boolean(auth?.admin || auth?.mode === 'off');
   const pending = data?.tasks.filter((t) => t.status === '待处理') || [];
+  const funnel = applicationFunnelCounts(data?.jobs || []);
   // 首页「下一步」按实际资料推导：先补履历，再收集职位、定制简历、练习回答，最后看分析。
   const nextSteps = (() => {
     if (!data) return [] as [string, string, string, string, string?][];
@@ -1241,22 +1242,21 @@ export default function Home() {
                       </button>
                     );
                   })()}
-                  <div className="stats">
+                  <div className="stats home-pipeline-stats">
                     {[
-                      ['关注职位', data.jobs.length, '全部保存的求职机会'],
+                      ['公司总数', funnel.companies, '全部保存的求职机会'],
                       [
-                        '进行中的投递',
-                        openJobs.filter((j) =>
-                          ['已投递', '书类选考', '面试中'].includes(j.status),
-                        ).length,
-                        '等待回复或进入下一阶段',
+                        '已投递公司',
+                        funnel.applied,
+                        '曾进入投递阶段的公司',
                       ],
-                      ['待准备面试', interviews.length, '把准备留在面试之前'],
                       [
-                        '专属准备资料',
-                        data.materials.length,
-                        '按公司整理并保留版本',
+                        '书类选考落选',
+                        funnel.screeningRejected,
+                        '未进入面试即结束的公司',
                       ],
+                      ['进入面试', funnel.interviewed, '曾进入面试阶段的公司'],
+                      ['内定', funnel.offers, '当前获得内定的公司'],
                     ].map(([title, count]) => (
                       <div
                         key={title}

@@ -8,7 +8,7 @@ const result = await build({ entryPoints: ['lib/company-timeline.ts'], bundle: t
 const module = { exports: {} };
 // Same realm as the assertions, so arrays and objects compare structurally.
 new Function('module', 'exports', 'require', result.outputFiles[0].text)(module, module.exports, require);
-const { pipelineView, companyTimeline, isScreeningRejection } = module.exports;
+const { pipelineView, companyTimeline, isScreeningRejection, applicationFunnelCounts } = module.exports;
 
 const job = (status, history, extra = {}) => ({ id: 'j', company: 'Example', role: 'Engineer', status, history, ...extra });
 
@@ -67,4 +67,22 @@ test('only rejections that never reached an interview count as document-screenin
   assert.equal(isScreeningRejection(job('未通过', [{ status: '面试中' }, { status: '未通过' }])), false);
   assert.equal(isScreeningRejection(job('已撤回', [{ status: '已投递' }])), false);
   assert.equal(isScreeningRejection(job('已投递', [])), false);
+});
+
+test('homepage funnel keeps ended applications in the furthest stage they reached', () => {
+  const counts = applicationFunnelCounts([
+    job('关注中', []),
+    job('已投递', [{ status: '已投递' }]),
+    job('未通过', [{ status: '已投递' }, { status: '未通过' }]),
+    job('未通过', [{ status: '已投递' }, { status: '面试中' }, { status: '未通过' }]),
+    job('内定', []),
+    job('已撤回', [{ status: '准备投递' }, { status: '已撤回' }]),
+  ]);
+  assert.deepEqual(counts, {
+    companies: 6,
+    applied: 4,
+    screeningRejected: 1,
+    interviewed: 2,
+    offers: 1,
+  });
 });

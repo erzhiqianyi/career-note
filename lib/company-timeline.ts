@@ -43,6 +43,24 @@ export function isScreeningRejection(job: Pick<Job, 'status' | 'history'>): bool
   return !(job.history || []).some((item) => pipeline.indexOf(item.status as (typeof pipeline)[number]) >= interview);
 }
 
+/** Cumulative homepage funnel. Terminal records still count in the furthest stage they actually reached. */
+export function applicationFunnelCounts(jobs: Pick<Job, 'status' | 'history'>[]) {
+  const reached = (job: Pick<Job, 'status' | 'history'>, status: string) =>
+    job.status === status || (job.history || []).some((item) => item.status === status);
+  const applied = (job: Pick<Job, 'status' | 'history'>) =>
+    ['已投递', '书类选考', '面试中', '内定'].some((status) => reached(job, status)) ||
+    (job.status === '未通过' && !(job.history || []).length);
+  const interviewed = (job: Pick<Job, 'status' | 'history'>) =>
+    reached(job, '面试中') || reached(job, '内定');
+  return {
+    companies: jobs.length,
+    applied: jobs.filter(applied).length,
+    screeningRejected: jobs.filter(isScreeningRejection).length,
+    interviewed: jobs.filter(interviewed).length,
+    offers: jobs.filter((job) => job.status === '内定').length,
+  };
+}
+
 export type TimelineItem = {
   key: string;
   date: string;
