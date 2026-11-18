@@ -423,6 +423,24 @@ final class AppModel {
         await sync()
     }
 
+    func selectQuestionOrder(_ saved: QuestionOrders, activeOrderID: String?) async throws {
+        guard let uid = userID else { throw InterviewStore.failure("ログインしてください。") }
+        let encodedOrders = try JSONSerialization.jsonObject(with: JSONEncoder().encode(saved.orders))
+        let payload: [String: Any] = [
+            "questionSetId": saved.id,
+            "revision": saved.revision ?? 0,
+            "activeOrderId": activeOrderID ?? NSNull(),
+            "orders": encodedOrders
+        ]
+        let data = try await interviewRequest("question-orders", method: "POST",
+                                              body: JSONSerialization.data(withJSONObject: payload), uid: uid)
+        let result = try JSONDecoder().decode(QuestionOrders.self, from: data)
+        state.questionOrders = (state.questionOrders ?? []).filter { $0.id != result.id } + [result]
+        guard persist() else {
+            throw InterviewStore.failure("順番はサーバーに保存されましたが、端末の保存に失敗しました。同期してください。")
+        }
+    }
+
     func setPracticePlanStatus(id: String, revision: Int, status: String) async throws {
         guard let uid = userID else { throw InterviewStore.failure("ログインしてください。") }
         let payload: [String: Any] = ["id": id, "revision": revision, "status": status]

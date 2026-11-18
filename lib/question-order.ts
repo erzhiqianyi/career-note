@@ -1,6 +1,12 @@
 // Saved practice orders for one question set. Orders only list question ids, so Q numbers,
 // answers and reviews stay attached to the questions themselves and survive any reordering.
-export type QuestionOrder = { id: string; name: string; questionIds: string[] };
+export type QuestionOrder = {
+  id: string;
+  name: string;
+  questionIds: string[];
+  /** When true, questions omitted from questionIds stay hidden instead of following the saved order. */
+  onlySelected?: boolean;
+};
 export type QuestionOrders = {
   /** The question set id; one record per set, kept apart from the set so agent rewrites never drop it. */
   id: string;
@@ -15,8 +21,12 @@ export const MAX_QUESTION_ORDERS = 20;
 export const MAX_ORDER_NAME = 40;
 
 /** Questions in the saved order; ids no longer in the set are skipped and new questions follow in set order. */
-export function applyQuestionOrder<T extends { id: string }>(questions: T[], questionIds: readonly string[] | undefined): T[] {
-  if (!questionIds?.length) return questions;
+export function applyQuestionOrder<T extends { id: string }>(
+  questions: T[],
+  questionIds: readonly string[] | undefined,
+  onlySelected = false,
+): T[] {
+  if (!questionIds?.length) return onlySelected ? [] : questions;
   const byId = new Map(questions.map(q => [q.id, q]));
   const seen = new Set<string>();
   const ordered: T[] = [];
@@ -24,7 +34,7 @@ export function applyQuestionOrder<T extends { id: string }>(questions: T[], que
     const q = byId.get(id);
     if (q && !seen.has(id)) { ordered.push(q); seen.add(id); }
   }
-  return [...ordered, ...questions.filter(q => !seen.has(q.id))];
+  return onlySelected ? ordered : [...ordered, ...questions.filter(q => !seen.has(q.id))];
 }
 
 export function activeQuestionOrder(orders: QuestionOrders | undefined): QuestionOrder | undefined {

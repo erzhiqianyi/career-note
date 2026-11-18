@@ -538,13 +538,15 @@ void test('saved question orders keep question ids, answers and numbers, and fol
  assert.equal((await send('attempts',{questionSetId:'pack-order',questionId:'c',answer:'My answer',language:'日语',durationSeconds:45})).status,200);
  const before=await (await send('state')).json();
  const numbers=Object.fromEntries(before.questionSets[0].questions.map(q=>[q.id,q.questionNumber]));
- const orders=[{id:'focus',name:'重点强化',questionIds:['c','a','b']},{id:'flow',name:'面试流程',questionIds:['a','b','c']}];
+ const orders=[{id:'focus',name:'重点强化',questionIds:['c','a'],onlySelected:true},{id:'flow',name:'面试流程',questionIds:['a','b','c']}];
  const saved=await send('question-orders',{questionSetId:'pack-order',revision:0,activeOrderId:'focus',orders});
  assert.equal(saved.status,200);
  assert.equal((await saved.json()).revision,1);
  assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:0,activeOrderId:null,orders})).status,409);
  assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:1,activeOrderId:null,orders:[{id:'x',name:'Bad',questionIds:['zzz']}]})).status,400);
  assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:1,activeOrderId:null,orders:[{id:'x',name:'Dup',questionIds:['a','a']}]})).status,400);
+ assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:1,activeOrderId:null,orders:[{id:'x',name:'Bad flag',questionIds:['a'],onlySelected:'yes'}]})).status,400);
+ assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:1,activeOrderId:null,orders:[{id:'x',name:'Empty',questionIds:[],onlySelected:true}]})).status,400);
  assert.equal((await send('question-orders',{questionSetId:'missing',revision:0,activeOrderId:null,orders:[]})).status,400);
  const state=await (await send('state')).json();
  assert.deepEqual(state.questionOrders,[{id:'pack-order',activeOrderId:'focus',orders,revision:1,updatedAt:state.questionOrders[0].updatedAt}]);

@@ -81,6 +81,14 @@ test('Azure synthesis is saved once in private R2 and later served without a key
   assert.equal(second.headers.get('cache-control'), 'private, no-store');
   await assert.rejects(referenceSpeechResponse({ ...base, source: '任意の文章' }),
     error => error instanceof ReferenceSpeechError && error.status === 409);
+  // The bottom player reads every reverse question at once, without the circled numbers.
+  const whole = await referenceSpeechResponse({ ...base, source: sampleAnswer, azureRegion: 'japaneast',
+    azureKey: 'test-key', fetcher: async (_url, options) => {
+      assert.doesNotMatch(options.body, /[①②]/u);
+      assert.match(options.body, /配属後の工程は何ですか。/);
+      return new Response(audio, { headers: { 'content-type': 'audio/mpeg' } });
+    } });
+  assert.equal(whole.status, 200);
   await assert.rejects(referenceSpeechResponse({ ...base, voice: 'other' }),
     error => error instanceof ReferenceSpeechError && error.status === 400);
 });

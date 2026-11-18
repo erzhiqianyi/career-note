@@ -14,7 +14,7 @@ import Foundation
                                             status: "flow", audio: nil, segmentCount: 2, exchangeCount: 1, practiceCount: 0)]
         let flowPack = #"{"id":"flow-pack","title":"Practice","questions":[{"id":"q1","title":"Project","questionJa":"説明してください","outline":"Original notes","answerFlow":{"version":1,"nodes":[{"id":"background","title":"背景","cue":"要点","detail":"説明","cautions":"注意"}],"followUps":[{"id":"why","question":"なぜ？","nodeId":"background","questionId":"q2"}]}},{"id":"q2","title":"Why","questionJa":"なぜ？"}]}"#
         state.questionSets = [try JSONDecoder().decode(QuestionSet.self, from: Data(flowPack.utf8))]
-        state.questionOrders = [try JSONDecoder().decode(QuestionOrders.self, from: Data(#"{"id":"flow-pack","activeOrderId":"focus","orders":[{"id":"focus","name":"重点强化","questionIds":["q2","gone"]}],"revision":1,"updatedAt":"2026-11-18"}"#.utf8))]
+        state.questionOrders = [try JSONDecoder().decode(QuestionOrders.self, from: Data(#"{"id":"flow-pack","activeOrderId":"focus","orders":[{"id":"focus","name":"重点强化","questionIds":["q2","gone"],"onlySelected":true}],"revision":1,"updatedAt":"2026-11-18"}"#.utf8))]
         let pending = PendingAttempt(id: "pending-1", questionSetId: "pack-1", questionId: "q-1", answer: "offline answer", language: "ja", durationSeconds: 32, requestReview: true, createdAt: Date(timeIntervalSince1970: 12345), hasRecording: true)
         let snapshot = LocalSnapshot(state: state, pending: [pending], lastUpdated: Date(timeIntervalSince1970: 45678), personalizedResumes: [])
         try LocalStore.save(snapshot, uid: "test-user", in: root)
@@ -26,7 +26,7 @@ import Foundation
         precondition(read?.state.questionSets.first?.questions.first?.answerFlow?.followUps.first?.questionId == "q2")
         precondition(read?.state.questionSets.first?.questions.last?.answerFlow == nil)
         precondition(read?.state.questionOrders?.first?.activeOrder?.name == "重点强化")
-        precondition(read.map { $0.state.orderedQuestions(of: $0.state.questionSets[0]).map(\.id) } == ["q2", "q1"])
+        precondition(read.map { $0.state.orderedQuestions(of: $0.state.questionSets[0]).map(\.id) } == ["q2"])
         precondition(read?.pending.first?.answer == "offline answer")
         precondition(read?.pending.first?.hasRecording == true)
         precondition(read?.lastUpdated == snapshot.lastUpdated)

@@ -4379,15 +4379,21 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .question-order-editor > p { margin: 0 0 12px; }
 .question-order-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .question-order-tools input { flex: 1 1 200px; min-width: 0; }
+.question-order-filter { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--ink-2); font-size: .875rem; }
+.question-order-filter input { width: auto; }
 .question-order-tools button, .question-order-actions button { display: inline-flex; align-items: center; gap: 6px; }
 .question-order-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 60vh; overflow-y: auto; }
-.question-order-list li { display: grid; grid-template-columns: 18px 28px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); cursor: grab; }
+.question-order-list li { display: grid; grid-template-columns: 18px 28px minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); cursor: grab; }
 .question-order-list li.is-dragging { opacity: .45; }
 .question-order-grip { color: var(--ink-3); }
 .question-order-title { font-size: .875rem; line-height: 1.6; overflow-wrap: anywhere; }
+.question-order-excluded { margin-top: 12px; color: var(--ink-2); }
+.question-order-excluded summary { cursor: pointer; font-size: .875rem; }
+.question-order-excluded ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; max-height: 36vh; overflow-y: auto; }
+.question-order-excluded li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
 .question-order-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 @media (max-width: 640px) {
   .question-order-editor { padding: 12px; }
-  .question-order-list li { grid-template-columns: 24px minmax(0, 1fr) auto auto; padding: 8px; }
+  .question-order-list li { grid-template-columns: 24px minmax(0, 1fr) auto auto auto; padding: 8px; }
   .question-order-grip { display: none; }
 }

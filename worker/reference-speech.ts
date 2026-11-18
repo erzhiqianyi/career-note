@@ -32,6 +32,7 @@ export function plainReferenceSpeech(source: string): string {
   return source.replace(/\{([^{}|\n]+)\|[ぁ-ゖァ-ヺー・]+\}/gu, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/gu, '$1')
     .replace(/^\s{0,3}(?:#{1,6}\s+|[-*+]\s+|\d+\.\s+|>\s+)/gmu, '')
+    .replace(/^\s*[①-⑳]\s*/gmu, '')
     .replace(/\*\*|`/gu, '')
     .trim();
 }
@@ -97,7 +98,8 @@ export async function referenceSpeechResponse(input: {
   if (!REFERENCE_VOICES.includes(voice as typeof REFERENCE_VOICES[number]))
     throw new ReferenceSpeechError(400, '音声の種類が正しくありません');
   const numbered = category === '逆質問' ? numberedReferenceQuestions(sampleAnswer) : [];
-  const allowed = numbered.length ? numbered : [sampleAnswer, ...referenceSentences(sampleAnswer)];
+  // The whole answer is always allowed; its parts are the numbered reverse questions or its sentences.
+  const allowed = [sampleAnswer, ...(numbered.length ? numbered : referenceSentences(sampleAnswer))];
   if (!allowed.includes(source)) throw new ReferenceSpeechError(409, '参考回答が更新されました。同期してから再試行してください');
   const text = plainReferenceSpeech(source);
   if (!text || text.length > MAX_TEXT_LENGTH) throw new ReferenceSpeechError(400, '朗読する文章の長さが正しくありません');

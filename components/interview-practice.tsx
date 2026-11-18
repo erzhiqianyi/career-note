@@ -855,10 +855,10 @@ export default function InterviewPractice({
             // The default order is the interview flow; a saved order shows one flat list in its own sequence.
             const flowOrdered = INTERVIEW_FLOW.flatMap(phase => shown.filter(q => interviewFlowOf(q) === phase.id));
             const groups = custom
-              ? [{ id: custom.id, label: custom.name, number: '', questions: applyQuestionOrder(shown, custom.questionIds) }]
+              ? [{ id: custom.id, label: custom.name, number: '', questions: applyQuestionOrder(shown, custom.questionIds, custom.onlySelected) }]
               : INTERVIEW_FLOW.map((phase, phaseIndex) => ({ id: phase.id, label: tr(phase.label), number: String(phaseIndex + 1).padStart(2, '0'), questions: shown.filter(q => interviewFlowOf(q) === phase.id) }));
             return <>
-          <QuestionOrderBar packId={pack.id} questions={custom ? groups[0].questions : flowOrdered} saved={savedOrder}
+          <QuestionOrderBar packId={pack.id} questions={flowOrdered} saved={savedOrder}
             attempts={companyAttempts} reviewedAttemptIds={reviewedAttemptIds} reload={reload} title={q => bt(q.title)} />
           <section className="panel question-list prep-tab-panel interview-flow-list">
             {groups.map(group => {

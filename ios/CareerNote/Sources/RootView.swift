@@ -644,10 +644,13 @@ struct QuestionList: View {
     @Bindable var model: AppModel
     let pack: QuestionSet
     @State private var search = ""
+    @State private var savingOrder = false
+    @State private var orderError: String?
 
     /// Follows the practice order saved on the web; positions number the ordered list.
     private var ordered: [CareerQuestion] { model.state.orderedQuestions(of: pack) }
     private var activeOrderName: String? { model.state.questionOrders?.first { $0.id == pack.id }?.activeOrder?.name }
+    private var savedOrders: QuestionOrders? { model.state.questionOrders?.first { $0.id == pack.id } }
     private var questions: [CareerQuestion] {
         ordered.filter { $0.category != "日语表达基础" && $0.matchesListSearch(search) }
     }
@@ -665,6 +668,30 @@ struct QuestionList: View {
             }
             SectionHeading(title: "练习题目",
                            detail: [activeOrderName, "\(questions.count) 道题"].compactMap { $0 }.joined(separator: " · "))
+            if let savedOrders, !savedOrders.orders.isEmpty {
+                Menu {
+                    Button {
+                        chooseOrder(nil, saved: savedOrders)
+                    } label: {
+                        if savedOrders.activeOrderId == nil { Label("面接の流れ（標準）", systemImage: "checkmark") }
+                        else { Text("面接の流れ（標準）") }
+                    }
+                    ForEach(savedOrders.orders) { order in
+                        Button {
+                            chooseOrder(order.id, saved: savedOrders)
+                        } label: {
+                            if savedOrders.activeOrderId == order.id { Label(order.name, systemImage: "checkmark") }
+                            else { Text(order.name) }
+                        }
+                    }
+                } label: {
+                    Label(activeOrderName ?? "面接の流れ（標準）", systemImage: "list.number")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .disabled(savingOrder)
+                if savingOrder { ProgressView("順番を保存しています…").font(.caption) }
+                if let orderError { Text(orderError).font(.caption).foregroundStyle(.red) }
+            }
             ForEach(questions) { question in
                 PracticeQuestionLink(model: model, pack: pack, question: question,
                                      number: (ordered.firstIndex { $0.id == question.id } ?? 0) + 1)
@@ -680,6 +707,17 @@ struct QuestionList: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(CareerRichText.plain(pack.title))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func chooseOrder(_ id: String?, saved: QuestionOrders) {
+        guard id != saved.activeOrderId, !savingOrder else { return }
+        savingOrder = true
+        orderError = nil
+        Task {
+            do { try await model.selectQuestionOrder(saved, activeOrderID: id) }
+            catch { orderError = error.localizedDescription }
+            savingOrder = false
+        }
     }
 }
 
@@ -886,6 +924,8 @@ struct AnswerView: View {
     @State private var practiceKeywords = ""
     @State private var speech = PracticeSpeechRecorder()
     @State private var referenceSpeech = ReferenceSpeechPlayer()
+    /// Reads one tapped sentence or reverse question; the bottom player keeps the full answer.
+    @State private var sentenceSpeech = ReferenceSpeechPlayer(systemControls: false)
     @State private var recognitionLanguage = "ja-JP"
     @State private var selectedSection: AnswerSection?
     @State private var showAnswers = false
@@ -963,8 +1003,12 @@ struct AnswerView: View {
                 if loading {
                     referenceSpeech.stop()
                 } else if active && ready {
-                    if playing { referenceSpeech.pause() } else { referenceSpeech.resume() }
+                    if playing { referenceSpeech.pause() } else {
+                        sentenceSpeech.stop()
+                        referenceSpeech.resume()
+                    }
                 } else {
+                    sentenceSpeech.stop()
                     let voice = ReferenceSpeechSettings.voice
                     Task {
                         await referenceSpeech.play(source, userID: model.userID ?? "local", voice: voice) {
@@ -1062,6 +1106,7 @@ struct AnswerView: View {
         .onDisappear {
             speech.discard()
             referenceSpeech.stop()
+            sentenceSpeech.stop()
             historyPlayer?.stop()
         }
         .navigationTitle(question.questionNumber.map { "Q\($0) · \(CareerRichText.plain(question.title))" } ?? CareerRichText.plain(question.title))
@@ -1366,6 +1411,8 @@ struct AnswerView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(readingItems.enumerated()), id: \.offset) { index, item in
                             let selected = index == selectedReading
+                            let active = sentenceSpeech.activeSource == item
+                            let sounding = active && (sentenceSpeech.isLoading || sentenceSpeech.isPlaying)
                             if index > 0 { Divider().padding(.leading, 42) }
                             HStack(alignment: .center, spacing: 12) {
                                 Text(String(format: "%02d", index + 1))
@@ -1375,11 +1422,18 @@ struct AnswerView: View {
                                 RichContent(text: item, markdown: reverseQuestions.isEmpty, fontSize: 18)
                                     .allowsHitTesting(false)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                Image(systemName: "speaker.wave.2.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(PhoneStyle.accent)
-                                    .opacity(selected ? 1 : 0)
-                                    .accessibilityHidden(true)
+                                Group {
+                                    if active && sentenceSpeech.isLoading {
+                                        ProgressView().controlSize(.mini)
+                                    } else {
+                                        Image(systemName: sounding ? "speaker.wave.2.fill" : "speaker.wave.2")
+                                            .font(.caption)
+                                            .foregroundStyle(PhoneStyle.accent)
+                                            .opacity(sounding ? 1 : 0.45)
+                                    }
+                                }
+                                .frame(width: 18)
+                                .accessibilityHidden(true)
                             }
                             .padding(.vertical, 12)
                             .overlay(alignment: .leading) {
@@ -1390,9 +1444,11 @@ struct AnswerView: View {
                                     .opacity(selected ? 1 : 0)
                             }
                             .contentShape(Rectangle())
-                            .onTapGesture { selectedReading = index }
+                            .onTapGesture { readSentence(item, at: index) }
+                            .disabled(speech.phase == .recording || speech.phase == .recognizing)
                             .accessibilityElement(children: .ignore)
                             .accessibilityLabel(CareerRichText.plain(item))
+                            .accessibilityHint(sounding ? "読み上げを停止" : "この文だけを読み上げる")
                             .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
                         }
                     }
@@ -1401,11 +1457,29 @@ struct AnswerView: View {
         }
     }
 
-    /// Text the bottom read-aloud control plays for the 参考回答 card.
+    /// The bottom read-aloud control always plays the whole 参考回答; tapped sentences use their own player.
     private var speechSource: String? {
         guard let sample = question.sampleAnswer, !sample.isEmpty else { return nil }
-        guard !readingItems.isEmpty else { return sample }
-        return readingItems[min(selectedReading, readingItems.count - 1)]
+        return sample
+    }
+
+    /// Reads only the tapped sentence. A playing full answer is paused, keeping its position;
+    /// tapping the sentence that is sounding stops it.
+    private func readSentence(_ item: String, at index: Int) {
+        selectedReading = index
+        if sentenceSpeech.activeSource == item && (sentenceSpeech.isLoading || sentenceSpeech.isPlaying) {
+            sentenceSpeech.stop()
+            return
+        }
+        if referenceSpeech.isLoading { referenceSpeech.stop() }
+        else if referenceSpeech.isPlaying { referenceSpeech.pause() }
+        let voice = ReferenceSpeechSettings.voice
+        Task {
+            await sentenceSpeech.play(item, userID: model.userID ?? "local", voice: voice) {
+                try await model.referenceSpeech(questionSetID: pack.id, questionID: question.id,
+                                                source: item, voice: voice)
+            }
+        }
     }
 
     private var bottomBar: some View {
@@ -1413,7 +1487,7 @@ struct AnswerView: View {
             if currentSection == .sample, let source = speechSource {
                 VStack(alignment: .leading, spacing: 6) {
                     speechPlayer(for: source)
-                    if let message = referenceSpeech.errorMessage {
+                    if let message = sentenceSpeech.errorMessage ?? referenceSpeech.errorMessage {
                         Text(message).font(.caption).foregroundStyle(.red)
                     }
                 }
@@ -1506,6 +1580,7 @@ struct AnswerView: View {
                 case .idle:
                     Button {
                         referenceSpeech.stop()
+                        sentenceSpeech.stop()
                         Task { await startRecording() }
                     } label: {
                         Label("回答を録音", systemImage: "mic.fill")
@@ -1640,6 +1715,7 @@ struct AnswerView: View {
     private func playSavedRecording(id: String) async {
         do {
             referenceSpeech.stop()
+            sentenceSpeech.stop()
             let data = try await model.savedRecording(id: id)
             try AVAudioSession.sharedInstance().setCategory(.playback)
             try AVAudioSession.sharedInstance().setActive(true)

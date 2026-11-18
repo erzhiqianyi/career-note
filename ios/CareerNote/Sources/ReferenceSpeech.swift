@@ -99,6 +99,7 @@ enum ReferenceSpeechText {
             .replacingOccurrences(of: #"\[([^\]]+)\]\([^)]+\)"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"(?m)^\s{0,3}(?:#{1,6}\s+|[-*+]\s+|\d+\.\s+|>\s+)"#,
                                   with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?m)^\s*[①-⑳]\s*"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: "**", with: "")
             .replacingOccurrences(of: "`", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -179,6 +180,15 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
     var errorMessage: String?
     @ObservationIgnored private var player: AVAudioPlayer?
     @ObservationIgnored private var generation = UUID()
+    /// The full-answer player owns the lock-screen controls and the saved repeat setting.
+    /// A sentence player reads one tapped item once and leaves both alone.
+    @ObservationIgnored private let systemControls: Bool
+
+    init(systemControls: Bool = true) {
+        self.systemControls = systemControls
+        super.init()
+        if !systemControls { isLooping = false }
+    }
 
     func play(_ source: String, userID: String, voice: String,
               fetchAudio: () async throws -> Data) async {
@@ -277,7 +287,7 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
     }
 
     private func updateNowPlaying() {
-        guard player != nil else { return }
+        guard systemControls, player != nil else { return }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [
             MPMediaItemPropertyTitle: "参考回答",
             MPMediaItemPropertyArtist: "Career Note",
@@ -288,6 +298,11 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
     }
 
     private func installControls() {
+        NotificationCenter.default.addObserver(self, selector: #selector(interrupted(_:)),
+            name: AVAudioSession.interruptionNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(routeChanged(_:)),
+            name: AVAudioSession.routeChangeNotification, object: nil)
+        guard systemControls else { return }
         let center = MPRemoteCommandCenter.shared()
         let actions: [(MPRemoteCommand, Selector)] = [
             (center.playCommand, #selector(remotePlay)),
@@ -300,10 +315,6 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
             command.addTarget(self, action: selector)
             remoteTargets.append(command)
         }
-        NotificationCenter.default.addObserver(self, selector: #selector(interrupted(_:)),
-            name: AVAudioSession.interruptionNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(routeChanged(_:)),
-            name: AVAudioSession.routeChangeNotification, object: nil)
     }
 
     @objc private func remotePlay() -> MPRemoteCommandHandlerStatus { resume(); return .success }
@@ -351,7 +362,7 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
         NotificationCenter.default.removeObserver(self)
         player?.stop()
         if player != nil {
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            if systemControls { MPNowPlayingInfoCenter.default().nowPlayingInfo = nil }
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
         currentTime = 0

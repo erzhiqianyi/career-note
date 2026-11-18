@@ -9,6 +9,11 @@ void test('saved orders skip removed questions and keep new ones at the end', ()
   assert.deepEqual(applyQuestionOrder(q(['a', 'b']), undefined).map(x => x.id), ['a', 'b']);
 });
 
+void test('selected-only orders hide questions omitted from the saved order', () => {
+  assert.deepEqual(applyQuestionOrder(q(['a', 'b', 'c', 'd']), ['c', 'a'], true).map(x => x.id), ['c', 'a']);
+  assert.deepEqual(applyQuestionOrder(q(['a', 'b']), [], true), []);
+});
+
 void test('a question moves to sit right after another one', () => {
   assert.deepEqual(moveQuestionAfter(['q140', 'q150', 'q160', 'q175'], 'q175', 'q140'), ['q140', 'q175', 'q150', 'q160']);
   assert.deepEqual(moveQuestionAfter(['a', 'b', 'c'], 'c', null), ['c', 'a', 'b']);

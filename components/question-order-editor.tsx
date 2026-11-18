@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, GripVertical, ListOrdered, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, ListOrdered, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { api, type Attempt, type Question } from '@/lib/career';
-import { MAX_ORDER_NAME, MAX_QUESTION_ORDERS, moveQuestionAfter, unfamiliarFirst, type QuestionOrders } from '@/lib/question-order';
+import { applyQuestionOrder, MAX_ORDER_NAME, MAX_QUESTION_ORDERS, moveQuestionAfter, unfamiliarFirst, type QuestionOrders } from '@/lib/question-order';
 import { Ja } from '@/components/japanese-text';
 import { useLocale } from '@/components/locale-provider';
 
@@ -25,7 +25,7 @@ export function QuestionOrderBar({ packId, questions, saved, attempts, reviewedA
   const { t: tr } = useLocale();
   const orders = saved?.orders || [];
   const active = orders.find(o => o.id === saved?.activeOrderId);
-  const [editing, setEditing] = useState<{ id: string | null; name: string; ids: string[] } | null>(null);
+  const [editing, setEditing] = useState<{ id: string | null; name: string; ids: string[]; onlySelected: boolean } | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -46,7 +46,13 @@ export function QuestionOrderBar({ packId, questions, saved, attempts, reviewedA
   }
   function startEditing(fromActive: boolean) {
     setMessage('');
-    setEditing({ id: fromActive && active ? active.id : null, name: fromActive && active ? active.name : '', ids: questions.map(q => q.id) });
+    const source = fromActive && active ? active : undefined;
+    setEditing({
+      id: source?.id ?? null,
+      name: source?.name ?? '',
+      ids: applyQuestionOrder(questions, source?.questionIds, source?.onlySelected).map(q => q.id),
+      onlySelected: source?.onlySelected === true,
+    });
   }
   async function commit(asNew: boolean) {
     if (!editing) return;
@@ -55,7 +61,8 @@ export function QuestionOrderBar({ packId, questions, saved, attempts, reviewedA
     if (orders.some(o => o.name === name && (asNew || o.id !== editing.id))) { setMessage('已有同名顺序'); return; }
     const id = asNew || !editing.id ? newOrderId() : editing.id;
     if (id !== editing.id && orders.length >= MAX_QUESTION_ORDERS) { setMessage(tr('最多保存 {0} 个顺序', [String(MAX_QUESTION_ORDERS)])); return; }
-    const order = { id, name, questionIds: editing.ids };
+    if (!editing.ids.length) { setMessage('请至少保留一道题'); return; }
+    const order = { id, name, questionIds: editing.ids, ...(editing.onlySelected ? { onlySelected: true } : {}) };
     const next = orders.some(o => o.id === id) ? orders.map(o => o.id === id ? order : o) : [...orders, order];
     if (await save(next, id)) setEditing(null);
   }
@@ -72,6 +79,7 @@ export function QuestionOrderBar({ packId, questions, saved, attempts, reviewedA
     return { ...e, ids };
   });
   const byId = new Map(questions.map(q => [q.id, q]));
+  const excluded = editing?.onlySelected ? questions.filter(q => !editing.ids.includes(q.id)) : [];
   const label = (q: Question) => (q.questionNumber ? 'Q' + q.questionNumber + ' · ' : '') + title(q);
 
   return <div className="question-order">
@@ -100,6 +108,11 @@ export function QuestionOrderBar({ packId, questions, saved, attempts, reviewedA
           <Sparkles size={15} />{tr('未熟练优先')}
         </button>
       </div>
+      <label className="question-order-filter">
+        <input type="checkbox" checked={editing.onlySelected}
+          onChange={e => setEditing({ ...editing, onlySelected: e.target.checked })} />
+        <span>{tr('只练这个顺序中保留的题目')}</span>
+      </label>
       <ol className="question-order-list">
         {editing.ids.map((id, index) => {
           const q = byId.get(id);
@@ -126,9 +139,19 @@ export function QuestionOrderBar({ packId, questions, saved, attempts, reviewedA
             <span className="question-order-title"><Ja text={label(q)} /></span>
             <button type="button" className="icon-button" aria-label={tr('上移')} disabled={index === 0} onClick={() => move(id, -1)}><ArrowUp size={15} /></button>
             <button type="button" className="icon-button" aria-label={tr('下移')} disabled={index === editing.ids.length - 1} onClick={() => move(id, 1)}><ArrowDown size={15} /></button>
+            {editing.onlySelected && <button type="button" className="icon-button" aria-label={tr('移出此顺序')}
+              onClick={() => setEditing({ ...editing, ids: editing.ids.filter(item => item !== id) })}><X size={15} /></button>}
           </li>;
         })}
       </ol>
+      {editing.onlySelected && excluded.length > 0 && <details className="question-order-excluded">
+        <summary>{tr('未包含的题目')}（{excluded.length}）</summary>
+        <ul>{excluded.map(q => <li key={q.id}>
+          <span className="question-order-title"><Ja text={label(q)} /></span>
+          <button type="button" className="icon-button" aria-label={tr('加入此顺序')}
+            onClick={() => setEditing({ ...editing, ids: [...editing.ids, q.id] })}><Plus size={15} /></button>
+        </li>)}</ul>
+      </details>}
       {message && <p role="alert" className="small">{tr(message)}</p>}
       <div className="question-order-actions">
         {editing.id && <button type="button" className="primary" disabled={busy} onClick={() => void commit(false)}><Save size={15} />{tr('保存')}</button>}

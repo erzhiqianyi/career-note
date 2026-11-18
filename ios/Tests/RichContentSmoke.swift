@@ -22,6 +22,21 @@ import Foundation
     precondition(layout.contains("<table>"))
     precondition(layout.contains("data:image/png;base64,"))
     precondition(!layout.contains("フェアで"))
-    print("Rich text, ruby toggle, links, and escaping passed")
+    // Paragraph text with readings and emphasis is drawn natively (no WebView); links and blocks are not.
+    typealias Run = CareerRichText.InlineRun
+    let question = CareerRichText.nativeParagraphs("{何|なに}か{質問|しつもん}はありますか。", markdown: false)
+    precondition(question == [[Run(text: "何", reading: "なに"), Run(text: "か"),
+                               Run(text: "質問", reading: "しつもん"), Run(text: "はありますか。")]])
+    let sample = CareerRichText.nativeParagraphs("はじめまして。\n\n**三年**{担当|たんとう}\nしました。", markdown: true)
+    precondition(sample == [[Run(text: "はじめまして。")],
+                            [Run(text: "三年", bold: true), Run(text: "担当", reading: "たんとう"),
+                             Run(text: "\n"), Run(text: "しました。")]])
+    precondition(CareerRichText.nativeParagraphs("{ab|あ}", markdown: false) == [[Run(text: "{ab|あ}")]])
+    precondition(CareerRichText.nativeParagraphs("[link](https://example.com)", markdown: true) == nil)
+    precondition(CareerRichText.nativeParagraphs("see https://example.com", markdown: false) == nil)
+    precondition(CareerRichText.nativeParagraphs("# 見出し", markdown: true) == nil)
+    precondition(CareerRichText.nativeParagraphs("- 項目", markdown: true) == nil)
+    precondition(CareerRichText.nativeParagraphs("- 項目", markdown: false) != nil)
+    print("Rich text, ruby toggle, links, native paragraphs, and escaping passed")
   }
 }

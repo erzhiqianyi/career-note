@@ -276,6 +276,80 @@ enum CareerRichText {
         return result
     }
 
+    /// A piece of inline text for native rendering: plain text, a {漢字|かな} reading, or emphasis/code.
+    struct InlineRun: Equatable {
+        var text: String
+        var reading: String? = nil
+        var bold = false
+        var italic = false
+        var code = false
+    }
+
+    /// Paragraphs of inline runs when the text can be drawn without a web view: plain lines,
+    /// readings, bold, italic and inline code. Returns nil when it holds links or, for Markdown,
+    /// block structure (headings, lists, quotes, code blocks, rules). Within a paragraph a line
+    /// break is kept as "\n"; blank lines separate paragraphs, as in the HTML rendering.
+    static func nativeParagraphs(_ source: String, markdown: Bool) -> [[InlineRun]]? {
+        let lines = source.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
+        var paragraphs: [[InlineRun]] = []
+        var current: [InlineRun]?
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if markdown {
+                if trimmed.isEmpty {
+                    if let current { paragraphs.append(current) }
+                    current = nil
+                    continue
+                }
+                let block = trimmed.hasPrefix("```") || heading(line) != nil ||
+                    ["---", "***", "___"].contains(trimmed) || trimmed.hasPrefix("> ") ||
+                    trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ") ||
+                    trimmed.range(of: #"^\d+\. "#, options: .regularExpression) != nil
+                if block { return nil }
+            }
+            guard let runs = inlineRuns(line) else { return nil }
+            if current == nil { current = runs } else { current! += [InlineRun(text: "\n")] + runs }
+        }
+        if let current { paragraphs.append(current) }
+        return paragraphs
+    }
+
+    static func inlineRuns(_ source: String, bold: Bool = false, italic: Bool = false) -> [InlineRun]? {
+        let range = NSRange(source.startIndex..<source.endIndex, in: source)
+        var runs: [InlineRun] = []
+        var offset = source.startIndex
+        func add(_ text: String, reading: String? = nil, code: Bool = false) {
+            guard !text.isEmpty else { return }
+            runs.append(InlineRun(text: text, reading: reading, bold: bold, italic: italic, code: code))
+        }
+        for match in inline.matches(in: source, range: range) {
+            guard let full = Range(match.range, in: source) else { continue }
+            add(String(source[offset..<full.lowerBound]))
+            func group(_ number: Int) -> String? {
+                guard let range = Range(match.range(at: number), in: source) else { return nil }
+                return String(source[range])
+            }
+            if let base = group(1), let kana = group(2), base.unicodeScalars.contains(where: isKanji) {
+                add(base, reading: kana)
+            } else if group(4) != nil || group(8) != nil {
+                return nil // links stay tappable in the web view
+            } else if let strong = group(5) {
+                guard let inner = inlineRuns(strong, bold: true, italic: italic) else { return nil }
+                runs += inner
+            } else if let emphasis = group(6) {
+                guard let inner = inlineRuns(emphasis, bold: bold, italic: true) else { return nil }
+                runs += inner
+            } else if let code = group(7) {
+                add(code, code: true)
+            } else {
+                add(String(source[full]))
+            }
+            offset = full.upperBound
+        }
+        add(String(source[offset...]))
+        return runs
+    }
+
     private static func isKanji(_ scalar: Unicode.Scalar) -> Bool {
         switch scalar.value {
         case 0x3400...0x9FFF, 0xF900...0xFAFF, 0x3005, 0x3006, 0x30F6: return true

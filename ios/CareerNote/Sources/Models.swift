@@ -17,8 +17,8 @@ struct CareerState: Codable {
     /// Saved practice orders chosen on the web, one per question set; nil on older Workers.
     var questionOrders: [QuestionOrders]?
 
-    /// The pack's questions in its active saved order: ids no longer in the set are skipped and
-    /// questions added later follow in set order. Without an active order the set order is kept.
+    /// The pack's questions in its active saved order. Selected-only orders hide omitted questions;
+    /// older orders keep appending new or unlisted questions for backwards compatibility.
     func orderedQuestions(of pack: QuestionSet) -> [CareerQuestion] {
         guard let saved = questionOrders?.first(where: { $0.id == pack.id }),
               let activeID = saved.activeOrderId,
@@ -28,7 +28,7 @@ struct CareerState: Codable {
         for id in order.questionIds {
             if let question = remaining.removeValue(forKey: id) { result.append(question) }
         }
-        return result + pack.questions.filter { remaining[$0.id] != nil }
+        return order.onlySelected == true ? result : result + pack.questions.filter { remaining[$0.id] != nil }
     }
 }
 
@@ -37,10 +37,13 @@ struct QuestionOrders: Codable, Identifiable {
         let id: String
         let name: String
         let questionIds: [String]
+        let onlySelected: Bool?
     }
     let id: String
     let activeOrderId: String?
     let orders: [Order]
+    let revision: Int?
+    let updatedAt: String?
 
     var activeOrder: Order? { activeOrderId.flatMap { active in orders.first { $0.id == active } } }
 }

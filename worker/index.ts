@@ -895,7 +895,11 @@ async function saveQuestionOrders(db: Workspace, data: Record<string, unknown>) 
     const ids = order.questionIds.map(value => validateString(value, 'questionIds', { required: true, max: 120 }));
     if (new Set(ids).size !== ids.length) throw new AppError(400, '同一问题不能在顺序中出现两次');
     if (ids.some(qid => !questionIds.has(qid))) throw new AppError(400, '顺序引用了题组外的问题');
-    return { id: orderId, name, questionIds: ids };
+    const onlySelected = order.onlySelected === true;
+    if (order.onlySelected !== undefined && typeof order.onlySelected !== 'boolean')
+      throw new AppError(400, 'onlySelected 必须是布尔值');
+    if (onlySelected && ids.length === 0) throw new AppError(400, '仅显示所选题目时至少需要一道题');
+    return { id: orderId, name, questionIds: ids, ...(onlySelected ? { onlySelected: true } : {}) };
   });
   const activeOrderId = data.activeOrderId === null || data.activeOrderId === undefined || data.activeOrderId === ''
     ? null : validateString(data.activeOrderId, 'activeOrderId', { required: true, max: 80 });
