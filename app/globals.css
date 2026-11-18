@@ -3426,6 +3426,9 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
 .practice-reference summary { color: var(--ink-2); font-weight: 600; cursor: pointer; }
 .practice-reference p { margin: 12px 0 0; color: var(--ink-3); line-height: 1.9; overflow-wrap: anywhere; }
 .practice-reference .reverse-sample-list { display: grid; gap: 10px; list-style: none; margin: 14px 0 0; padding: 0; }
+.practice-reference-answer { padding-top: 14px; border-top: 1px solid var(--line); }
+.practice-reference-answer > p { margin: 0; color: var(--ink-2); line-height: 2; overflow-wrap: anywhere; }
+.practice-reference-answer .reverse-sample-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
 .reverse-sample-list li { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; align-items: start; padding: 13px 15px; border: 1px solid #dce9e0; border-radius: 10px; background: #f8fbf9; }
 .reverse-sample-number { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #e8f2eb; color: #2f6b4f; font-size: 0.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .reverse-sample-text { color: var(--ink-2); font-size: 0.9375rem; line-height: 2; overflow-wrap: anywhere; }
@@ -3437,6 +3440,7 @@ summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus
   .practice-record-layout .answer-editor textarea { min-height: 220px; }
 }
 @media (max-width: 640px) {
+  .header-context-action.is-labeled span { max-width: 118px; overflow: hidden; text-overflow: ellipsis; }
   .practice-prompt-panel { padding: 21px; }
   .reverse-sample-list li { gap: 10px; padding: 12px; }
 }
@@ -3801,6 +3805,8 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
   .prep-tabs button { min-width: 0; gap: 3px; padding: 8px 2px; font-size: 0.8125rem; }
 }
 .header-context-action { display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 0 9px; color: var(--accent); }
+.header-context-action.is-labeled { min-height: 38px; padding: 0 13px; border: 1px solid #bad1c4; border-radius: 8px; background: #eef7f1; color: #246344; font-weight: 650; white-space: nowrap; }
+.header-context-action.is-labeled:hover { background: #e2f1e7; color: #174b32; }
 .prep-action-dialog { width: min(420px, calc(100% - 28px)); padding: 20px; }
 .prep-action-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .prep-action-head h2 { margin: 0; }
@@ -4363,4 +4369,25 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 @media (max-width: 700px) {
   .practice-topic-list .list-pagination { justify-content: space-between; flex-wrap: wrap; }
   .practice-topic-list .list-pagination > span { flex-basis: 100%; }
+}
+/* Saved practice orders above a question set's list. */
+.question-order { margin-bottom: 12px; }
+.question-order-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.question-order-bar label { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); }
+.question-order-bar select { min-width: 0; max-width: min(320px, 70vw); }
+.question-order-editor { margin-top: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.question-order-editor > p { margin: 0 0 12px; }
+.question-order-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.question-order-tools input { flex: 1 1 200px; min-width: 0; }
+.question-order-tools button, .question-order-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.question-order-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 60vh; overflow-y: auto; }
+.question-order-list li { display: grid; grid-template-columns: 18px 28px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); cursor: grab; }
+.question-order-list li.is-dragging { opacity: .45; }
+.question-order-grip { color: var(--ink-3); }
+.question-order-title { font-size: .875rem; line-height: 1.6; overflow-wrap: anywhere; }
+.question-order-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+@media (max-width: 640px) {
+  .question-order-editor { padding: 12px; }
+  .question-order-list li { grid-template-columns: 24px minmax(0, 1fr) auto auto; padding: 8px; }
+  .question-order-grip { display: none; }
 }

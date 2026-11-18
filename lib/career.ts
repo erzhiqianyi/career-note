@@ -172,6 +172,8 @@ export type State = {
   tasks: Task[];
   today: string;
   questionSets: QuestionSet[];
+  /** Saved practice orders, one record per question set (absent on older Workers). */
+  questionOrders?: import('./question-order').QuestionOrders[];
   attempts: Attempt[];
   reviews: AnswerReview[];
   /** Study furigana glossary; absent in the agent summary view. */

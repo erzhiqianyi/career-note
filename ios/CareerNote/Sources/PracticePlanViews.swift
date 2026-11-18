@@ -126,7 +126,7 @@ struct PracticeTopicView: View {
 
     private var packs: [QuestionSet] { model.state.questionSets.filter { $0.jobId == "builtin:general" } }
     private func questions(in pack: QuestionSet) -> [CareerQuestion] {
-        pack.questions.filter { PracticeTopic.topic(for: $0) == topic && $0.matchesListSearch(search) }
+        model.state.orderedQuestions(of: pack).filter { PracticeTopic.topic(for: $0) == topic && $0.matchesListSearch(search) }
     }
     private var resultCount: Int { packs.reduce(0) { $0 + questions(in: $1).count } }
 
@@ -138,7 +138,7 @@ struct PracticeTopicView: View {
                 ForEach(packs) { pack in
                     ForEach(questions(in: pack)) { question in
                         PracticeQuestionLink(model: model, pack: pack, question: question,
-                            number: (pack.questions.firstIndex { $0.id == question.id } ?? 0) + 1)
+                            number: (model.state.orderedQuestions(of: pack).firstIndex { $0.id == question.id } ?? 0) + 1)
                     }
                 }
                 if resultCount == 0 {

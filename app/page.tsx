@@ -65,6 +65,7 @@ import {
   CalendarClock,
   CalendarDays,
   Blocks,
+  Bot,
   Check,
   ChevronRight,
   Download,
@@ -995,11 +996,11 @@ export default function Home() {
               <RefreshCw size={16} />
             </button>
             {recordView?.action && <button
-              className="icon-button header-context-action"
+              className={`icon-button header-context-action${recordView.action.presentation === 'button' ? ' is-labeled' : ''}`}
               aria-label={recordView.action.label}
               onClick={recordView.action.onClick}
             >
-              <MoreHorizontal size={20} aria-hidden="true" />
+              {recordView.action.presentation === 'button' ? <><Bot size={17} aria-hidden="true" /><span>{recordView.action.label}</span></> : <MoreHorizontal size={20} aria-hidden="true" />}
             </button>}
           </div>
         </header>

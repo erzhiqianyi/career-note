@@ -41,6 +41,8 @@ import { postingSource } from '@/lib/job-platforms';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Question, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
+import { activeQuestionOrder, applyQuestionOrder } from '@/lib/question-order';
+import { QuestionOrderBar } from './question-order-editor';
 import { buildHints, type Hints } from '@/lib/interview-hints';
 import { resumeSections } from '@/lib/resume';
 import { prepRank, prepStage, prepStageTone, type PrepProgress } from '@/lib/prep-stage';
@@ -478,6 +480,15 @@ export default function InterviewPractice({
       setNotice('指令已复制，可以发给当前 AI Agent 对话处理。');
     });
   }
+  function copyAgentPracticeInstruction() {
+    if (!pack || !question) return;
+    return run(async () => {
+      await navigator.clipboard.writeText(linkedPlan ? practiceAgentPrompt(linkedPlan, plannedContext?.scheduleId) :
+        '请使用 Career Note MCP 读取 career_get_practice_plan_guide 和现有专题计划。围绕题组 ID ' + pack.id + '、问题 ID ' + question.id +
+        ' 选择或制定对应的专题计划，保留旧题目与历史回答。先关键词，再每次一句，最后由我组成完整回答。每轮用 career_save_practice_turn 预览、保存、读回我的原话、反馈与 nextStep。');
+      setNotice('已复制 Agent 练习指令。');
+    });
+  }
   if (!company && !practiceRecord && !guide && !help) {
     const closed = ['未通过', '已撤回'];
     const progress = (jobId: string) => {
@@ -837,14 +848,24 @@ export default function InterviewPractice({
       ) : (
         <>
           <div className="section-head prep-practice-head"><h2>{tr('练习题目')}</h2><span className="muted">{tr('已练问题')} {practiced.size} / {pack.questions.length}</span></div>
+          {(() => {
+            const shown = pack.questions.filter(q => routeBase.endsWith('/japanese') ? q.category === '日语表达基础' : q.category !== '日语表达基础');
+            const savedOrder = data.questionOrders?.find(o => o.id === pack.id);
+            const custom = activeQuestionOrder(savedOrder);
+            // The default order is the interview flow; a saved order shows one flat list in its own sequence.
+            const flowOrdered = INTERVIEW_FLOW.flatMap(phase => shown.filter(q => interviewFlowOf(q) === phase.id));
+            const groups = custom
+              ? [{ id: custom.id, label: custom.name, number: '', questions: applyQuestionOrder(shown, custom.questionIds) }]
+              : INTERVIEW_FLOW.map((phase, phaseIndex) => ({ id: phase.id, label: tr(phase.label), number: String(phaseIndex + 1).padStart(2, '0'), questions: shown.filter(q => interviewFlowOf(q) === phase.id) }));
+            return <>
+          <QuestionOrderBar packId={pack.id} questions={custom ? groups[0].questions : flowOrdered} saved={savedOrder}
+            attempts={companyAttempts} reviewedAttemptIds={reviewedAttemptIds} reload={reload} title={q => bt(q.title)} />
           <section className="panel question-list prep-tab-panel interview-flow-list">
-            {INTERVIEW_FLOW.map((phase, phaseIndex) => {
-              const questions = pack.questions
-                .filter(q => routeBase.endsWith('/japanese') ? q.category === '日语表达基础' : q.category !== '日语表达基础')
-                .filter(q => interviewFlowOf(q) === phase.id);
+            {groups.map(group => {
+              const questions = group.questions;
               if (!questions.length) return null;
-              return <section className="interview-flow-group" key={phase.id}>
-                <h3><span>{String(phaseIndex + 1).padStart(2, '0')}</span>{tr(phase.label)}<small>{questions.length}</small></h3>
+              return <section className="interview-flow-group" key={group.id}>
+                <h3>{group.number && <span>{group.number}</span>}{group.label}<small>{questions.length}</small></h3>
                 {questions.map((q, i) => (
                   <button
                     disabled={busy}
@@ -873,6 +894,8 @@ export default function InterviewPractice({
               </section>;
             })}
           </section>
+            </>;
+          })()}
         </>
       ))}
       {activeTab === 'summary' && <div className="prep-tab-panel prep-summary">
@@ -967,6 +990,11 @@ export default function InterviewPractice({
       {routeBase.startsWith('#interview-review') && <RecordBack
         title={routeBase.endsWith('/japanese') ? '日语练习' : tr('针对性练习')}
         backLabel={currentJob ? currentJob.company : routeBase.endsWith('/japanese') ? '日语练习' : tr('复盘')}
+        action={practiceRecord && question ? {
+          label: `${question.questionNumber ? `Q${question.questionNumber} · ` : ''}${tr('在 Agent 中练习')}`,
+          onClick: () => void copyAgentPracticeInstruction(),
+          presentation: 'button',
+        } : undefined}
         onBack={() => {
           if (practiceRecord) setPracticeRecord(null);
           else if (help) setHelp(null);
@@ -1044,12 +1072,6 @@ export default function InterviewPractice({
               {tr(error)}
             </div>
           )}
-          {question.questionNumber && <button className="text-button" onClick={async () => {
-            try {
-              await navigator.clipboard.writeText('Q' + question.questionNumber);
-              setNotice('Q' + question.questionNumber + ' コピーしました');
-            } catch { setError('番号をコピーできませんでした'); }
-          }}>Q{question.questionNumber} · 番号をコピー</button>}
           {help && <section className="panel question-help-page"><h2 lang="ja"><Ja text={question.questionJa} mode="ja" /></h2>              <p>{bt(question.meaning)}</p>
               {(question.simpleQuestionJa || question.vocabulary) && (
                 <details className="language-support">
@@ -1151,8 +1173,11 @@ export default function InterviewPractice({
                 <summary>{tr('回答思路')}</summary>
                 <p className="prewrap"><Ja text={bt(question.outline)} /></p>
               </details>
-              <details className="practice-reference">
-                <summary>{tr('参考回答')}</summary>
+              <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('查看完整回答提示')}</button>
+            </section>}
+            {practiceRecord && <section className="panel answer-panel">
+              <h3>{tr('参考回答')}</h3>
+              <div className="practice-reference-answer">
                 {hasNumberedReverseSamples ? <ol className="reverse-sample-list" lang="ja">
                   {reverseSampleLines.map((line, index) => <li key={index}>
                     <span className="reverse-sample-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
@@ -1160,17 +1185,7 @@ export default function InterviewPractice({
                   </li>)}
                 </ol> : question.sampleAnswer ? <p className="prewrap" lang="ja"><Ja text={question.sampleAnswer} mode="ja" /></p> :
                   <p>{tr('这道题尚未提供题目级参考回答。保存并获得点评后，可以查看针对你回答的参考改写。')}</p>}
-              </details>
-              <button className="text-button question-help-link" onClick={() => setHelp(pack.id + '|' + question.id)}>{tr('查看完整回答提示')}</button>
-            </section>}
-            {practiceRecord && <section className="panel answer-panel">
-              <h3>在 Agent 中练习</h3><p>基本关键词 → 一次一句 → 完整回答。这里保存原回答和练习回顾。</p>
-              <button className="primary" onClick={() => void run(async () => {
-                await navigator.clipboard.writeText(linkedPlan ? practiceAgentPrompt(linkedPlan, plannedContext?.scheduleId) :
-                  '请使用 Career Note MCP 读取 career_get_practice_plan_guide 和现有专题计划。围绕题组 ID ' + pack.id + '、问题 ID ' + question.id +
-                  ' 选择或制定对应的专题计划，保留旧题目与历史回答。先关键词，再每次一句，最后由我组成完整回答。每轮用 career_save_practice_turn 预览、保存、读回我的原话、反馈与 nextStep。');
-                setNotice('已复制 Agent 练习指令。');
-              })}>复制 Agent 练习指令</button>
+              </div>
               <details><summary>补录历史回答</summary><div className="answer-editor">
                 <label htmlFor="practice-answer">
                   {tr('你的回答')}

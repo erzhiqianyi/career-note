@@ -9,12 +9,23 @@ import Foundation
             .appendingPathComponent("ReferenceSpeech")
             .appendingPathComponent(SHA256.hash(data: Data(userID.utf8)).map { String(format: "%02x", $0) }.joined())
         let previousRate = UserDefaults.standard.object(forKey: "audioPlaybackRate")
+        let previousLoop = UserDefaults.standard.object(forKey: "referenceSpeechLoop")
         defer {
+            if let previousLoop { UserDefaults.standard.set(previousLoop, forKey: "referenceSpeechLoop") }
+            else { UserDefaults.standard.removeObject(forKey: "referenceSpeechLoop") }
             try? FileManager.default.removeItem(at: cache)
             if let previousRate { UserDefaults.standard.set(previousRate, forKey: "audioPlaybackRate") }
             else { UserDefaults.standard.removeObject(forKey: "audioPlaybackRate") }
         }
+        // Same fixture as tests/reference-speech.test.mjs: the Worker only accepts these sentences.
+        let sample = "はじめまして。{本日|ほんじつ}はよろしくお願いします！\n\n「はい。」と答えました。Why? 約9年間、Javaを{中心|ちゅうしん}に開発しました\n最後の行"
+        precondition(ReferenceSpeechText.sentences(sample) == [
+            "はじめまして。", "{本日|ほんじつ}はよろしくお願いします！", "「はい。」", "と答えました。", "Why?",
+            "約9年間、Javaを{中心|ちゅうしん}に開発しました", "最後の行"
+        ], "\(ReferenceSpeechText.sentences(sample))")
+        precondition(ReferenceSpeechText.sentences("").isEmpty)
         let player = ReferenceSpeechPlayer()
+        player.setLooping(false)
         player.setRate(1)
         await player.play("テスト", userID: userID, voice: "test") { wave() }
         precondition(player.errorMessage == nil, player.errorMessage ?? "")
@@ -30,6 +41,16 @@ import Foundation
         try await Task.sleep(for: .seconds(1.3))
         precondition(!player.isPlaying && player.currentTime == player.duration,
                      "Completion must follow the actual audio at the selected rate")
+        player.seek(to: 0.5)
+        player.setLooping(true)
+        player.resume()
+        try await Task.sleep(for: .seconds(1.6))
+        precondition(player.isPlaying && player.currentTime < 1.5,
+                     "Looping must restart the audio instead of finishing")
+        precondition(UserDefaults.standard.bool(forKey: "referenceSpeechLoop"))
+        player.setLooping(false)
+        try await Task.sleep(for: .seconds(1.3))
+        precondition(!player.isPlaying, "Turning loop off must let the current pass finish")
         player.seek(to: 0.25)
         player.resume()
         precondition(player.isPlaying)

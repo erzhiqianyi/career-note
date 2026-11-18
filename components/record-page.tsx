@@ -38,21 +38,24 @@ export function useRecordPage<T>(base: string, view: string, resolve: (id: strin
   return [value, setValue] as const;
 }
 
-export type SubView = { title?: string; backLabel?: string; onBack: () => void; action?: { label: string; onClick: () => void } };
+export type SubViewAction = { label: string; onClick: () => void; presentation?: 'menu' | 'button' };
+export type SubView = { title?: string; backLabel?: string; onBack: () => void; action?: SubViewAction };
 /** The page shell provides this; drilled-in views register here so the header's back arrow controls every return. */
 export const SubViewContext = createContext<(id: string, view: SubView | null) => void>(() => {});
 
 /** Registers a drilled-in view with the header (back arrow + optional title); renders nothing itself, so all pages return the same way. */
-export function RecordBack({ onBack, title, backLabel, action }: { onBack: () => void; title?: string; backLabel?: string; action?: { label: string; onClick: () => void } }) {
+export function RecordBack({ onBack, title, backLabel, action }: { onBack: () => void; title?: string; backLabel?: string; action?: SubViewAction }) {
   const register = useContext(SubViewContext);
   const id = useId();
   const latest = useRef(onBack);
   const latestAction = useRef(action);
+  const actionLabel = action?.label;
+  const actionPresentation = action?.presentation;
   latest.current = onBack;
   latestAction.current = action;
   useEffect(() => {
-    register(id, { title, backLabel, onBack: () => latest.current(), action: action ? { label: action.label, onClick: () => latestAction.current?.onClick() } : undefined });
+    register(id, { title, backLabel, onBack: () => latest.current(), action: actionLabel ? { label: actionLabel, onClick: () => latestAction.current?.onClick(), presentation: actionPresentation } : undefined });
     return () => register(id, null);
-  }, [register, id, title, backLabel, action?.label]);
+  }, [register, id, title, backLabel, actionLabel, actionPresentation]);
   return null;
 }

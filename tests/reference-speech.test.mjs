@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deleteReferenceSpeechForPacks, numberedReferenceQuestions, plainReferenceSpeech, referenceSpeechResponse, ReferenceSpeechError } from '../worker/reference-speech.ts';
+import { deleteReferenceSpeechForPacks, numberedReferenceQuestions, plainReferenceSpeech, referenceSentences, referenceSpeechResponse, ReferenceSpeechError } from '../worker/reference-speech.ts';
 
 test('numbered reverse questions keep only one spoken question at a time', () => {
   const sample = '① Javaの{開発案件|かいはつあんけん}はありますか。\n\n② {日本語|にほんご}はどこで使いますか。';
@@ -9,6 +9,21 @@ test('numbered reverse questions keep only one spoken question at a time', () =>
     '{日本語|にほんご}はどこで使いますか。',
   ]);
   assert.equal(plainReferenceSpeech(numberedReferenceQuestions(sample)[0]), 'Javaの開発案件はありますか。');
+});
+
+test('reference answers split into sentences with ruby and closing brackets intact', () => {
+  // Same fixture as ios/Tests/ReferenceSpeechSmoke.swift so both splitters stay identical.
+  const sample = 'はじめまして。{本日|ほんじつ}はよろしくお願いします！\n\n「はい。」と答えました。Why? 約9年間、Javaを{中心|ちゅうしん}に開発しました\n最後の行';
+  assert.deepEqual(referenceSentences(sample), [
+    'はじめまして。',
+    '{本日|ほんじつ}はよろしくお願いします！',
+    '「はい。」',
+    'と答えました。',
+    'Why?',
+    '約9年間、Javaを{中心|ちゅうしん}に開発しました',
+    '最後の行',
+  ]);
+  assert.deepEqual(referenceSentences(''), []);
 });
 
 test('deleting a question pack removes only its stored speech across R2 pages', async () => {
@@ -68,4 +83,21 @@ test('Azure synthesis is saved once in private R2 and later served without a key
     error => error instanceof ReferenceSpeechError && error.status === 409);
   await assert.rejects(referenceSpeechResponse({ ...base, voice: 'other' }),
     error => error instanceof ReferenceSpeechError && error.status === 400);
+});
+
+test('a single sentence of the saved reference answer can be synthesized, but not other text', async () => {
+  const sampleAnswer = 'はじめまして。{本日|ほんじつ}はよろしくお願いします。';
+  const bucket = { get: async () => null, put: async () => {} };
+  const spoken = [];
+  const fetcher = async (_url, options) => {
+    spoken.push(options.body);
+    return new Response(Uint8Array.from([0xff, 0xfb]), { headers: { 'content-type': 'audio/mpeg' } });
+  };
+  const base = { uid: 'owner', packId: 'pack', questionId: 'intro', voice: 'ja-JP-NanamiNeural',
+    sampleAnswer, category: '自己紹介', bucket, azureRegion: 'japaneast', azureKey: 'test-key', fetcher };
+  for (const source of [sampleAnswer, ...referenceSentences(sampleAnswer)])
+    assert.equal((await referenceSpeechResponse({ ...base, source })).status, 200);
+  assert.match(spoken[2], />本日はよろしくお願いします。</);
+  await assert.rejects(referenceSpeechResponse({ ...base, source: 'はじめまして' }),
+    error => error instanceof ReferenceSpeechError && error.status === 409);
 });

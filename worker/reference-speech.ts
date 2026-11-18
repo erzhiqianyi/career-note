@@ -16,6 +16,18 @@ export function numberedReferenceQuestions(source: string): string[] {
   return lines.map(line => line.replace(/^[①-⑳]\s*/u, ''));
 }
 
+/**
+ * Sentences of a reference answer, split on the saved source (ruby markup intact) after
+ * 。！？!? plus any closing brackets, and at line breaks. iOS uses the same rule
+ * (ReferenceSpeechText.sentences) so each sentence can be read on its own.
+ */
+export function referenceSentences(source: string): string[] {
+  return source.split(/\r?\n/u).flatMap(line =>
+    line.match(/[^。！？!?]+(?:[。！？!?]+[」』）)]*)?/gu) ?? [])
+    .map(sentence => sentence.trim())
+    .filter(Boolean);
+}
+
 export function plainReferenceSpeech(source: string): string {
   return source.replace(/\{([^{}|\n]+)\|[ぁ-ゖァ-ヺー・]+\}/gu, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/gu, '$1')
@@ -85,7 +97,7 @@ export async function referenceSpeechResponse(input: {
   if (!REFERENCE_VOICES.includes(voice as typeof REFERENCE_VOICES[number]))
     throw new ReferenceSpeechError(400, '音声の種類が正しくありません');
   const numbered = category === '逆質問' ? numberedReferenceQuestions(sampleAnswer) : [];
-  const allowed = numbered.length ? numbered : [sampleAnswer];
+  const allowed = numbered.length ? numbered : [sampleAnswer, ...referenceSentences(sampleAnswer)];
   if (!allowed.includes(source)) throw new ReferenceSpeechError(409, '参考回答が更新されました。同期してから再試行してください');
   const text = plainReferenceSpeech(source);
   if (!text || text.length > MAX_TEXT_LENGTH) throw new ReferenceSpeechError(400, '朗読する文章の長さが正しくありません');

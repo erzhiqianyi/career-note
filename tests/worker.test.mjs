@@ -527,3 +527,33 @@ void test('deleting cleared question sets keeps real practice and answered sets'
  assert.equal(state.jobs.length,3);
  assert.equal((await send('import',{schemaVersion:1,questionSets:[pack('cleared','Opening')],completeTaskIds:[]})).status,200);
 });
+
+void test('saved question orders keep question ids, answers and numbers, and follow the set',async t=>{
+ const mf=await worker(t);
+ const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const question=id=>({id,title:'Question '+id,questionJa:'質問です。',meaning:'Question',why:'Practice',outline:'Point',followUps:'Why?',category:'Opening',targetSeconds:60});
+ const jobs=[{id:'job-order',company:'Example',role:'Engineer'}];
+ const pack={id:'pack-order',jobId:'job-order',title:'Practice',scenario:'Interview',plan:'Practice',sourceNotes:'Test source',questions:['a','b','c'].map(question)};
+ assert.equal((await send('import',{schemaVersion:1,jobs,questionSets:[pack],completeTaskIds:[]})).status,200);
+ assert.equal((await send('attempts',{questionSetId:'pack-order',questionId:'c',answer:'My answer',language:'日语',durationSeconds:45})).status,200);
+ const before=await (await send('state')).json();
+ const numbers=Object.fromEntries(before.questionSets[0].questions.map(q=>[q.id,q.questionNumber]));
+ const orders=[{id:'focus',name:'重点强化',questionIds:['c','a','b']},{id:'flow',name:'面试流程',questionIds:['a','b','c']}];
+ const saved=await send('question-orders',{questionSetId:'pack-order',revision:0,activeOrderId:'focus',orders});
+ assert.equal(saved.status,200);
+ assert.equal((await saved.json()).revision,1);
+ assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:0,activeOrderId:null,orders})).status,409);
+ assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:1,activeOrderId:null,orders:[{id:'x',name:'Bad',questionIds:['zzz']}]})).status,400);
+ assert.equal((await send('question-orders',{questionSetId:'pack-order',revision:1,activeOrderId:null,orders:[{id:'x',name:'Dup',questionIds:['a','a']}]})).status,400);
+ assert.equal((await send('question-orders',{questionSetId:'missing',revision:0,activeOrderId:null,orders:[]})).status,400);
+ const state=await (await send('state')).json();
+ assert.deepEqual(state.questionOrders,[{id:'pack-order',activeOrderId:'focus',orders,revision:1,updatedAt:state.questionOrders[0].updatedAt}]);
+ assert.deepEqual(Object.fromEntries(state.questionSets[0].questions.map(q=>[q.id,q.questionNumber])),numbers);
+ assert.equal(state.attempts.length,1);
+ // Agent rewrites of the set leave the saved order alone.
+ assert.equal((await send('import',{schemaVersion:1,questionSets:[{...pack,questions:['a','b','c','d'].map(question)}],completeTaskIds:[]})).status,200);
+ assert.equal((await (await send('state')).json()).questionOrders[0].activeOrderId,'focus');
+ const job=(await (await send('state')).json()).jobs[0];
+ assert.equal((await send('jobs/delete',{jobs:[{id:job.id,revision:job.revision}]})).status,200);
+ assert.deepEqual((await (await send('state')).json()).questionOrders,[]);
+});

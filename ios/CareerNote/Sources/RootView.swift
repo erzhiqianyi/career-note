@@ -253,8 +253,13 @@ struct RootView: View {
         restoredUserID = userID
     }
 
-    @ViewBuilder
+    /// Pushed (non top-level) screens hide the tab bar; it returns on the section's root page.
     private func destination(_ route: AppRoute) -> some View {
+        routeContent(route).toolbar(.hidden, for: .tabBar)
+    }
+
+    @ViewBuilder
+    private func routeContent(_ route: AppRoute) -> some View {
         switch route {
         case .job(let id):
             if let job = model.state.jobs.first(where: { $0.id == id }) {
@@ -341,6 +346,12 @@ enum PhoneStyle {
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.48, green: 0.66, blue: 0.98, alpha: 1)
             : UIColor(red: 0.18, green: 0.31, blue: 0.57, alpha: 1)
+    })
+    /// Solid navy for section banners and step numbers; white text stays readable in both modes.
+    static let banner = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.20, green: 0.33, blue: 0.58, alpha: 1)
+            : UIColor(red: 0.09, green: 0.22, blue: 0.43, alpha: 1)
     })
     static let canvas = Color(uiColor: .systemGroupedBackground)
     static let card = Color(uiColor: .secondarySystemGroupedBackground)
@@ -634,8 +645,11 @@ struct QuestionList: View {
     let pack: QuestionSet
     @State private var search = ""
 
+    /// Follows the practice order saved on the web; positions number the ordered list.
+    private var ordered: [CareerQuestion] { model.state.orderedQuestions(of: pack) }
+    private var activeOrderName: String? { model.state.questionOrders?.first { $0.id == pack.id }?.activeOrder?.name }
     private var questions: [CareerQuestion] {
-        pack.questions.filter { $0.category != "日语表达基础" && $0.matchesListSearch(search) }
+        ordered.filter { $0.category != "日语表达基础" && $0.matchesListSearch(search) }
     }
 
     var body: some View {
@@ -649,10 +663,11 @@ struct QuestionList: View {
                     .lineLimit(2)
                     .padding(.bottom, 6)
             }
-            SectionHeading(title: "练习题目", detail: "\(questions.count) 道题")
+            SectionHeading(title: "练习题目",
+                           detail: [activeOrderName, "\(questions.count) 道题"].compactMap { $0 }.joined(separator: " · "))
             ForEach(questions) { question in
                 PracticeQuestionLink(model: model, pack: pack, question: question,
-                                     number: (pack.questions.firstIndex { $0.id == question.id } ?? 0) + 1)
+                                     number: (ordered.firstIndex { $0.id == question.id } ?? 0) + 1)
             }
             if questions.isEmpty {
                 PhoneListEmpty(title: "没有匹配的题目", detail: "试试其他关键词，或清除搜索。")
@@ -709,20 +724,16 @@ private struct AnswerFlowView: View {
     @State private var expandedStep: String?
 
     var body: some View {
-        let steps = flow.nodes
-        VStack(alignment: .leading, spacing: 0) {
-            Text("回答の流れ")
-                .font(.headline)
-                .padding(.bottom, 12)
-            ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(flow.nodes.enumerated()), id: \.element.id) { index, step in
                 HStack(alignment: .top, spacing: 12) {
                     Text("\(index + 1)")
                         .font(.subheadline.bold().monospacedDigit())
-                        .foregroundStyle(PhoneStyle.accent)
-                        .frame(width: 30, height: 30)
-                        .background(PhoneStyle.accent.opacity(0.10), in: Circle())
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(PhoneStyle.banner, in: Circle())
                         .accessibilityLabel("ステップ \(index + 1)")
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         let related = flow.followUps.filter { $0.nodeId == step.id }
                         if step.detail?.isEmpty == false || step.cautions?.isEmpty == false || !related.isEmpty {
                             DisclosureGroup(isExpanded: Binding(
@@ -754,19 +765,110 @@ private struct AnswerFlowView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 5)
+                    .padding(.top, 4)
                 }
-                .padding(10)
-                .background(PhoneStyle.accent.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
-                if index < steps.count - 1 {
-                    Image(systemName: "arrow.down")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(PhoneStyle.accent.opacity(0.6))
-                        .frame(width: 50, height: 22)
-                        .accessibilityHidden(true)
-                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(PhoneStyle.accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
             }
         }
+    }
+}
+
+/// Turns off the navigation back-swipe while the practice page is visible, so horizontal
+/// swipes only move between cards. The back button still works.
+private struct PopGestureDisabler: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> Controller { Controller() }
+    func updateUIViewController(_ controller: Controller, context: Context) {}
+
+    final class Controller: UIViewController {
+        private var saved: [(UIGestureRecognizer, Bool)] = []
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            guard saved.isEmpty, let navigation = navigationController else { return }
+            var gestures = [navigation.interactivePopGestureRecognizer].compactMap { $0 }
+            if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
+                gestures.append(content)
+            }
+            saved = gestures.map { ($0, $0.isEnabled) }
+            gestures.forEach { $0.isEnabled = false }
+        }
+
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            saved.forEach { $0.0.isEnabled = $0.1 }
+            saved = []
+        }
+    }
+}
+
+/// One swipeable card of the practice question, modeled on the printed Q&A sheets:
+/// keywords, answer flow, reference answer, notes and follow-up questions.
+private enum AnswerSection: String, Identifiable {
+    case intro, flow, sample, related
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .intro: "面接質問"
+        case .flow: "回答フロー"
+        case .sample: "参考回答"
+        case .related: "関連質問"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .intro: "person.fill"
+        case .flow: "list.number"
+        case .sample: "doc.text.fill"
+        case .related: "bubble.left.and.bubble.right.fill"
+        }
+    }
+}
+
+private struct AnswerSectionCard<Content: View>: View {
+    let section: AnswerSection
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label(section.title, systemImage: section.icon)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.leading, 14)
+                .padding(.trailing, 22)
+                .padding(.vertical, 9)
+                .background(PhoneStyle.banner, in: UnevenRoundedRectangle(
+                    topLeadingRadius: 17, bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 22, topTrailingRadius: 4))
+                .padding(.top, -16)
+                .padding(.leading, -16)
+                .accessibilityAddTraits(.isHeader)
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PhoneStyle.card, in: RoundedRectangle(cornerRadius: 18))
+        .overlay { RoundedRectangle(cornerRadius: 18).strokeBorder(PhoneStyle.accent.opacity(0.22)) }
+    }
+}
+
+private struct KeywordChip: View {
+    let text: String
+    var tint: Color = PhoneStyle.accent
+    var filled = true
+
+    var body: some View {
+        Text(text)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(filled ? Color.primary : tint)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+            .background(tint.opacity(filled ? 0.09 : 0.12), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -785,9 +887,11 @@ struct AnswerView: View {
     @State private var speech = PracticeSpeechRecorder()
     @State private var referenceSpeech = ReferenceSpeechPlayer()
     @State private var recognitionLanguage = "ja-JP"
-    @State private var showOutline = false
-    @State private var showFollowUps = false
-    @State private var showSample = ProcessInfo.processInfo.arguments.contains("-careerDesignReverse")
+    @State private var selectedSection: AnswerSection?
+    @State private var showAnswers = false
+    @State private var selectedReading = 0
+    @State private var sectionForward = true
+    @GestureState private var sectionDrag: CGFloat = 0
     @State private var showMoreHints = false
     @State private var saved = false
     @State private var historyPlayer: AVAudioPlayer?
@@ -833,73 +937,100 @@ struct AnswerView: View {
                                resume: model.state.resume ?? [])
     }
 
+    /// Items read one at a time: numbered reverse questions, otherwise the answer's sentences.
+    /// A one-sentence answer is shown and read whole.
+    private var readingItems: [String] {
+        guard !reverseQuestions.isEmpty else {
+            let sentences = ReferenceSpeechText.sentences(question.sampleAnswer ?? "")
+            return sentences.count > 1 ? sentences : []
+        }
+        return reverseQuestions
+    }
+
     private var reverseQuestions: [String] {
         guard question.category == "逆質問", let sample = question.sampleAnswer else { return [] }
         return ReferenceSpeechText.numberedQuestions(sample)
     }
 
-    private func speechButton(for source: String, title: String) -> some View {
+    /// Compact reference-answer player: play/pause, position, loop and speed.
+    private func speechPlayer(for source: String) -> some View {
         let active = referenceSpeech.activeSource == source
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Button {
-                    if active && referenceSpeech.isLoading {
-                        referenceSpeech.stop()
-                    } else if active {
-                        if referenceSpeech.isPlaying { referenceSpeech.pause() }
-                        else { referenceSpeech.resume() }
+        let loading = active && referenceSpeech.isLoading
+        let playing = active && referenceSpeech.isPlaying
+        let ready = active && referenceSpeech.duration > 0
+        return HStack(spacing: 12) {
+            Button {
+                if loading {
+                    referenceSpeech.stop()
+                } else if active && ready {
+                    if playing { referenceSpeech.pause() } else { referenceSpeech.resume() }
+                } else {
+                    let voice = ReferenceSpeechSettings.voice
+                    Task {
+                        await referenceSpeech.play(source, userID: model.userID ?? "local", voice: voice) {
+                            try await model.referenceSpeech(questionSetID: pack.id, questionID: question.id,
+                                                            source: source, voice: voice)
+                        }
+                    }
+                }
+            } label: {
+                ZStack {
+                    Circle().fill(PhoneStyle.banner)
+                    if loading {
+                        ProgressView().controlSize(.small).tint(.white)
                     } else {
-                        let voice = ReferenceSpeechSettings.voice
-                        Task {
-                            await referenceSpeech.play(source, userID: model.userID ?? "local", voice: voice) {
-                                try await model.referenceSpeech(questionSetID: pack.id, questionID: question.id,
-                                                                source: source, voice: voice)
-                            }
-                        }
+                        Image(systemName: playing ? "pause.fill" : "play.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .offset(x: playing ? 0 : 1)
                     }
-                } label: {
-                    HStack(spacing: 7) {
-                        if active && referenceSpeech.isLoading {
-                            ProgressView().controlSize(.mini)
-                        } else {
-                            Image(systemName: active && referenceSpeech.isPlaying ? "pause.fill" : "play.fill")
-                        }
-                        Text(active && referenceSpeech.isLoading ? "キャンセル" :
-                             active && referenceSpeech.isPlaying ? "一時停止" : active ? "再生" : title)
-                    }
-                    .font(.subheadline.weight(.medium))
                 }
-                .buttonStyle(.bordered)
-                Spacer()
-                Menu {
-                    ForEach([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2], id: \.self) { speed in
-                        Button {
-                            referenceSpeech.setRate(Float(speed))
-                        } label: {
-                            if Float(speed) == referenceSpeech.rate {
-                                Label("\(speed.formatted())×", systemImage: "checkmark")
-                            } else { Text("\(speed.formatted())×") }
-                        }
-                    }
-                } label: {
-                    Text("\(Double(referenceSpeech.rate).formatted())×")
-                        .font(.subheadline.monospacedDigit())
-                }
-                .accessibilityLabel("再生速度")
+                .frame(width: 40, height: 40)
             }
-            if active && referenceSpeech.duration > 0 {
-                Slider(value: Binding(get: { referenceSpeech.currentTime },
+            .buttonStyle(.plain)
+            .accessibilityLabel(loading ? "読み込みをキャンセル" : playing ? "一時停止" : "朗読を再生")
+            VStack(spacing: 0) {
+                Slider(value: Binding(get: { ready ? referenceSpeech.currentTime : 0 },
                                       set: { referenceSpeech.seek(to: $0) }),
-                       in: 0...referenceSpeech.duration)
+                       in: 0...max(ready ? referenceSpeech.duration : 1, 0.1))
+                    .disabled(!ready)
                     .accessibilityLabel("再生位置")
                 HStack {
-                    Text(playbackTime(referenceSpeech.currentTime))
+                    Text(playbackTime(ready ? referenceSpeech.currentTime : 0))
                     Spacer()
-                    Text(playbackTime(referenceSpeech.duration))
+                    Text(ready ? playbackTime(referenceSpeech.duration) : "--:--")
                 }
-                .font(.caption.monospacedDigit())
+                .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
             }
+            Button { referenceSpeech.setLooping(!referenceSpeech.isLooping) } label: {
+                Image(systemName: "repeat")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(referenceSpeech.isLooping ? Color.white : PhoneStyle.accent)
+                    .frame(width: 32, height: 32)
+                    .background(referenceSpeech.isLooping ? PhoneStyle.banner : PhoneStyle.accent.opacity(0.1),
+                                in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("繰り返し再生")
+            .accessibilityAddTraits(referenceSpeech.isLooping ? .isSelected : [])
+            Menu {
+                ForEach([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2], id: \.self) { speed in
+                    Button {
+                        referenceSpeech.setRate(Float(speed))
+                    } label: {
+                        if Float(speed) == referenceSpeech.rate {
+                            Label("\(speed.formatted())×", systemImage: "checkmark")
+                        } else { Text("\(speed.formatted())×") }
+                    }
+                }
+            } label: {
+                Text("\(Double(referenceSpeech.rate).formatted())×")
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(PhoneStyle.accent)
+                    .frame(minWidth: 40, minHeight: 32)
+            }
+            .accessibilityLabel("再生速度")
         }
         .disabled(speech.phase == .recording || speech.phase == .recognizing)
     }
@@ -912,48 +1043,17 @@ struct AnswerView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if let context = practiceContext {
-                    PhoneCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("計画に沿って練習").font(.headline)
-                            if let plan = model.state.practicePlans?.first(where: { $0.id == context.planId }) {
-                                Text(plan.goal).font(.subheadline)
-                                if let exercise = plan.content?.exercises.first(where: { $0.id == context.exerciseId }) {
-                                    RichContent(text: exercise.instructions)
-                                }
-                            }
-                            Text("答える前にキーワードを三つまで整理しましょう。中国語・日本語のどちらでも構いません。")
-                                .font(.caption).foregroundStyle(.secondary)
-                            TextField("キーワード", text: $practiceKeywords, axis: .vertical)
-                                .textFieldStyle(.roundedBorder)
-                            Text("回答 → 一つの改善点を確認 → もう一度回答。実際の回答が計画に記録されます。")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                }
                 promptCard
-                PhoneCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("在 Agent 中练习").font(.headline)
-                        Text("基本关键词 → 每次一句 → 完整回答。原话、反馈与下次位置保存在 Career Note。")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        ShareLink(item: practiceContext.flatMap { context in
-                            model.state.practicePlans?.first { $0.id == context.planId }?.agentPrompt(scheduleID: context.scheduleId)
-                        } ?? "请通过 Career Note MCP 读取 career_get_practice_plan_guide 和已有专题计划，围绕题组 \(pack.id) 的问题 \(question.id) 按计划练习。先关键词，再一次一句，最后由我组成完整回答；用 career_save_practice_turn 保存原话、反馈、nextStep，换聊天先读回接续。") {
-                            Label("复制 Agent 练习指令", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                }
-                DisclosureGroup("补录历史回答") { answerCard }
-                historyCard
             }
             .frame(maxWidth: horizontalSizeClass == .regular ? 1120 : 620, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.top, 16)
-            .padding(.bottom, 44)
+            .padding(.bottom, 24)
         }
         .background(PhoneStyle.canvas)
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+        .background(PopGestureDisabler())
         .onAppear {
             guard !initializedAnswerMode else { return }
             answerMode = question.category == "日语表达基础" ? "text" : "voice"
@@ -966,136 +1066,370 @@ struct AnswerView: View {
         }
         .navigationTitle(question.questionNumber.map { "Q\($0) · \(CareerRichText.plain(question.title))" } ?? CareerRichText.plain(question.title))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ReadingToggleButton() }
-        .alert("已保存", isPresented: $saved) {
-            Button("好", role: .cancel) {}
-        } message: {
-            Text("回答已保存在本机；联网时会自动同步。")
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                ShareLink(item: agentPrompt) {
+                    Label("Agent で練習", systemImage: "sparkles")
+                }
+                Button { showAnswers = true } label: {
+                    Label("回答を記録・履歴", systemImage: "mic.badge.plus")
+                }
+                ReadingToggleButton()
+            }
+        }
+        .sheet(isPresented: $showAnswers) {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if let context = practiceContext {
+                        PhoneCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("計画に沿って練習").font(.headline)
+                                if let plan = model.state.practicePlans?.first(where: { $0.id == context.planId }) {
+                                    Text(plan.goal).font(.subheadline)
+                                    if let exercise = plan.content?.exercises.first(where: { $0.id == context.exerciseId }) {
+                                        RichContent(text: exercise.instructions)
+                                    }
+                                }
+                                Text("答える前にキーワードを三つまで整理しましょう。中国語・日本語のどちらでも構いません。")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                TextField("キーワード", text: $practiceKeywords, axis: .vertical)
+                                    .textFieldStyle(.roundedBorder)
+                                Text("回答 → 一つの改善点を確認 → もう一度回答。実際の回答が計画に記録されます。")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                        answerCard
+                        historyCard
+                    }
+                    .frame(maxWidth: 620, alignment: .leading)
+                    .padding(16)
+                }
+                .background(PhoneStyle.canvas)
+                .scrollDismissesKeyboard(.interactively)
+                .navigationTitle("回答を記録・履歴")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("閉じる") { showAnswers = false }
+                            .disabled(speech.phase == .recording || speech.phase == .recognizing)
+                    }
+                }
+                .alert("已保存", isPresented: $saved) {
+                    Button("好", role: .cancel) {}
+                } message: {
+                    Text("回答已保存在本机；联网时会自动同步。")
+                }
+            }
+            .interactiveDismissDisabled(speech.phase == .recording || speech.phase == .recognizing)
         }
     }
 
+    private var flowCues: [String] {
+        guard let flow = question.answerFlow, flow.version == 1 else { return [] }
+        var seen = Set<String>()
+        return flow.nodes.compactMap { node in
+            guard let cue = node.cue.map(CareerRichText.plain), !cue.isEmpty else { return nil }
+            return seen.insert(cue).inserted ? cue : nil
+        }
+    }
+
+    private var unlinkedFollowUps: [AnswerFlow.FollowUp] {
+        guard let flow = question.answerFlow, flow.version == 1 else { return [] }
+        return flow.followUps.filter { $0.nodeId == nil }
+    }
+
+    private var agentPrompt: String {
+        practiceContext.flatMap { context in
+            model.state.practicePlans?.first { $0.id == context.planId }?.agentPrompt(scheduleID: context.scheduleId)
+        } ?? "请通过 Career Note MCP 读取 career_get_practice_plan_guide 和已有专题计划，围绕题组 \(pack.id) 的问题 \(question.id) 按计划练习。先关键词，再一次一句，最后由我组成完整回答；用 career_save_practice_turn 保存原话、反馈、nextStep，换聊天先读回接续。"
+    }
+
+    private var hasFlow: Bool {
+        guard let flow = question.answerFlow else { return false }
+        return flow.version == 1 && !flow.nodes.isEmpty
+    }
+
+    private var sections: [AnswerSection] {
+        var result: [AnswerSection] = [.intro]
+        if hasFlow || question.outline?.isEmpty == false || question.why?.isEmpty == false { result.append(.flow) }
+        if question.sampleAnswer?.isEmpty == false { result.append(.sample) }
+        if question.answerFlow?.version == 1 ? !unlinkedFollowUps.isEmpty : question.followUps?.isEmpty == false {
+            result.append(.related)
+        }
+        return result
+    }
+
+    private var currentSection: AnswerSection? {
+        let available = sections
+        if let selectedSection, available.contains(selectedSection) { return selectedSection }
+        if ProcessInfo.processInfo.arguments.contains("-careerDesignReverse"), available.contains(.sample) { return .sample }
+        return available.first
+    }
+
+    private func showSection(_ target: AnswerSection) {
+        let available = sections
+        guard let from = currentSection.flatMap(available.firstIndex(of:)),
+              let to = available.firstIndex(of: target), from != to else { return }
+        sectionForward = to > from
+        // Apply the direction first so the outgoing card leaves on the matching side.
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) { selectedSection = target }
+        }
+    }
+
+    private func stepSection(_ offset: Int) {
+        let available = sections
+        guard let current = currentSection, let index = available.firstIndex(of: current) else { return }
+        let next = index + offset
+        guard available.indices.contains(next) else { return }
+        showSection(available[next])
+    }
+
     private var promptCard: some View {
-        PhoneCard {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    if let number = question.questionNumber {
-                        Button {
-                            UIPasteboard.general.string = "Q\(number)"
-                            copiedReference = true
-                        } label: {
-                            Label("Q\(number)", systemImage: copiedReference ? "checkmark" : "doc.on.doc")
-                                .font(.caption.bold().monospacedDigit())
-                        }
-                        .accessibilityLabel("質問番号 Q\(number) をコピー")
+        sectionPager
+        .sheet(isPresented: $showMoreHints) { hintsSheet }
+    }
+
+    private var sectionPager: some View {
+        let available = sections
+        let current = currentSection ?? available[0]
+        let index = available.firstIndex(of: current) ?? 0
+        return VStack(spacing: 12) {
+            ZStack {
+                sectionCard(current)
+                    .id(current)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: sectionForward ? .trailing : .leading).combined(with: .opacity),
+                        removal: .move(edge: sectionForward ? .leading : .trailing).combined(with: .opacity)))
+            }
+            .offset(x: sectionDrag)
+            .clipped()
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24)
+                    .updating($sectionDrag) { value, state, _ in
+                        let width = value.translation.width
+                        guard abs(width) > abs(value.translation.height) * 1.4 else { return }
+                        let atEdge = (width > 0 && index == 0) || (width < 0 && index == available.count - 1)
+                        state = width * (atEdge ? 0.15 : 0.35)
                     }
-                    if let category = question.category, !category.isEmpty {
-                        Text(category)
-                            .font(.caption.bold())
-                            .foregroundStyle(PhoneStyle.accent)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(PhoneStyle.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+                    .onEnded { value in
+                        let width = value.predictedEndTranslation.width
+                        guard abs(value.translation.width) > abs(value.translation.height) * 1.4,
+                              abs(width) > 70 else { return }
+                        stepSection(width < 0 ? 1 : -1)
                     }
-                    Spacer(minLength: 0)
-                    if let targetSeconds {
-                        Label(targetSeconds, systemImage: "clock")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+            )
+            .animation(.interactiveSpring, value: sectionDrag)
+            .accessibilityAction(named: "次のカード") { stepSection(1) }
+            .accessibilityAction(named: "前のカード") { stepSection(-1) }
+        }
+    }
+
+    /// Small bottom-pinned page dots; swiping the card is the way to move between sections.
+    @ViewBuilder
+    private var sectionDots: some View {
+        let available = sections
+        if available.count > 1, let current = currentSection, let index = available.firstIndex(of: current) {
+            HStack(spacing: 6) {
+                ForEach(available) { item in
+                    Capsule()
+                        .fill(item == current ? PhoneStyle.banner : PhoneStyle.accent.opacity(0.25))
+                        .frame(width: item == current ? 16 : 6, height: 6)
                 }
-                RichContent(text: question.questionJa, markdown: false, fontSize: 25)
-                    .accessibilityLabel(CareerRichText.plain(question.questionJa))
-                if let meaning = question.meaning, !meaning.isEmpty {
-                    RichContent(text: meaning, markdown: false, fontSize: 15)
-                }
-                if !keywordHints.isEmpty {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)],
-                              alignment: .leading, spacing: 6) {
-                        ForEach(keywordHints) { hint in
-                            Text(hint.word)
-                                .font(.caption.bold())
-                                .foregroundStyle(hint.isGap ? Color.orange : Color.green)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 5)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(hint.isGap ? Color.orange.opacity(0.12) : Color.green.opacity(0.12),
-                                            in: Capsule())
-                        }
-                    }
-                }
-                if let flow = question.answerFlow, flow.version == 1 {
-                    Divider()
-                    AnswerFlowView(flow: flow, packID: pack.id).id(question.id)
-                }
-                if let outline = question.outline, !outline.isEmpty {
-                    Divider()
-                    DisclosureGroup("詳しい説明・注意点", isExpanded: $showOutline) {
-                        RichContent(text: outline).padding(.top, 8)
-                    }
-                }
-                if let flow = question.answerFlow, flow.version == 1 {
-                    let unlinked = flow.followUps.filter { $0.nodeId == nil }
-                    if !unlinked.isEmpty {
-                        Divider()
-                        DisclosureGroup("関連する追加質問", isExpanded: $showFollowUps) {
-                            AnswerFollowUpsView(items: unlinked, packID: pack.id).padding(.top, 8)
-                        }
-                    }
-                } else if let followUps = question.followUps, !followUps.isEmpty {
-                    Divider()
-                    DisclosureGroup("関連する追加質問", isExpanded: $showFollowUps) {
-                        RichContent(text: followUps).padding(.top, 8)
-                    }
-                }
-                if let sample = question.sampleAnswer, !sample.isEmpty {
-                    Divider()
-                    DisclosureGroup("参考回答", isExpanded: $showSample) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if reverseQuestions.isEmpty {
-                                RichContent(text: sample)
-                                speechButton(for: sample, title: "朗読する")
-                            } else {
-                                ForEach(Array(reverseQuestions.enumerated()), id: \.offset) { index, item in
-                                    HStack(alignment: .top, spacing: 12) {
-                                        Text(String(format: "%02d", index + 1))
-                                            .font(.caption.bold().monospacedDigit())
-                                            .foregroundStyle(PhoneStyle.accent)
-                                            .frame(width: 30, height: 30)
-                                            .background(PhoneStyle.accent.opacity(0.10),
-                                                        in: RoundedRectangle(cornerRadius: 8))
-                                        VStack(alignment: .leading, spacing: 10) {
-                                            RichContent(text: item, markdown: false, fontSize: 18)
-                                                .accessibilityLabel(CareerRichText.plain(item))
-                                            speechButton(for: item, title: "この質問を朗読")
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                    .padding(14)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(PhoneStyle.accent.opacity(0.04),
-                                                in: RoundedRectangle(cornerRadius: 14))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .strokeBorder(PhoneStyle.accent.opacity(0.12))
-                                    }
-                                }
-                            }
-                            if let message = referenceSpeech.errorMessage {
-                                Text(message).font(.caption).foregroundStyle(.red)
-                            }
-                            Text("初回はサーバーが Azure で生成し、Cloudflare R2 に保存します。次回は端末または R2 のキャッシュから再生します。")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        .padding(.top, 8)
-                    }
-                }
-                if question.why?.isEmpty == false {
-                    Button("回答のヒントを詳しく見る") { showMoreHints = true }
-                        .font(.subheadline.bold())
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(.regularMaterial, in: Capsule())
+            .animation(.easeOut(duration: 0.2), value: current)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(available.count) 枚中 \(index + 1) 枚目：\(current.title)")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: stepSection(1)
+                case .decrement: stepSection(-1)
+                default: break
                 }
             }
         }
-        .sheet(isPresented: $showMoreHints) {
+    }
+
+    @ViewBuilder
+    private func sectionCard(_ section: AnswerSection) -> some View {
+        AnswerSectionCard(section: section) {
+            switch section {
+            case .intro: introContent
+            case .flow: flowContent
+            case .sample: sampleContent
+            case .related:
+                if !unlinkedFollowUps.isEmpty {
+                    AnswerFollowUpsView(items: unlinkedFollowUps, packID: pack.id)
+                } else if let followUps = question.followUps {
+                    RichContent(text: followUps)
+                }
+            }
+        }
+    }
+
+    private var introContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                if let number = question.questionNumber {
+                    Button {
+                        UIPasteboard.general.string = "Q\(number)"
+                        copiedReference = true
+                    } label: {
+                        Label("Q\(number)", systemImage: copiedReference ? "checkmark" : "doc.on.doc")
+                            .font(.caption.bold().monospacedDigit())
+                    }
+                    .accessibilityLabel("質問番号 Q\(number) をコピー")
+                }
+                if let category = question.category, !category.isEmpty {
+                    Text(category)
+                        .font(.caption.bold())
+                        .foregroundStyle(PhoneStyle.accent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(PhoneStyle.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 7))
+                }
+                Spacer(minLength: 0)
+                if let targetSeconds {
+                    Label(targetSeconds, systemImage: "clock")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            RichContent(text: question.questionJa, markdown: false, fontSize: 23)
+                .accessibilityLabel(CareerRichText.plain(question.questionJa))
+            if let meaning = question.meaning, !meaning.isEmpty {
+                RichContent(text: meaning, markdown: false, fontSize: 15)
+            }
+            if !flowCues.isEmpty || !keywordHints.isEmpty {
+                Label("キーワード", systemImage: "key.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(PhoneStyle.accent)
+                    .padding(.top, 4)
+                keywordsContent
+            }
+        }
+    }
+
+    private var flowContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if hasFlow, let flow = question.answerFlow {
+                AnswerFlowView(flow: flow, packID: pack.id).id(question.id)
+                if let outline = question.outline, !outline.isEmpty {
+                    DisclosureGroup("詳しい説明・注意点") {
+                        RichContent(text: outline).padding(.top, 8)
+                    }
+                    .font(.subheadline)
+                }
+            } else if let outline = question.outline, !outline.isEmpty {
+                RichContent(text: outline)
+            }
+            if question.why?.isEmpty == false {
+                Button("回答のヒントを詳しく見る") { showMoreHints = true }
+                    .font(.subheadline.bold())
+            }
+        }
+    }
+
+    private var keywordsContent: some View {
+        let columns = [GridItem(.adaptive(minimum: 140), spacing: 8)]
+        return VStack(alignment: .leading, spacing: 12) {
+            if !flowCues.isEmpty {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                    ForEach(flowCues, id: \.self) { KeywordChip(text: $0) }
+                }
+            }
+            if !keywordHints.isEmpty {
+                if !flowCues.isEmpty {
+                    Text("求人・履歴書との対応").font(.caption.bold()).foregroundStyle(.secondary)
+                }
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                    ForEach(keywordHints) { hint in
+                        KeywordChip(text: hint.word, tint: hint.isGap ? .orange : .green, filled: false)
+                    }
+                }
+            }
+        }
+    }
+
+    private var sampleContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let sample = question.sampleAnswer {
+                if readingItems.isEmpty {
+                    RichContent(text: sample)
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(readingItems.enumerated()), id: \.offset) { index, item in
+                            let selected = index == selectedReading
+                            if index > 0 { Divider().padding(.leading, 42) }
+                            HStack(alignment: .center, spacing: 12) {
+                                Text(String(format: "%02d", index + 1))
+                                    .font(.subheadline.bold().monospacedDigit())
+                                    .foregroundStyle(selected ? PhoneStyle.accent : Color.secondary)
+                                    .frame(width: 30, alignment: .leading)
+                                RichContent(text: item, markdown: reverseQuestions.isEmpty, fontSize: 18)
+                                    .allowsHitTesting(false)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Image(systemName: "speaker.wave.2.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(PhoneStyle.accent)
+                                    .opacity(selected ? 1 : 0)
+                                    .accessibilityHidden(true)
+                            }
+                            .padding(.vertical, 12)
+                            .overlay(alignment: .leading) {
+                                Capsule().fill(PhoneStyle.accent)
+                                    .frame(width: 3)
+                                    .padding(.vertical, 10)
+                                    .offset(x: -16)
+                                    .opacity(selected ? 1 : 0)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedReading = index }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(CareerRichText.plain(item))
+                            .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Text the bottom read-aloud control plays for the 参考回答 card.
+    private var speechSource: String? {
+        guard let sample = question.sampleAnswer, !sample.isEmpty else { return nil }
+        guard !readingItems.isEmpty else { return sample }
+        return readingItems[min(selectedReading, readingItems.count - 1)]
+    }
+
+    private var bottomBar: some View {
+        VStack(spacing: 8) {
+            if currentSection == .sample, let source = speechSource {
+                VStack(alignment: .leading, spacing: 6) {
+                    speechPlayer(for: source)
+                    if let message = referenceSpeech.errorMessage {
+                        Text(message).font(.caption).foregroundStyle(.red)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 16)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            sectionDots
+        }
+        .padding(.bottom, 6)
+        .animation(.easeOut(duration: 0.2), value: currentSection)
+    }
+
+    private var hintsSheet: some View {
             NavigationStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
@@ -1122,7 +1456,6 @@ struct AnswerView: View {
                 }
             }
         }
-    }
 
     private func startRecording() async {
         if recognitionProvider == "cloudflare" {

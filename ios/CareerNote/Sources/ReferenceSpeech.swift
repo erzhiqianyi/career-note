@@ -76,6 +76,24 @@ enum ReferenceSpeechText {
         return lines.map { String($0.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 
+    private static let sentencePattern = try! NSRegularExpression(
+        pattern: "[^。！？!?]+(?:[。！？!?]+[」』）)]*)?")
+
+    /// Sentences of a reference answer, split on the saved source (ruby markup intact).
+    /// Must match `referenceSentences` in worker/reference-speech.ts, which only synthesizes
+    /// the whole answer or one of these sentences.
+    static func sentences(_ source: String) -> [String] {
+        source.components(separatedBy: "\n").flatMap { raw -> [String] in
+            let line = raw.hasSuffix("\r") ? String(raw.dropLast()) : raw
+            let range = NSRange(line.startIndex..., in: line)
+            return sentencePattern.matches(in: line, range: range).compactMap { match in
+                Range(match.range, in: line).map { String(line[$0]) }
+            }
+        }
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    }
+
     static func plain(_ source: String) -> String {
         CareerRichText.plain(source)
             .replacingOccurrences(of: #"\[([^\]]+)\]\([^)]+\)"#, with: "$1", options: .regularExpression)
@@ -151,6 +169,8 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
     private(set) var currentTime: TimeInterval = 0
     private(set) var duration: TimeInterval = 0
     private(set) var rate = AudioPlaybackSettings.rate
+    /// Repeat the current audio until paused; remembered across launches.
+    private(set) var isLooping = UserDefaults.standard.bool(forKey: "referenceSpeechLoop")
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var remoteTargets: [MPRemoteCommand] = []
     private(set) var isLoading = false
@@ -186,6 +206,7 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
             let audio = try AVAudioPlayer(data: data)
             AudioPlaybackSettings.apply(to: audio)
             rate = audio.rate
+            audio.numberOfLoops = isLooping ? -1 : 0
             audio.delegate = self
             guard audio.play() else { throw SpeechError.invalidAudio }
             player = audio
@@ -196,7 +217,9 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
             timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     guard let self, let player = self.player, player.isPlaying else { return }
+                    let wrapped = player.currentTime + 0.5 < self.currentTime
                     self.currentTime = player.currentTime
+                    if wrapped { self.updateNowPlaying() }
                     self.isPlaying = player.isPlaying
                 }
             }
@@ -245,6 +268,12 @@ final class ReferenceSpeechPlayer: NSObject, AVAudioPlayerDelegate {
         UserDefaults.standard.set(Double(rate), forKey: "audioPlaybackRate")
         player?.rate = rate
         updateNowPlaying()
+    }
+
+    func setLooping(_ value: Bool) {
+        isLooping = value
+        UserDefaults.standard.set(value, forKey: "referenceSpeechLoop")
+        player?.numberOfLoops = value ? -1 : 0
     }
 
     private func updateNowPlaying() {

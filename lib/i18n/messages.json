@@ -5981,5 +5981,20 @@
   "技术细节": {"ja": "技術詳細", "en": "Technical details"},
   "一般问题": {"ja": "一般質問", "en": "General questions"},
   "条件确认": {"ja": "条件確認", "en": "Conditions"},
-  "逆質問": {"ja": "逆質問", "en": "Questions for the interviewer"}
+  "逆質問": {"ja": "逆質問", "en": "Questions for the interviewer"},
+  "练习顺序": { "ja": "練習の順番", "en": "Practice order" },
+  "面试流程（默认）": { "ja": "面接の流れ（標準）", "en": "Interview flow (default)" },
+  "调整顺序": { "ja": "順番を調整", "en": "Reorder" },
+  "拖动或用箭头调整顺序；只改变练习顺序，Q 编号、回答和点评都会保留。": { "ja": "ドラッグまたは矢印で並べ替えます。練習の順番だけが変わり、Q 番号・回答・評価はそのまま残ります。", "en": "Drag or use the arrows to reorder. Only the practice order changes; Q numbers, answers and reviews stay." },
+  "顺序名称，例如：重点强化": { "ja": "順番の名前（例：重点強化）", "en": "Order name, e.g. Focus" },
+  "顺序名称": { "ja": "順番の名前", "en": "Order name" },
+  "未练习 → 未点评 → 点评次数少的问题依次提前": { "ja": "未練習 → 未評価 → 評価の少ない質問の順に前へ", "en": "Unpractised, then unreviewed, then least-reviewed questions first" },
+  "未熟练优先": { "ja": "未習熟を優先", "en": "Least practised first" },
+  "上移": { "ja": "上へ", "en": "Move up" },
+  "下移": { "ja": "下へ", "en": "Move down" },
+  "另存为新顺序": { "ja": "新しい順番として保存", "en": "Save as new order" },
+  "删除此顺序": { "ja": "この順番を削除", "en": "Delete this order" },
+  "请给这个顺序起个名字": { "ja": "順番に名前を付けてください", "en": "Name this order" },
+  "已有同名顺序": { "ja": "同じ名前の順番があります", "en": "An order with this name already exists" },
+  "最多保存 {0} 个顺序": { "ja": "順番は最大 {0} 件まで保存できます", "en": "You can save up to {0} orders" }
 }

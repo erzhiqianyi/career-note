@@ -17,6 +17,7 @@ import { verifyFirebaseToken } from './firebase-auth';
 import { deleteReferenceSpeechForPacks, referenceSpeechResponse, ReferenceSpeechError } from './reference-speech';
 import { mergePlatforms, validatePlatform, type JobPlatform } from '../lib/job-platforms';
 import { BANK_JOB_ID, findBuiltinQuestionSet, isBuiltinQuestionSet } from '../lib/interview-bank';
+import { MAX_ORDER_NAME, MAX_QUESTION_ORDERS } from '../lib/question-order';
 import type { ExportedHandler } from '@cloudflare/workers-types';
 import type { Material } from '../lib/career';
 import { parseEventHeader, withEventHeader, type EventHeader } from '../lib/calendar-events';
@@ -361,6 +362,7 @@ async function state(db: Workspace, uid = 'local', resumeSummary = false) {
     tasks: await records(db, 'tasks'),
     today: today(),
     questionSets: await numberedQuestionSets(db),
+    questionOrders: await records(db, 'questionOrders'),
     attempts: await records(db, 'attempts'),
     reviews: await records(db, 'reviews'),
     interviews: (await records(db, 'interviews')).map(item => interviewSummary(item as Parameters<typeof interviewSummary>[0])),
@@ -642,7 +644,7 @@ async function deleteJobs(db: Workspace, env: Env, uid: string, data: Record<str
   const links = (await records(audioLinks(db.connection), 'audioLinks')).filter(item => audioKeys.has(String(item.key)));
   const statements = [
     ...[...selected].map(([id, revision]) => db.connection.prepare("DELETE FROM records WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?3").bind(workspaceKey(db, 'jobs'), id, revision)),
-    ...([['materials', materials], ['questionSets', packs], ['attempts', attempts], ['reviews', reviews], ['tasks', tasks]] as const)
+    ...([['materials', materials], ['questionSets', packs], ['questionOrders', packs], ['attempts', attempts], ['reviews', reviews], ['tasks', tasks]] as const)
       .flatMap(([kind, items]) => items.map(item => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(db, kind), item.id))),
     ...links.map(item => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(audioLinks(db.connection), 'audioLinks'), item.id)),
     ...materials.map(item => db.connection.prepare("UPDATE material_publications SET revoked_at=?1 WHERE owner=?2 AND json_extract(body, '$.materialId')=?3 AND revoked_at=''").bind(now(), db.namespace, item.id)),
@@ -669,7 +671,7 @@ async function deleteClearedQuestionSets(db: Workspace, env: Env, uid: string) {
     .filter(pack => !hasPracticeQuestions(pack as unknown as { questions: { category?: string }[] }) && !answered.has(String(pack.id)))
     .map(pack => String(pack.id));
   if (ids.length) {
-    await db.connection.batch(ids.map(id => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(db, 'questionSets'), id)));
+    await db.connection.batch(['questionSets', 'questionOrders'].flatMap(kind => ids.map(id => db.connection.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(db, kind), id))));
     if (env.CAREER_AUDIO) await deleteReferenceSpeechForPacks(env.CAREER_AUDIO, uid, ids).catch(() => undefined);
   }
   return { deleted: ids.length };
@@ -867,6 +869,45 @@ async function patchQuestionSet(db: Workspace, data: Record<string, unknown>, pr
   }
   const result = { ...existing, questions, updatedAt: now() };
   if (!preview) await putRecord(db, 'questionSets', result);
+  return result;
+}
+
+// Saved practice orders list question ids only, so Q numbers, answers and reviews never move with them.
+async function saveQuestionOrders(db: Workspace, data: Record<string, unknown>) {
+  const id = validateString(data.questionSetId, 'questionSetId', { required: true, max: 120 });
+  const pack = (findBuiltinQuestionSet(id) as { questions?: { id: string }[] } | undefined) ?? await getRecord(db, 'questionSets', id);
+  if (!pack) throw new AppError(400, '题组不存在');
+  const questionIds = new Set((pack.questions || []).map((q: { id: string }) => String(q.id)));
+  const revision = data.revision;
+  if (!Number.isSafeInteger(revision) || (revision as number) < 0) throw new AppError(400, 'revision 不正确');
+  if (!Array.isArray(data.orders) || data.orders.length > MAX_QUESTION_ORDERS)
+    throw new AppError(400, `orders 必须是最多 ${MAX_QUESTION_ORDERS} 条的数组`);
+  const seenOrders = new Set<string>();
+  const orders = data.orders.map((item) => {
+    if (!item || typeof item !== 'object') throw new AppError(400, '顺序必须是对象');
+    const order = item as Record<string, unknown>;
+    const orderId = validateString(order.id, 'id', { required: true, max: 80 });
+    if (seenOrders.has(orderId)) throw new AppError(400, '顺序 id 重复');
+    seenOrders.add(orderId);
+    const name = validateString(order.name, 'name', { required: true, max: MAX_ORDER_NAME });
+    if (!Array.isArray(order.questionIds) || order.questionIds.length > questionIds.size)
+      throw new AppError(400, 'questionIds 必须是题组内问题 id 的数组');
+    const ids = order.questionIds.map(value => validateString(value, 'questionIds', { required: true, max: 120 }));
+    if (new Set(ids).size !== ids.length) throw new AppError(400, '同一问题不能在顺序中出现两次');
+    if (ids.some(qid => !questionIds.has(qid))) throw new AppError(400, '顺序引用了题组外的问题');
+    return { id: orderId, name, questionIds: ids };
+  });
+  const activeOrderId = data.activeOrderId === null || data.activeOrderId === undefined || data.activeOrderId === ''
+    ? null : validateString(data.activeOrderId, 'activeOrderId', { required: true, max: 80 });
+  if (activeOrderId && !seenOrders.has(activeOrderId)) throw new AppError(400, '当前顺序不存在');
+  const old = await getRecord(db, 'questionOrders', id);
+  if ((old?.revision ?? 0) !== revision) throw new AppError(409, '题目顺序已更新，请刷新后重新调整');
+  const result = { id, activeOrderId, orders, revision: (revision as number) + 1, updatedAt: now() };
+  const write = await db.connection.prepare(`INSERT INTO records(kind,id,body) VALUES (?1,?2,?3)
+    ON CONFLICT(kind,id) DO UPDATE SET body=excluded.body
+    WHERE json_extract(records.body, '$.revision') = ?4`)
+    .bind(workspaceKey(db, 'questionOrders'), id, JSON.stringify(result), revision).run();
+  if (!write.meta.changes) throw new AppError(409, '题目顺序已更新，请刷新后重新调整');
   return result;
 }
 
@@ -2087,6 +2128,11 @@ const handler = async (
       ensureScopes(context, ['career:write']);
       if (context.tokenType === 'mcp') throw new AppError(403, '已清空题组只能由本人在应用中删除');
       result = await deleteClearedQuestionSets(db, env, context.uid);
+      break;
+    case '/api/career/question-orders':
+      ensureScopes(context, ['career:write']);
+      if (context.tokenType === 'mcp') throw new AppError(403, '题目顺序只能由本人在应用中调整');
+      result = await saveQuestionOrders(db, payload);
       break;
     case '/api/career/tasks':
       ensureScopes(context, ['agent:write']);
