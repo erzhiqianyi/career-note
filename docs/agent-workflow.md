@@ -40,6 +40,8 @@ MCP prompts（需要 agent:write）：`career_company_board`（参数 company：
 
 志望群是职位上的 `preferenceGroup`，可取 `第一志望群`、`第二志望群`、`第三志望群` 或空字符串（未选择）。它表示本人意愿，不按星级、匹配评价、优先级或投递状态自动映射。仅在用户指定或明确授权 Agent 判断后，调用 `career_update_job_preference({ id, revision, preferenceGroup })` 保存（需要 `career:write`），读回确认；409 时重新读取。工具只修改 preferenceGroup、revision 和 updatedAt。通用 jobs 研究导入禁止 preferenceGroup；旧客户端未传此字段时保留原值。公司列表与详情展示，职位编辑页可选择或清空。`career_application_preparation` prompt 会携带现有选择、星级、revision 和岗位证据，并明确保存与不提交申请的边界。
 
+练习顺序只在用户要求调整题目顺序、挑选题目或命名顺序时，用 `career_save_question_orders({ questionSetId, revision, activeOrderId, orders })` 保存，需要 `career:write`。先读 `career_get_context` 的 `questionOrders`（按题组 id 一条记录；没有记录时 revision 为 0）。该调用整组替换，未重新提交的顺序会被删除；`questionIds` 用题组内的问题 id，不是 Q 编号；`onlySelected: true` 时未列出的题目被隐藏，否则按原顺序排在后面。`activeOrderId` 为 null 表示使用原顺序。问题、Q 编号、回答和点评都不变；409 时重新读取后再保存。
+
 以下 CLI 是维护者的备用路径；独立安装的技能不需要它。
 
 ## 读取当前资料

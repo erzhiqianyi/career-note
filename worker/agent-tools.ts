@@ -11,6 +11,7 @@ import { jobStatuses } from '../lib/job-status';
 import { INTERVIEW_GUIDE, interviewUpdateSchema } from '../lib/interview-session';
 import { PRACTICE_PLAN_GUIDE, agentPracticeSchema, practiceContextSchema, practicePlanInputSchema, practicePlanContentSchema, practicePlanReviewSchema } from '../lib/practice-plan';
 import { MAX_QUESTIONS_PER_SET } from '../lib/question-set-limits';
+import { MAX_ORDER_NAME, MAX_QUESTION_ORDERS } from '../lib/question-order';
 
 export const CAREER_SCOPES = {
   'career:read': { description: 'Read profile, resume, jobs, materials, tasks and practice records', required: true },
@@ -459,6 +460,24 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       handler: (payload, ctx) => api(ctx, 'jobs/preference', payload),
+    },
+    {
+      name: 'career_save_question_orders',
+      scope: 'career:write',
+      description: `Save the named practice orders of one question set only when the user asks to reorder, select or name questions. Read career_get_context first: questionOrders has one record per set id ({id, activeOrderId, orders, revision}); a set without a record has revision 0. This replaces all orders of the set, so resend every order to keep (at most ${MAX_QUESTION_ORDERS}, names up to ${MAX_ORDER_NAME} chars). questionIds lists question ids of that set (not Q-numbers); questions left out follow in set order, or are hidden when onlySelected is true. activeOrderId selects the order the app uses (null = original set order). Questions, Q-numbers, answers and reviews are not changed. A stale revision is rejected with 409; read back and retry from fresh state.`,
+      inputSchema: {
+        questionSetId: z.string().min(1).max(120),
+        revision: z.number().int().nonnegative().describe('Current revision of this set’s questionOrders record; 0 when none exists.'),
+        activeOrderId: z.string().max(80).nullable().describe('Order id to use in the app, or null for the original order.'),
+        orders: z.array(z.object({
+          id: z.string().min(1).max(80).describe('Stable order id; keep existing ids when editing.'),
+          name: z.string().min(1).max(MAX_ORDER_NAME),
+          questionIds: z.array(z.string().min(1).max(120)).max(MAX_QUESTIONS_PER_SET),
+          onlySelected: z.boolean().optional().describe('Hide questions not listed in questionIds; needs at least one question.'),
+        }).strict()).max(MAX_QUESTION_ORDERS),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+      handler: (payload, ctx) => api(ctx, 'question-orders', payload),
     },
     {
       name: 'career_update_profile',

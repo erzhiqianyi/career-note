@@ -116,6 +116,18 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.equal((await ok(a, 'state')).jobs[0].preferenceGroup, '第二志望群');
   assert.deepEqual((await ok(b, 'state')).jobs[0], bobJobBefore);
   assert.equal((await send(issued.token, 'jobs/preference', { id: currentAliceJob.id, revision: currentAliceJob.revision, preferenceGroup: '第一志望群' })).status, 403);
+  // Practice orders: a career:write agent saves them through the tool; read-only grants cannot.
+  const orderSet=(await ok(a,'state')).questionSets[0];
+  const orderArgs={questionSetId:orderSet.id,revision:0,activeOrderId:'agent-order',orders:[{id:'agent-order',name:'Agent order',questionIds:[orderSet.questions[0].id],onlySelected:true}]};
+  assert.equal((await send(issued.token,'question-orders',orderArgs)).status,403);
+  const ordered=await rpc(writer.token,'tools/call',{name:'career_save_question_orders',arguments:orderArgs});
+  assert.equal(ordered.result.isError,false,JSON.stringify(ordered));
+  const savedOrder=(await ok(a,'state')).questionOrders.find(item=>item.id===orderSet.id);
+  assert.equal(savedOrder.activeOrderId,'agent-order');
+  assert.equal(savedOrder.revision,1);
+  assert.equal(savedOrder.orders[0].onlySelected,true);
+  assert.equal((await ok(b,'state')).questionOrders.length,0);
+  assert.equal((await rpc(writer.token,'tools/call',{name:'career_save_question_orders',arguments:orderArgs})).result.isError,true);
   // Application status: only through the dedicated tool, keeping the user's follow-ups and dating the change.
   const beforeStatus=(await ok(a,'state')).jobs[0];
   await ok(a,'jobs',{...beforeStatus,nextAction:'面接日程を返信',nextDate:'2026-11-05',notes:'自分のメモ'});

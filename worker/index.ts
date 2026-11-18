@@ -2135,7 +2135,6 @@ const handler = async (
       break;
     case '/api/career/question-orders':
       ensureScopes(context, ['career:write']);
-      if (context.tokenType === 'mcp') throw new AppError(403, '题目顺序只能由本人在应用中调整');
       result = await saveQuestionOrders(db, payload);
       break;
     case '/api/career/tasks':

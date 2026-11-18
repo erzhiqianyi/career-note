@@ -83,6 +83,7 @@ export function summarizeToolResult(path: string, body: Record<string, unknown> 
   if (path === 'jobs/delete') return { requested: Array.isArray(body?.jobs) ? body.jobs.length : 0, deleted: response && typeof response === 'object' ? (response as Record<string, unknown>).deleted ?? null : null };
   if (path === 'attempts/audio-link') return { attemptId: body?.attemptId ?? null }; // the URL itself is never logged
   if (path === 'jobs/rating' || path === 'jobs/preference' || path === 'jobs/status') return { id: body?.id ?? null, revision: body?.revision ?? null };
+  if (path === 'question-orders') return { questionSetId: body?.questionSetId ?? null, revision: body?.revision ?? null };
   if (path === 'profile' || path === 'resume' || path === 'personalized-resumes') return { id: body?.id ?? null, revision: body?.revision ?? null };
   return null;
 }
