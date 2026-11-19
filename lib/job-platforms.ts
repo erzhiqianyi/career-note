@@ -35,15 +35,55 @@ const siteOf = (url: string) => {
   }
 };
 
-/** Where a posting lives: the recorded platform, else a saved platform on the same site, else the site itself. */
-export function postingSource(job: { url: string; sourcePlatform?: string }, platforms: JobPlatform[]): string {
-  if (job.sourcePlatform) return job.sourcePlatform;
-  const site = siteOf(job.url);
-  const platform = site && platforms.find((p) => {
-    const own = siteOf(p.url);
-    return own && (site === own || site.endsWith('.' + own));
-  });
-  return platform ? platform.name : site;
+// Second-level labels under which Japanese (and similar) registries hand out names: example.co.jp, not co.jp.
+const SHARED_SECOND_LEVEL = new Set(['co', 'ne', 'or', 'ac', 'go', 'ed', 'gr', 'lg', 'ad', 'com', 'net', 'org', 'gov', 'edu']);
+/** The part of a host its owner registered: mypage.levtech.jp and career.levtech.jp both give levtech.jp. */
+export function registrableDomain(host: string): string {
+  const labels = host.toLowerCase().split('.').filter(Boolean);
+  if (labels.length <= 2) return labels.join('.');
+  const take = labels.at(-1)!.length === 2 && SHARED_SECOND_LEVEL.has(labels.at(-2)!) ? 3 : 2;
+  return labels.slice(-take).join('.');
+}
+
+/**
+ * The media a posting came from, read from the posting URL. A site in the platform list gives that
+ * platform's name (`listed`); any other site is named by the recorded platform or its host and is
+ * flagged as missing from the list. Without a usable URL the recorded platform is all there is.
+ */
+export type PostingMedia = { name: string; listed: boolean; site: string };
+export function postingMedia(job: { url?: string; sourcePlatform?: string }, platforms: Array<Pick<JobPlatform, 'name' | 'url'> & { deleted?: boolean }> | undefined): PostingMedia | null {
+  const active = (platforms || []).filter((p) => !p.deleted);
+  const site = siteOf(job.url || '');
+  const recorded = job.sourcePlatform?.trim() || '';
+  if (site) {
+    const domain = registrableDomain(site);
+    // Prefer the platform on the very same host (type.jp vs type.career-agent.jp), then one on the same registered domain.
+    const platform = active.find((p) => siteOf(p.url) === site) ||
+      active.find((p) => { const own = siteOf(p.url); return !!own && registrableDomain(own) === domain; });
+    if (platform) return { name: platform.name, listed: true, site };
+    return { name: recorded || site, listed: false, site };
+  }
+  if (!recorded) return null;
+  return { name: recorded, listed: active.some((p) => p.name === recorded), site: '' };
+}
+
+/** Where a posting lives, by name: the listed platform its URL belongs to, else the recorded platform or host. */
+export function postingSource(job: { url: string; sourcePlatform?: string }, platforms: JobPlatform[] | undefined): string {
+  return postingMedia(job, platforms)?.name || '';
+}
+
+/** Posting sites that jobs link to but the platform list does not know, most used first. */
+export function unlistedPostingSites(jobs: Array<{ url?: string; sourcePlatform?: string }>, platforms: JobPlatform[]) {
+  const counts = new Map<string, { site: string; name: string; count: number }>();
+  for (const job of jobs) {
+    const media = postingMedia(job, platforms);
+    if (!media || media.listed || !media.site) continue;
+    const key = registrableDomain(media.site);
+    const entry = counts.get(key) || { site: key, name: media.name === media.site ? key : media.name, count: 0 };
+    entry.count += 1;
+    counts.set(key, entry);
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.site.localeCompare(b.site));
 }
 
 export function validatePlatform(

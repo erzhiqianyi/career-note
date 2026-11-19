@@ -37,7 +37,7 @@ import {
   FileOutput,
 } from 'lucide-react';
 import StatusMark from '@/components/status-mark';
-import { postingSource } from '@/lib/job-platforms';
+import { postingMedia, postingSource } from '@/lib/job-platforms';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { api, apiBlob, apiUpload, materialKinds, statuses, statusSince, type Attempt, type Job, type Material, type Profile, type Question, type Report, type State } from '@/lib/career';
 import { BANK_JOB_ID, builtinQuestionSets } from '@/lib/interview-bank';
@@ -544,6 +544,12 @@ export default function InterviewPractice({
     const listStatuses = statuses.filter(status => status !== REJECTED_STATUS);
     const activeStatusFilter = viewingArchive ? [] : statusFilter.filter(status => status !== REJECTED_STATUS);
     const platformOf = (job: Job) => postingSource(job, data.platforms) || '未记录';
+    // Media read from the posting URL; a site missing from the 求职平台 list gets a 未登记 mark.
+    const mediaLabel = (job: Job) => {
+      const media = postingMedia(job, data.platforms);
+      if (!media) return null;
+      return <>{tr(media.name)}{!media.listed && <span className="media-unlisted" title={tr('该网站不在求职平台列表中')}>{tr('未登记')}</span>}</>;
+    };
     const platformOptions = [...new Set(directoryJobs.map(platformOf))].sort((a, b) => a.localeCompare(b));
     // Archive: newest rejection first, whatever the list sort says.
     const archiveOrder = (a: Job, b: Job) => statusSince(b).localeCompare(statusSince(a)) || a.company.localeCompare(b.company);
@@ -672,10 +678,10 @@ export default function InterviewPractice({
         ]}>{pageJobs.map(job => {
           const screening = isScreeningRejection(job);
           const reason = job.rejectionReason?.trim();
-          const platform = postingSource(job, data.platforms);
+          const platform = mediaLabel(job);
           return <DataRow key={job.id} className={managing ? 'is-managing' : ''} onOpen={managing ? undefined : () => window.open(companyHref(job), '_blank', 'noopener')}>
             {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
-            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{platform && <> · {tr(platform)}</>}</>} href={companyHref(job)} />
+            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{platform && <> · {platform}</>}</>} href={companyHref(job)} />
             <DataCell label={tr('落选阶段')}><span className={'rejection-stage ' + (screening ? 'is-screening' : 'is-interview')}>{tr(screening ? '书类阶段' : '面试阶段')}</span></DataCell>
             <DataCell label={tr('落选日期')} className="rejection-date">{statusSince(job) ? day(statusSince(job)) : <span className="muted">—</span>}</DataCell>
             <DataCell label={tr('不採用理由')} className="rejection-reason">{reason ? <span title={reason}>{reason}</span> : <span className="muted">{tr('未告知')}</span>}</DataCell>
@@ -714,7 +720,7 @@ export default function InterviewPractice({
                 {prep.questions ? ' · ' + tr('练习 {0} / {1} 题', [String(prep.answered), String(prep.questions)]) : ''}
               </small>
             </DataCell>
-            <DataCell label={tr('招聘原文')} className="prep-posting">{job.url ? <a className="text-button" href={job.url} target="_blank" rel="noreferrer" title={job.url} aria-label={tr('招聘原文') + ' · ' + job.company}><span>{tr(postingSource(job, data.platforms)) || tr('打开')}</span><ExternalLink size={14} aria-hidden="true" /></a> : <span className="muted">—</span>}{reason && <ReasonCopyButton reason={reason} company={job.company} />}</DataCell>
+            <DataCell label={tr('招聘原文')} className="prep-posting">{job.url ? <a className="text-button" href={job.url} target="_blank" rel="noreferrer" title={job.url} aria-label={tr('招聘原文') + ' · ' + job.company}><span>{mediaLabel(job) || tr('打开')}</span><ExternalLink size={14} aria-hidden="true" /></a> : <span className="muted">—</span>}{reason && <ReasonCopyButton reason={reason} company={job.company} />}</DataCell>
           </DataRow>;
         })}</DataTable> : <div className="empty"><p>{tr(directoryJobs.length ? '没有符合条件的职位' : companyPracticeOnly ? '还没有公司专项练习' : '还没有保存职位')}</p></div>}
         {pageCount > 1 && <nav className="list-pagination" aria-label={tr('分页')}>
@@ -815,7 +821,7 @@ export default function InterviewPractice({
         </details>
         <details className="panel prep-info-section" open>
           <summary className="prep-info-heading"><h2 className="prep-block-heading"><span className="prep-block-icon" aria-hidden="true"><BriefcaseBusiness size={18} /></span>{tr('招聘信息')}</h2></summary>
-          {currentJob.url && <div className="prep-posting-link"><a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}{postingSource(currentJob, data.platforms) && ' · ' + tr(postingSource(currentJob, data.platforms))}<ExternalLink size={15} /></a></div>}
+          {currentJob.url && <div className="prep-posting-link"><a className="text-button" href={currentJob.url} target="_blank" rel="noreferrer">{tr('招聘原文')}{(() => { const media = postingMedia(currentJob, data.platforms); return media && <> · {tr(media.name)}{!media.listed && <span className="media-unlisted" title={tr('该网站不在求职平台列表中')}>{tr('未登记')}</span>}</>; })()}<ExternalLink size={15} /></a></div>}
           <div className="prep-source-row">
             <span className="prep-source-chip"><Globe2 size={15} aria-hidden="true" /><span>{tr('来源平台')}</span><b>{currentJob.sourcePlatform ? tr(currentJob.sourcePlatform) : tr('未记录')}</b></span>
             <span className="prep-source-chip" data-source-channel={currentJob.sourceChannel || ''}>

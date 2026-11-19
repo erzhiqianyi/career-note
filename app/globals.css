@@ -4439,3 +4439,13 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
 .rejection-stage.is-interview { background: #fff4dc; color: #8a5d00; }
 .rejection-date { font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .rejection-reason > span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.45; overflow-wrap: anywhere; }
+
+/* Posting media missing from the 求职平台 list. */
+.media-unlisted { display: inline-block; margin-left: 5px; padding: 0 6px; border: 1px solid #f0c98a; border-radius: 999px; background: #fff7e6; color: #8a5d00; font-size: 0.6875rem; font-weight: 600; line-height: 1.5; vertical-align: 1px; white-space: nowrap; }
+.platform-unlisted { margin: 0 0 18px; padding: 14px 16px; border: 1px solid #f0d9a8; border-radius: 10px; background: #fffaf0; }
+.platform-unlisted h3 { margin: 0 0 8px; font-size: 0.9375rem; color: #7a5200; }
+.platform-unlisted ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.platform-unlisted li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 0.875rem; }
+.platform-unlisted-name { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.platform-unlisted-name small { font-weight: 400; color: var(--ink-3); }
+.platform-unlisted .text-button { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; }

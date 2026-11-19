@@ -1482,6 +1482,7 @@ export default function Home() {
                 <JobPlatforms
                   platforms={data.platforms || []}
                   reload={reload}
+                  jobs={data.jobs}
                 />
               )}
               {active === '我的履历' && (

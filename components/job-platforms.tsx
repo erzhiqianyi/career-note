@@ -8,6 +8,7 @@ import { api } from '@/lib/career';
 import {
   builtinPlatforms,
   platformCategories,
+  unlistedPostingSites,
   type JobPlatform,
 } from '@/lib/job-platforms';
 
@@ -17,9 +18,9 @@ const categoryIcons: Record<string, typeof Globe2> = {
   '转职中介': BriefcaseBusiness,
 };
 
-type Props = { platforms: JobPlatform[]; reload: () => Promise<void> };
+type Props = { platforms: JobPlatform[]; reload: () => Promise<void>; jobs?: Array<{ url?: string; sourcePlatform?: string }> };
 type ResumeOption = { id: string; title: string; language: string; archived?: boolean; updatedAt?: string };
-export default function JobPlatforms({ platforms, reload }: Props) {
+export default function JobPlatforms({ platforms, reload, jobs = [] }: Props) {
   const { t: tr } = useLocale();
   function platformText(
     platform: JobPlatform,
@@ -106,6 +107,19 @@ export default function JobPlatforms({ platforms, reload }: Props) {
       <div className="platform-directory-heading">
         <button className="secondary" onClick={() => { setError(''); setEdit({}); }}><Plus size={17} />{tr('添加平台')}</button>
       </div>
+      {(() => {
+        // Posting URLs are checked against this list; sites it does not know show up here to add.
+        const unlisted = unlistedPostingSites(jobs, platforms);
+        if (!unlisted.length) return null;
+        return <section className="platform-unlisted" aria-label={tr('未登记的求人网站')}>
+          <h3>{tr('求人原文中有 {0} 个网站不在平台列表里', [String(unlisted.length)])}</h3>
+          <ul>{unlisted.map(item => <li key={item.site}>
+            <span className="platform-unlisted-name">{item.name}{item.name !== item.site && <small>{item.site}</small>}</span>
+            <span className="muted">{tr('{0} 个职位', [String(item.count)])}</span>
+            <button type="button" className="text-button" onClick={() => { setError(''); setEdit({ name: item.name, url: 'https://' + item.site + '/' }); }}><Plus size={14} />{tr('添加为平台')}</button>
+          </li>)}</ul>
+        </section>;
+      })()}
       <div className="list-toolbar platform-toolbar">
         <label className="search">
           <Search size={17} />

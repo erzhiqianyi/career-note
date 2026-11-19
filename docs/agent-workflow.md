@@ -132,7 +132,7 @@ node scripts/career-data.mjs state
 }
 ```
 
-`matchLevel` 只能是 `优先准备`、`先确认条件`、`暂不匹配` 或空（待评估），与 `matchNotes` 中的理由一致。`sourcePlatform` 是最初发现职位的平台名称，可写“公司官网”或实际平台名；`sourceChannel` 只能是 `主动发现`、`AI 搜索`、`Agent 推荐` 或空。主动发现指用户自己找到，AI 搜索指用户请 AI 搜索，Agent 推荐指 Agent 主动提出候选；无法确认时留空。已有职位来源字段缺省时会保留原值。kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。用户明确要求去掉旧版材料时，可在同一数据包中用 `"archiveMaterials": [{"id": "旧材料 id", "archived": true}]` 归档；归档只从默认列表隐藏，正文保留，`archived: false` 可恢复。不要自行归档用户未指定的材料。示例是协议示意，不能作为真实招聘信息导入。
+`matchLevel` 只能是 `优先准备`、`先确认条件`、`暂不匹配` 或空（待评估），与 `matchNotes` 中的理由一致。`sourcePlatform` 是最初发现职位的平台名称，可写“公司官网”或实际平台名；`sourceChannel` 只能是 `主动发现`、`AI 搜索`、`Agent 推荐` 或空。主动发现指用户自己找到，AI 搜索指用户请 AI 搜索，Agent 推荐指 Agent 主动提出候选；无法确认时留空。已有职位来源字段缺省时会保留原值。网页列表显示的「媒体」按职位 URL 对照求职平台列表（同一注册域名也算，如 mypage.levtech.jp 对应 career.levtech.jp），不在列表中的网站标为「未登记」并在求职平台页列出；这只影响显示，不改写 sourcePlatform。kind 支持：履歴書、職務経歴書、志望動機、面试准备、公司研究。已有职位 id 会更新其研究字段，必须提供完整研究字段以免空值覆盖；不得包含 status、revision、history、notes、nextDate、nextAction、priority。材料和报告 id 必须是新版本，不能覆盖旧版本。用户明确要求去掉旧版材料时，可在同一数据包中用 `"archiveMaterials": [{"id": "旧材料 id", "archived": true}]` 归档；归档只从默认列表隐藏，正文保留，`archived: false` 可恢复。不要自行归档用户未指定的材料。示例是协议示意，不能作为真实招聘信息导入。
 
 志望動機材料可另加 `applicationReason`：可直接粘贴到应募表单「ご応募理由（任意）」等栏位的简短版本，去掉 `{漢字|かな}` 读音后不超过 100 字（服务端按此计数并拒绝超长），只用于 kind 为志望動機的材料。写成完整的日语段落，不加标题、列表或 Markdown；内容与正文一致，突出对该公司业务的理解和可贡献的经历，不编造动机。网页的复制按钮会去掉读音。
 

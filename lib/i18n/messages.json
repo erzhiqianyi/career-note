@@ -1,4 +1,10 @@
 {
+  "未登记": { "ja": "未登録", "en": "Not listed" },
+  "该网站不在求职平台列表中": { "ja": "この求人サイトは求人サービス一覧にありません", "en": "This site is not in your job platform list" },
+  "未登记的求人网站": { "ja": "未登録の求人サイト", "en": "Unlisted job sites" },
+  "求人原文中有 {0} 个网站不在平台列表里": { "ja": "求人原文の {0} サイトが一覧にありません", "en": "{0} sites in job postings are not in this list" },
+  "{0} 个职位": { "ja": "{0} 件の求人", "en": "{0} jobs" },
+  "添加为平台": { "ja": "一覧に追加", "en": "Add as platform" },
   "不採用理由": { "ja": "不採用の理由", "en": "Reason given" },
   "企业或顾问说明的理由；没有告知就留空。": { "ja": "企業やエージェントから伝えられた理由。伝えられていなければ空欄のままにします。", "en": "The reason the company or agent gave; leave empty if none was given." },
   "共 {0} 家：书类阶段 {1} · 面试阶段 {2} · 已记录理由 {3}": { "ja": "計 {0} 社：書類選考 {1} · 面接 {2} · 理由あり {3}", "en": "{0} in total: screening {1} · interview {2} · reason recorded {3}" },
