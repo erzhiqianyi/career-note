@@ -50,6 +50,7 @@ import { Ja } from '@/components/japanese-text';
 import { CompanyBoard } from '@/components/company-board';
 import { CompanyTimeline, ProgressStepper } from '@/components/company-progress';
 import type { CareerEvent } from '@/lib/calendar-events';
+import { isScreeningRejection } from '@/lib/company-timeline';
 import { plainJapanese } from '@/lib/japanese-readings';
 import { currentApplicationReason } from '@/lib/application-reason';
 import { ReasonCopyButton } from '@/components/application-reason';
@@ -544,11 +545,14 @@ export default function InterviewPractice({
     const activeStatusFilter = viewingArchive ? [] : statusFilter.filter(status => status !== REJECTED_STATUS);
     const platformOf = (job: Job) => postingSource(job, data.platforms) || '未记录';
     const platformOptions = [...new Set(directoryJobs.map(platformOf))].sort((a, b) => a.localeCompare(b));
+    // Archive: newest rejection first, whatever the list sort says.
+    const archiveOrder = (a: Job, b: Job) => statusSince(b).localeCompare(statusSince(a)) || a.company.localeCompare(b.company);
     const jobs = directoryJobs
-      .filter(j => (j.company + ' ' + j.role + ' ' + (j.companyNumber || '')).toLowerCase().includes(search.toLowerCase()))
+      .filter(j => (j.company + ' ' + j.role + ' ' + (j.companyNumber || '') + ' ' + (j.rejectionReason || '')).toLowerCase().includes(search.toLowerCase()))
       .filter(j => !activeStatusFilter.length || activeStatusFilter.some(status => status === '进行中' ? !closed.includes(j.status) : status === '有面试' ? isInterview(j) : j.status === status))
       .filter(j => !platformFilter.length || platformFilter.includes(platformOf(j)))
       .sort((a, b) => {
+        if (viewingArchive) return archiveOrder(a, b);
         const x = keyOf(a), y = keyOf(b);
         const c = x < y ? -1 : x > y ? 1 : 0;
         return (sort.desc ? -c : c) || a.company.localeCompare(b.company);
@@ -608,7 +612,7 @@ export default function InterviewPractice({
             {platformOptions.map(platform => <DropdownMenuCheckboxItem key={platform} checked={platformFilter.includes(platform)} closeOnClick={false} onCheckedChange={checked => setPlatformFilter(current => checked ? [...current, platform] : current.filter(value => value !== platform))}>{tr(platform)}</DropdownMenuCheckboxItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
-        <DropdownMenu>
+        {!viewingArchive && <DropdownMenu>
           <DropdownMenuTrigger className="secondary job-status-filter" aria-label={tr('排序方式')}>
             <span>{tr(sortOptions.find(option => option.key === sort.key)?.label || '排序方式')}</span>
             <ChevronDown size={15} aria-hidden="true" />
@@ -619,7 +623,7 @@ export default function InterviewPractice({
               {sort.key === option.key && <Check size={15} aria-hidden="true" />}
             </DropdownMenuItem>)}
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu>}
         <span className="muted list-count">{tr('{0} / {1} 条', [String(jobs.length), String(directoryJobs.length)])}</span>
         {!companyPracticeOnly && data.jobs.length > 0 && <button type="button" className={'secondary icon-only job-manage-button' + (managing ? ' is-active' : '')} title={tr(managing ? '完成管理' : '批量管理')} aria-label={tr(managing ? '完成管理' : '批量管理')} aria-pressed={managing} onClick={() => { setManaging(value => !value); setSelectedJobIds(new Set()); setDeleteError(''); }}>
           <ListChecks size={20} aria-hidden="true" />
@@ -630,7 +634,7 @@ export default function InterviewPractice({
       </div>
       {viewingArchive && <div className="job-archive-banner" role="status">
         <Archive size={16} aria-hidden="true" />
-        <span>{tr('不採用的公司单独归档，不在公司列表中显示；记录与资料都保留。')}</span>
+        <span>{tr('共 {0} 家：书类阶段 {1} · 面试阶段 {2} · 已记录理由 {3}', [String(directoryJobs.length), String(directoryJobs.filter(isScreeningRejection).length), String(directoryJobs.filter(job => !isScreeningRejection(job)).length), String(directoryJobs.filter(job => job.rejectionReason?.trim()).length)])}</span>
       </div>}
       {managing && <div className="job-bulk-actions">
         <span>{tr('已选择 {0} 项', [String(selectedJobIds.size)])}</span>
@@ -659,7 +663,24 @@ export default function InterviewPractice({
         </div>
       </dialog>
       <section className="panel dt-panel prep-list">
-        {jobs.length ? <DataTable<PrepColumn> label={tr(companyPracticeOnly ? '公司预先练习' : '面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
+        {jobs.length && viewingArchive ? <DataTable<string> label={tr('不採用归档')} columns={[
+          ...(managing ? [{ key: 'select', label: <input type="checkbox" aria-label={tr('选择当前列表')} checked={allVisibleSelected} onChange={toggleVisible} />, width: '32px' }] : []),
+          { key: 'company', label: tr('公司 / 职位'), width: 'minmax(0,1.6fr)' },
+          { key: 'stage', label: tr('落选阶段'), width: 'minmax(104px,0.7fr)' },
+          { key: 'date', label: tr('落选日期'), width: '104px' },
+          { key: 'reason', label: tr('不採用理由'), width: 'minmax(0,2fr)' },
+        ]}>{pageJobs.map(job => {
+          const screening = isScreeningRejection(job);
+          const reason = job.rejectionReason?.trim();
+          const platform = postingSource(job, data.platforms);
+          return <DataRow key={job.id} className={managing ? 'is-managing' : ''} onOpen={managing ? undefined : () => window.open(companyHref(job), '_blank', 'noopener')}>
+            {managing && <DataCell className="job-select"><input type="checkbox" aria-label={tr('选择 {0} · {1}', [job.company, job.role])} checked={selectedJobIds.has(job.id)} onChange={() => setSelectedJobIds(current => { const next = new Set(current); if (next.has(job.id)) next.delete(job.id); else next.add(job.id); return next; })} /></DataCell>}
+            <DataTitle title={<>{job.companyNumber && <span className="company-number">#{job.companyNumber}</span>}{job.company}</>} meta={<>{job.role}{platform && <> · {tr(platform)}</>}</>} href={companyHref(job)} />
+            <DataCell label={tr('落选阶段')}><span className={'rejection-stage ' + (screening ? 'is-screening' : 'is-interview')}>{tr(screening ? '书类阶段' : '面试阶段')}</span></DataCell>
+            <DataCell label={tr('落选日期')} className="rejection-date">{statusSince(job) ? day(statusSince(job)) : <span className="muted">—</span>}</DataCell>
+            <DataCell label={tr('不採用理由')} className="rejection-reason">{reason ? <span title={reason}>{reason}</span> : <span className="muted">{tr('未告知')}</span>}</DataCell>
+          </DataRow>;
+        })}</DataTable> : jobs.length ? <DataTable<PrepColumn> label={tr(companyPracticeOnly ? '公司预先练习' : '面试准备')} sort={sort.key} desc={sort.desc} onSort={toggleSort} columns={[
           ...(managing ? [{ key: 'select' as PrepColumn, label: <input type="checkbox" aria-label={tr('选择当前列表')} checked={allVisibleSelected} onChange={toggleVisible} />, width: '32px' }] : []),
           { key: 'company', label: tr('公司 / 职位'), width: 'minmax(0,2fr)', sortable: true },
           { key: 'rating', label: tr('个人评分'), width: '100px', sortable: true },

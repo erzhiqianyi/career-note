@@ -151,8 +151,22 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'通过'})).status,400);
   assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'面试中',statusDate:'2999-01-01'})).status,400);
   assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'面试中',nextAction:'x'})).status,400);
+  // A 不採用 reason travels only with 未通过, is kept when omitted, and an empty string clears it.
+  assert.equal((await send(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'面试中',rejectionReason:'x'})).status,400);
+  const rejected=await ok(writer.token,'jobs/status',{id:moved.id,revision:corrected.revision,status:'未通过',statusDate:'2026-10-26',rejectionReason:'経験年数が要件に届かず'});
+  assert.equal(rejected.rejectionReason,'経験年数が要件に届かず');
+  const reasonKept=await ok(writer.token,'jobs/status',{id:moved.id,revision:rejected.revision,status:'未通过',statusDate:'2026-10-26'});
+  assert.equal(reasonKept.revision,rejected.revision);assert.equal(reasonKept.rejectionReason,'経験年数が要件に届かず');
+  const reasonCleared=await ok(writer.token,'jobs/status',{id:moved.id,revision:rejected.revision,status:'未通过',rejectionReason:''});
+  assert.equal(reasonCleared.rejectionReason,'');assert.equal(reasonCleared.history.length,rejected.history.length);
+  const editorReason=await ok(a,'jobs',{...reasonCleared,rejectionReason:'社内で別候補に決定'});
+  assert.equal(editorReason.rejectionReason,'社内で別候補に決定');
+  const afterEditor=await ok(a,'jobs',{...editorReason,rejectionReason:undefined,notes:'メモ更新'});
+  assert.equal(afterEditor.rejectionReason,'社内で別候補に決定');
+  const restored=await ok(writer.token,'jobs/status',{id:moved.id,revision:afterEditor.revision,status:'书类选考',statusDate:'2026-10-24'});
+  const corrected2=restored;
   // The web editor dates a status change the same way.
-  const edited=await ok(a,'jobs',{...corrected,status:'面试中',statusDate:'2026-10-27'});
+  const edited=await ok(a,'jobs',{...corrected2,status:'面试中',statusDate:'2026-10-27'});
   assert.deepEqual(edited.history.at(-1),{status:'面试中',at:'2026-10-27T00:00:00.000Z'});
   const pay={id:'current-pay',revision:0,kind:'compensation',language:'ja',parentId:'',sourceNotes:'源泉徴収票',verification:'confirmed',archived:false,data:{annualIncome:'4800000',monthlyIncome:'350000',annualBonus:'600000',incomeSource:'estimate'}};
   const deletable = { id: 'delete-shared-id', company: 'Deletion fixture', role: 'Engineer', status: '关注中', priority: '普通' };

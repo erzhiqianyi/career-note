@@ -439,12 +439,13 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
     {
       name: 'career_update_job_status',
       scope: 'career:write',
-      description: 'Record one existing job’s application status only when the user explicitly tells you the new status (for example “#19 is now 书类选考”). Never infer it from emails, job sites, interview invitations or your own judgment, and never submit applications or contact employers. Read career_get_context first for id and current revision. Pass statusDate (YYYY-MM-DD, not in the future) when the user says on which day it changed; omitted means now. Only status, history (a new dated entry when the status changes), revision and updatedAt change; priority, rating, match notes, next action, dates and notes are preserved. Repeating the current status with a different statusDate corrects the date of its latest history entry; otherwise it changes nothing. A stale revision is rejected; read back after saving and call once per job.',
+      description: 'Record one existing job’s application status only when the user explicitly tells you the new status (for example “#19 is now 书类选考”). Never infer it from emails, job sites, interview invitations or your own judgment, and never submit applications or contact employers. Read career_get_context first for id and current revision. Pass statusDate (YYYY-MM-DD, not in the future) when the user says on which day it changed; omitted means now. Only status, history (a new dated entry when the status changes), revision and updatedAt change; priority, rating, match notes, next action, dates and notes are preserved. Repeating the current status with a different statusDate corrects the date of its latest history entry; otherwise it changes nothing. With status 未通过 you may pass rejectionReason (≤2000 chars): only the reason the user reports the employer or agent gave, in their words; never guess one, and omit it to keep the stored reason (empty string clears it). A stale revision is rejected; read back after saving and call once per job.',
       inputSchema: {
         id: z.string().min(1).max(120),
         revision: z.number().int().positive(),
         status: z.enum(jobStatuses),
         statusDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        rejectionReason: z.string().max(2000).optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       handler: (payload, ctx) => api(ctx, 'jobs/status', payload),

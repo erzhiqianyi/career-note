@@ -555,26 +555,31 @@ struct RejectedCompaniesView: View {
     private var jobs: [CareerJob] {
         model.state.jobs
             .filter { $0.status == rejectedJobStatus }
-            .filter { search.isEmpty || ($0.company + " " + $0.role + " " + String($0.companyNumber ?? 0))
+            .filter { search.isEmpty || ($0.company + " " + $0.role + " " + String($0.companyNumber ?? 0) + " " + ($0.rejectionReason ?? ""))
                 .localizedCaseInsensitiveContains(search) }
-            .sorted { $0.company.localizedCompare($1.company) == .orderedAscending }
+            .sorted { ($0.statusDay ?? "", $1.company) > ($1.statusDay ?? "", $0.company) }
     }
+
+    private var allRejected: [CareerJob] { model.state.jobs.filter { $0.status == rejectedJobStatus } }
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
                 Text("不採用归档").font(.largeTitle.bold())
                 PhoneListSearch(text: $search, prompt: "搜索企业或职位")
-                Text("不採用的企业不在企业列表中显示；记录与资料都保留。")
+                Text("共 \(allRejected.count) 家：书类阶段 \(allRejected.filter(\.endedAtScreening).count) · 面试阶段 \(allRejected.filter { !$0.endedAtScreening }.count) · 已记录理由 \(allRejected.filter { !($0.rejectionReason ?? "").isEmpty }.count)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                SectionHeading(title: "不採用", detail: "\(jobs.count)")
                 if jobs.isEmpty {
                     PhoneCard { Text("没有符合条件的企业。").foregroundStyle(.secondary) }
                 }
                 ForEach(jobs) { job in
                     NavigationLink(value: AppRoute.job(job.id)) {
-                        PhoneListRow(title: job.company, subtitle: job.role, status: job.status)
+                        PhoneListRow(title: job.company,
+                                     subtitle: job.role,
+                                     metadata: rejectionReasonText(job),
+                                     status: job.endedAtScreening ? "书类阶段落选" : "面试阶段落选",
+                                     trailing: job.statusDay)
                     }
                     .buttonStyle(.plain)
                 }
@@ -587,5 +592,10 @@ struct RejectedCompaniesView: View {
         .scrollDismissesKeyboard(.interactively)
         .background(PhoneStyle.canvas)
         .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private func rejectionReasonText(_ job: CareerJob) -> String {
+        let reason = (job.rejectionReason ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return reason.isEmpty ? "理由：未告知" : "理由：" + reason
     }
 }

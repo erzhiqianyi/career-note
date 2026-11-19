@@ -290,8 +290,21 @@ struct CareerJob: Codable, Identifiable {
     let priority: String?
     let rating: Int?
     let notes: String?
+    /// Why the application ended as 未通过, when the company or agent said so.
+    let rejectionReason: String?
     let history: [CareerJobHistory]?
     let updatedAt: String?
+
+    /// 不採用 before any interview counts as document screening, matching the web archive.
+    var endedAtScreening: Bool {
+        !(history ?? []).contains { $0.status == "面试中" || $0.status == "内定" }
+    }
+
+    /// Day (YYYY-MM-DD) the job entered its current status.
+    var statusDay: String? {
+        guard let at = (history ?? []).last(where: { $0.status == status })?.at else { return nil }
+        return String(at.prefix(10))
+    }
 }
 
 struct CareerJobHistory: Codable, Identifiable {

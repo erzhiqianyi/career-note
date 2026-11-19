@@ -508,6 +508,10 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
     base.nextAction = nextAction;
     base.nextDate = nextDate;
     base.notes = notes;
+    // Optional: older clients leave it out, which keeps the stored reason.
+    base.rejectionReason = data.rejectionReason === undefined
+      ? String(old?.rejectionReason || '')
+      : validateString(data.rejectionReason, 'rejectionReason', { max: 2000 });
     base.history = statusHistory(old?.history, old?.status, status, validateStatusDate(data.statusDate));
     base.revision = (old ? Number(old.revision) : 0) + 1;
     base.updatedAt = now();
@@ -521,6 +525,7 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
     base.nextAction = old.nextAction || '';
     base.nextDate = old.nextDate || '';
     base.notes = old.notes || '';
+    base.rejectionReason = old.rejectionReason || '';
     base.revision = Number(old.revision || 0);
     base.updatedAt = old.updatedAt || now();
   }
@@ -590,8 +595,8 @@ async function updateJobPersonalField(db: Workspace, data: Record<string, unknow
  * priority, rating and research are left untouched, so an agent can record a status the user reports.
  */
 async function updateJobStatus(db: Workspace, data: Record<string, unknown>) {
-  if (Array.isArray(data) || Object.keys(data).some(key => !['id', 'revision', 'status', 'statusDate'].includes(key))) {
-    throw new AppError(400, '更新只接受 id、revision、status 和 statusDate');
+  if (Array.isArray(data) || Object.keys(data).some(key => !['id', 'revision', 'status', 'statusDate', 'rejectionReason'].includes(key))) {
+    throw new AppError(400, '更新只接受 id、revision、status、statusDate 和 rejectionReason');
   }
   const id = validateString(data.id, 'id', { required: true, max: 120 });
   const revision = data.revision;
@@ -601,15 +606,19 @@ async function updateJobStatus(db: Workspace, data: Record<string, unknown>) {
   }
   if (typeof status !== 'string' || !STATUSES.includes(status as JobStatus)) throw new AppError(400, '无效的投递状态');
   const statusDate = validateStatusDate(data.statusDate);
+  // The 不採用 reason travels with the 未通过 status only; omitted keeps whatever is stored.
+  if (data.rejectionReason !== undefined && status !== '未通过') throw new AppError(400, 'rejectionReason 只能与 未通过 一起记录');
+  const reason = data.rejectionReason === undefined ? undefined : validateString(data.rejectionReason, 'rejectionReason', { max: 2000 });
   const job = await getRecord(db, 'jobs', id);
   if (!job) throw new AppError(404, '职位不存在');
   if (job.revision !== revision) throw new AppError(409, '职位已更新，请读取最新 revision 后重试');
   const history = statusHistory(job.history, job.status, status, statusDate);
-  if (JSON.stringify(history) === JSON.stringify(job.history || [])) return job;
+  const nextReason = reason ?? String(job.rejectionReason || '');
+  if (JSON.stringify(history) === JSON.stringify(job.history || []) && nextReason === String(job.rejectionReason || '')) return job;
   const at = now();
   const saved = await db.connection.prepare(
-    "UPDATE records SET body=json_set(body, '$.status', ?3, '$.history', json(?4), '$.revision', ?5, '$.updatedAt', ?6) WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?7 RETURNING body",
-  ).bind(workspaceKey(db, 'jobs'), id, status, JSON.stringify(history), revision + 1, at, revision).first<{ body: string }>();
+    "UPDATE records SET body=json_set(body, '$.status', ?3, '$.history', json(?4), '$.revision', ?5, '$.updatedAt', ?6, '$.rejectionReason', ?8) WHERE kind=?1 AND id=?2 AND json_extract(body, '$.revision')=?7 RETURNING body",
+  ).bind(workspaceKey(db, 'jobs'), id, status, JSON.stringify(history), revision + 1, at, revision, nextReason).first<{ body: string }>();
   if (!saved) throw new AppError(409, '职位已更新，请读取最新 revision 后重试');
   return JSON.parse(saved.body);
 }
@@ -1311,7 +1320,7 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
           throw new AppError(400, 'applicationDoc 只能由本人在导出页面保存');
         }
         if (
-          ['status', 'history', 'notes', 'nextDate', 'nextAction', 'priority', 'revision'].some(
+          ['status', 'history', 'notes', 'rejectionReason', 'nextDate', 'nextAction', 'priority', 'revision'].some(
             (field) => Object.prototype.hasOwnProperty.call(obj, field),
           )
         ) {

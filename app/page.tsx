@@ -331,7 +331,10 @@ export default function Home() {
     [busy, setBusy] = useState(false);
   const [hash, setHash] = useState('');
   const [jobEdit, setJobEdit] = useState<Partial<Job> | null>(null),
+    // Status picked in the open editor; null follows the saved one. Shows the 不採用 reason field.
+    [editStatus, setEditStatus] = useState<string | null>(null),
     [doc, setDoc] = useRecordPage<Material | Report>('#documents', 'view', id => [...(data?.materials || []), ...(data?.reports || [])].find(item => item.id === id) || null, item => item.id);
+  useEffect(() => setEditStatus(null), [jobEdit?.id, jobEdit === null]);
   const [printMaterial, setPrintMaterial] = useRecordPage<Material>('#documents', 'print', id => data?.materials.find(m => m.id === id && !!m.jobId && ['履歴書', '職務経歴書'].includes(m.kind)) || null, m => m.id);
   const [exportJob, setExportJob] = useRecordPage<Job>('#documents', 'export', id => data?.jobs.find(j => j.id === id) || null, j => j.id);
   // Only the id is routed; the event itself is read from the latest data so saved edits show at once.
@@ -1080,6 +1083,7 @@ export default function Home() {
                     // A newly chosen status starts out dated today; going back to the saved one restores its date.
                     const date = e.currentTarget.form?.elements.namedItem('statusDate') as HTMLInputElement | null;
                     if (date) date.value = e.currentTarget.value === jobEdit.status ? statusSince(jobEdit) || data?.today || '' : data?.today || '';
+                    setEditStatus(e.currentTarget.value);
                   }}
                 >
                   {statuses.map((s) => (
@@ -1138,6 +1142,13 @@ export default function Home() {
                 value={jobEdit.notes}
                 large
               />
+              {(editStatus ?? jobEdit.status) === '未通过' && (
+                <label className="field wide">
+                  <span>{tr('不採用理由')}</span>
+                  <textarea name="rejectionReason" rows={3} defaultValue={jobEdit.rejectionReason || ''} maxLength={2000} />
+                  <small>{tr('企业或顾问说明的理由；没有告知就留空。')}</small>
+                </label>
+              )}
             </div>
             {error && <p className="form-error">{tr(error)}</p>}
             <div className="editor-actions">

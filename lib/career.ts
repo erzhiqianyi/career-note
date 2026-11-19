@@ -66,6 +66,8 @@ export type Job = {
   nextAction: string;
   nextDate: string;
   notes: string;
+  /** Why the application ended as 未通过, when the employer or agent said so; empty when not told. */
+  rejectionReason?: string;
   history: { status: string; at: string }[];
   revision: number;
   updatedAt: string;

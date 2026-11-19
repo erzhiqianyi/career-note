@@ -4432,3 +4432,10 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
   .home-pipeline-stats .pipeline-stat strong { font-size: 1.5rem; }
   .home-pipeline-stats .pipeline-stat.is-key strong { font-size: 1.75rem; }
 }
+
+/* 不採用 archive: where it ended and why, nothing about preparation. */
+.rejection-stage { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; white-space: nowrap; }
+.rejection-stage.is-screening { background: #fdf0ee; color: #a8443a; }
+.rejection-stage.is-interview { background: #fff4dc; color: #8a5d00; }
+.rejection-date { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.rejection-reason > span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.45; overflow-wrap: anywhere; }

@@ -38,7 +38,7 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
           const practiceProps = {
             async reload(){},
             openMaterial(){},
-            data: {today:'2026-09-12',materials:[],reports:[],jobs:[{id:'demo',company:'Example',role:'Original role',status:'面试中',nextAction:'原文を保持',nextDate:'2026-09-10',history:[]},{id:'gone',company:'Rejected Co',role:'Closed role',status:'未通过',history:[]}],profile:{revision:0},tasks:[],reviews:[],attempts:[],
+            data: {today:'2026-09-12',materials:[],reports:[],jobs:[{id:'demo',company:'Example',role:'Original role',status:'面试中',nextAction:'原文を保持',nextDate:'2026-09-10',history:[]},{id:'gone',company:'Rejected Co',role:'Closed role',status:'未通过',rejectionReason:'経験年数が不足',history:[{status:'已投递',at:'2026-09-01T00:00:00Z'},{status:'未通过',at:'2026-09-05T00:00:00Z'}]}],profile:{revision:0},tasks:[],reviews:[],attempts:[],
               questionSets:[{id:'pack',jobId:'demo',title:'Original title',createdAt:'2026-09-12',questions:[
                 {id:'q',title:'質問の原文',questionJa:'自己紹介をお願いします。',category:'自己紹介',targetSeconds:60}
               ]}]}
@@ -96,6 +96,12 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
     assert.doesNotMatch(output.practice, /Rejected Co/);
     assert.match(output.rejectedArchive, /Rejected Co/);
     assert.doesNotMatch(output.rejectedArchive, /Example/);
+    // The archive shows where and why it ended, not preparation columns.
+    assert.match(output.rejectedArchive, /経験年数が不足/);
+    assert.ok(output.rejectedArchive.includes(output.translate(locale, '书类阶段')));
+    assert.match(output.rejectedArchive, /2026\.09\.05/);
+    assert.ok(!output.rejectedArchive.includes(output.translate(locale, '准备阶段')));
+    assert.ok(!output.rejectedArchive.includes(output.translate(locale, '个人评分')));
     assert.doesNotMatch(output.practice, /質問の原文/);
     // Company records open on company information; rehearsal questions live under Review.
     assert.match(output.practiceCompany, /Original role/);
