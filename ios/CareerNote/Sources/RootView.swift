@@ -30,6 +30,7 @@ private struct SavedNavigation: Codable {
     let practicePath: [AppRoute]
     let resumePath: [AppRoute]
     var reviewPath: [AppRoute]? = nil
+    var archivePath: [AppRoute]? = nil
 }
 
 private struct AppFontSize: ViewModifier {
@@ -67,6 +68,7 @@ struct RootView: View {
     @State private var practicePath: [AppRoute] = []
     @State private var resumePath: [AppRoute] = []
     @State private var reviewPath: [AppRoute] = []
+    @State private var archivePath: [AppRoute] = []
     @State private var restoredUserID: String?
 
     var body: some View {
@@ -125,6 +127,7 @@ struct RootView: View {
                 practicePath = []
                 resumePath = []
                 reviewPath = []
+                archivePath = []
             }
         }
     }
@@ -139,6 +142,7 @@ struct RootView: View {
                         sidebarItem("复盘", systemImage: "waveform.and.magnifyingglass", tab: 4)
                         sidebarItem("练习", systemImage: "text.book.closed", tab: 1)
                         sidebarItem("简历", systemImage: "doc.text", tab: 2)
+                        sidebarItem("不採用归档", systemImage: "archivebox", tab: 5)
                     }
                     .navigationTitle("Career Note")
                     .listStyle(.sidebar)
@@ -162,6 +166,9 @@ struct RootView: View {
                     tabContent(2)
                         .tabItem { Label("简历", systemImage: "doc.text") }
                         .tag(2)
+                    tabContent(5)
+                        .tabItem { Label("不採用归档", systemImage: "archivebox") }
+                        .tag(5)
                 }
             }
         }
@@ -206,6 +213,11 @@ struct RootView: View {
                 ReviewHomeView(model: model)
                     .navigationDestination(for: AppRoute.self, destination: destination)
             }
+        case 5:
+            NavigationStack(path: pathBinding($archivePath)) {
+                RejectedCompaniesView(model: model)
+                    .navigationDestination(for: AppRoute.self, destination: destination)
+            }
         case 2:
             NavigationStack(path: pathBinding($resumePath)) {
                 ResumeHomeView(model: model)
@@ -230,7 +242,7 @@ struct RootView: View {
         guard let userID = model.userID, restoredUserID == userID else { return }
         let state = SavedNavigation(userID: userID, selectedTab: selectedTab,
                                     companyPath: companyPath, practicePath: practicePath,
-                                    resumePath: resumePath, reviewPath: reviewPath)
+                                    resumePath: resumePath, reviewPath: reviewPath, archivePath: archivePath)
         if let data = try? JSONEncoder().encode(state) { savedNavigation = data }
     }
 
@@ -242,13 +254,15 @@ struct RootView: View {
         practicePath = []
         resumePath = []
         reviewPath = []
+        archivePath = []
         if let state = try? JSONDecoder().decode(SavedNavigation.self, from: savedNavigation),
            state.userID == userID {
-            selectedTab = (0...4).contains(state.selectedTab) ? state.selectedTab : 1
+            selectedTab = (0...5).contains(state.selectedTab) ? state.selectedTab : 1
             companyPath = state.companyPath
             practicePath = state.practicePath
             resumePath = state.resumePath
             reviewPath = state.reviewPath ?? []
+            archivePath = state.archivePath ?? []
         }
         restoredUserID = userID
     }

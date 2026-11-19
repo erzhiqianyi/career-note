@@ -255,6 +255,9 @@ struct ScheduleHomeView: View {
     }
 }
 
+/// 不採用 (未通过) jobs are archived in their own tab and never listed under 企业.
+let rejectedJobStatus = "未通过"
+
 struct CompanyListView: View {
     @Bindable var model: AppModel
     @State private var search = ""
@@ -263,7 +266,7 @@ struct CompanyListView: View {
 
     private var jobs: [CareerJob] {
         model.state.jobs
-            .filter { showClosed || !["未通过", "已撤回"].contains($0.status) }
+            .filter { $0.status != rejectedJobStatus && (showClosed || $0.status != "已撤回") }
             .filter { search.isEmpty || ($0.company + " " + $0.role + " " + String($0.companyNumber ?? 0))
                 .localizedCaseInsensitiveContains(search) }
             .sorted {
@@ -296,11 +299,11 @@ struct CompanyListView: View {
             LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
                 Text("企业").font(.largeTitle.bold())
                 PhoneListSearch(text: $search, prompt: "搜索企业或职位")
-                Toggle("显示已结束的职位", isOn: $showClosed)
+                Toggle("显示已撤回的职位", isOn: $showClosed)
                     .font(.subheadline)
                 Toggle("按评分排序", isOn: $sortByRating)
                     .font(.subheadline)
-                SectionHeading(title: "已保存的企业", detail: "\(jobs.count) / \(model.state.jobs.count)")
+                SectionHeading(title: "已保存的企业", detail: "\(jobs.count) / \(model.state.jobs.filter { $0.status != rejectedJobStatus }.count)")
                 if jobs.isEmpty {
                     PhoneCard {
                         Text(model.state.jobs.isEmpty ? "首次联网同步后，这里会显示网页版已保存的企业。" : "没有符合条件的企业。")
@@ -542,5 +545,47 @@ private struct CompanyInfoSection: View {
                 }
             }
         }
+    }
+}
+
+struct RejectedCompaniesView: View {
+    @Bindable var model: AppModel
+    @State private var search = ""
+
+    private var jobs: [CareerJob] {
+        model.state.jobs
+            .filter { $0.status == rejectedJobStatus }
+            .filter { search.isEmpty || ($0.company + " " + $0.role + " " + String($0.companyNumber ?? 0))
+                .localizedCaseInsensitiveContains(search) }
+            .sorted { $0.company.localizedCompare($1.company) == .orderedAscending }
+    }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: PhoneStyle.listSpacing) {
+                Text("不採用归档").font(.largeTitle.bold())
+                PhoneListSearch(text: $search, prompt: "搜索企业或职位")
+                Text("不採用的企业不在企业列表中显示；记录与资料都保留。")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                SectionHeading(title: "不採用", detail: "\(jobs.count)")
+                if jobs.isEmpty {
+                    PhoneCard { Text("没有符合条件的企业。").foregroundStyle(.secondary) }
+                }
+                ForEach(jobs) { job in
+                    NavigationLink(value: AppRoute.job(job.id)) {
+                        PhoneListRow(title: job.company, subtitle: job.role, status: job.status)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: 620, alignment: .leading)
+            .padding(16)
+            .padding(.bottom, 24)
+        }
+        .refreshable { await model.sync() }
+        .scrollDismissesKeyboard(.interactively)
+        .background(PhoneStyle.canvas)
+        .toolbar(.hidden, for: .navigationBar)
     }
 }

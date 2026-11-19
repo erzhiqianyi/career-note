@@ -124,6 +124,7 @@ const nav = [
   { label: '今日准备', icon: LayoutDashboard },
   { label: '日程', icon: CalendarDays },
   { label: '公司', icon: BriefcaseBusiness },
+  { label: '不採用归档', icon: Archive },
   { label: '面试复盘', icon: ScrollText },
   { label: '练习', icon: BookOpen },
   { label: '我的履历', icon: UserRound },
@@ -134,7 +135,7 @@ const nav = [
 ];
 // Phone layout: every page lives behind the brand drawer (no bottom tab bar).
 // Content pages come first; anything that configures the workspace is grouped as "settings".
-const drawerPages = ['今日准备', '日程', '公司', '面试复盘', '练习', '我的履历', '个性化简历'];
+const drawerPages = ['今日准备', '日程', '公司', '不採用归档', '面试复盘', '练习', '我的履历', '个性化简历'];
 const drawerSettings = ['Agent 协作', '求职平台', '系统设置'];
 // `parent` is the nav page that stays highlighted; `back` is where the header arrow goes when it is not the parent.
 const subPages: Record<string, { parent: string; hash: string; back?: string }> = {
@@ -156,6 +157,7 @@ const hashes: Record<string, string> = {
   '#today': '今日准备',
   '#calendar': '日程',
   '#jobs': '公司',
+  '#archive': '不採用归档',
   '#interview-review': '面试复盘',
   '#practice': '练习',
   '#interview': '公司', // legacy links from before interview prep merged into the company page
@@ -1206,6 +1208,16 @@ export default function Home() {
                   onOpenEvent={(event) => setEventId(event.id)}
                 />
               </div>
+              {active === '不採用归档' && (
+                <InterviewPractice
+                  data={data}
+                  reload={reload}
+                  openMaterial={(m) => setDoc(m)}
+                  openReport={(r) => setDoc(r)}
+                  routeBase="#archive"
+                  rejectedArchive
+                />
+              )}
               {briefOpen && (
                 <DailyBrief
                   data={data}
@@ -1243,34 +1255,40 @@ export default function Home() {
                       </button>
                     );
                   })()}
-                  <div className="stats home-pipeline-stats">
-                    {[
-                      ['公司总数', funnel.companies, '全部保存的求职机会'],
-                      [
-                        '已投递公司',
-                        funnel.applied,
-                        '曾进入投递阶段的公司',
-                      ],
-                      [
-                        '书类选考落选',
-                        funnel.screeningRejected,
-                        '未进入面试即结束的公司',
-                      ],
-                      ['进入面试', funnel.interviewed, '曾进入面试阶段的公司'],
-                      ['内定', funnel.offers, '当前获得内定的公司'],
-                    ].map(([title, count]) => (
-                      <div
-                        key={title}
-                        className={count === 0 ? 'is-zero' : undefined}
-                      >
-                        <span>{tr(String(title))}</span>
-                        <strong>
-                          {count}
-                          <small>{tr('项')}</small>
-                        </strong>
+                  {(() => {
+                    // Application funnel: each stage has its own colour, and the share line says how it compares with the stage before.
+                    const pct = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0);
+                    const stages: Array<{ title: string; count: number; hint: string; tone: string; key?: boolean; rate?: [string, number] }> = [
+                      { title: '公司总数', count: funnel.companies, hint: '全部保存的求职机会', tone: 'total' },
+                      { title: '已投递公司', count: funnel.applied, hint: '曾进入投递阶段的公司', tone: 'applied', rate: ['投递率', pct(funnel.applied, funnel.companies)] },
+                      { title: '书类选考落选', count: funnel.screeningRejected, hint: '未进入面试即结束的公司', tone: 'rejected', rate: ['占已投递', pct(funnel.screeningRejected, funnel.applied)] },
+                      { title: '进入面试', count: funnel.interviewed, hint: '曾进入面试阶段的公司', tone: 'interview', key: true, rate: ['面试率', pct(funnel.interviewed, funnel.applied)] },
+                      { title: '内定', count: funnel.offers, hint: '当前获得内定的公司', tone: 'offer', key: true, rate: ['内定率', pct(funnel.offers, funnel.interviewed)] },
+                    ];
+                    return (
+                      <div className="stats home-pipeline-stats">
+                        {stages.map((stage) => (
+                          <div
+                            key={stage.title}
+                            className={['pipeline-stat', 'tone-' + stage.tone, stage.key && 'is-key', stage.count === 0 && 'is-zero'].filter(Boolean).join(' ')}
+                            title={tr(stage.hint)}
+                          >
+                            <span>{tr(stage.title)}</span>
+                            <strong>
+                              {stage.count}
+                              <small>{tr('项')}</small>
+                            </strong>
+                            <em className="pipeline-rate">
+                              {stage.rate ? <>{tr(stage.rate[0])} <b>{stage.rate[1]}%</b></> : tr(stage.hint)}
+                            </em>
+                            <i className="pipeline-bar" aria-hidden="true">
+                              <i style={{ width: pct(stage.count, funnel.companies) + '%' }} />
+                            </i>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                   <div className="dashboard-grid home-grid">
                     <div className="home-main">
                       <section className="panel">

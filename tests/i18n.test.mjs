@@ -38,12 +38,13 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
           const practiceProps = {
             async reload(){},
             openMaterial(){},
-            data: {today:'2026-09-12',materials:[],reports:[],jobs:[{id:'demo',company:'Example',role:'Original role',status:'面试中',nextAction:'原文を保持',nextDate:'2026-09-10',history:[]}],profile:{revision:0},tasks:[],reviews:[],attempts:[],
+            data: {today:'2026-09-12',materials:[],reports:[],jobs:[{id:'demo',company:'Example',role:'Original role',status:'面试中',nextAction:'原文を保持',nextDate:'2026-09-10',history:[]},{id:'gone',company:'Rejected Co',role:'Closed role',status:'未通过',history:[]}],profile:{revision:0},tasks:[],reviews:[],attempts:[],
               questionSets:[{id:'pack',jobId:'demo',title:'Original title',createdAt:'2026-09-12',questions:[
                 {id:'q',title:'質問の原文',questionJa:'自己紹介をお願いします。',category:'自己紹介',targetSeconds:60}
               ]}]}
           };
           export const practice = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
+          export const rejectedArchive = renderToStaticMarkup(React.createElement(InterviewPractice, {...practiceProps, routeBase:'#archive', rejectedArchive:true}));
           setTestRoute('#jobs/company/demo');
           export const practiceCompany = renderToStaticMarkup(React.createElement(InterviewPractice, practiceProps));
           setTestRoute('#interview-review/company/demo');
@@ -91,6 +92,10 @@ for (const locale of ['zh-CN', 'ja', 'en']) {
     assert.ok(output.practice.includes(output.translate(locale, '面试中')));
     assert.ok(output.practice.includes(output.translate(locale, '已逾期')));
     assert.match(output.practice, /Example/);
+    // 不採用 companies stay out of the company list and live in their own archive tab.
+    assert.doesNotMatch(output.practice, /Rejected Co/);
+    assert.match(output.rejectedArchive, /Rejected Co/);
+    assert.doesNotMatch(output.rejectedArchive, /Example/);
     assert.doesNotMatch(output.practice, /質問の原文/);
     // Company records open on company information; rehearsal questions live under Review.
     assert.match(output.practiceCompany, /Original role/);

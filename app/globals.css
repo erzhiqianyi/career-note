@@ -4399,3 +4399,36 @@ rt { font-size: .55em; color: var(--ink-3); font-weight: 400; letter-spacing: 0;
   .question-order-list li { grid-template-columns: 24px minmax(0, 1fr) auto auto auto; padding: 8px; }
   .question-order-grip { display: none; }
 }
+
+/* Home application funnel: one tinted card per stage; interviews and offers carry the emphasis. */
+.stats.home-pipeline-stats { gap: 12px; padding: 0; border: 0; background: transparent; }
+.stats.home-pipeline-stats > div.pipeline-stat {
+  --tone: #64748b; --tone-soft: #f4f6f9; --tone-line: #e2e7ee;
+  position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  padding: 16px 18px 14px; border: 1px solid var(--tone-line); border-top: 3px solid var(--tone);
+  border-radius: 10px; background: var(--tone-soft); overflow: hidden;
+}
+.stats.home-pipeline-stats > div.tone-applied { --tone: #2d6cdf; --tone-soft: #f2f6fe; --tone-line: #d8e4fa; }
+.stats.home-pipeline-stats > div.tone-rejected { --tone: #c2554b; --tone-soft: #fdf4f3; --tone-line: #f3dad6; }
+.stats.home-pipeline-stats > div.tone-interview { --tone: #1f8a5b; --tone-soft: #eef8f2; --tone-line: #cfeadb; }
+.stats.home-pipeline-stats > div.tone-offer { --tone: #c98a0b; --tone-soft: #fff8e7; --tone-line: #f4e0ad; }
+.home-pipeline-stats .pipeline-stat > span { font-size: 0.8125rem; font-weight: 600; color: var(--tone); }
+.home-pipeline-stats .pipeline-stat strong { display: block; margin: 0; font-size: 1.75rem; font-weight: 650; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.home-pipeline-stats .pipeline-stat.is-key strong { font-size: 2.125rem; color: var(--tone); }
+.home-pipeline-stats .pipeline-stat.is-key { box-shadow: 0 6px 18px color-mix(in srgb, var(--tone) 14%, transparent); }
+.home-pipeline-stats .pipeline-stat strong small { margin-left: 4px; font-size: 0.75rem; font-weight: 400; color: var(--ink-3); }
+.home-pipeline-stats .pipeline-rate { overflow: hidden; font-size: 0.75rem; font-style: normal; color: var(--ink-3); text-overflow: ellipsis; white-space: nowrap; }
+.home-pipeline-stats .pipeline-rate b { font-weight: 650; color: var(--tone); font-variant-numeric: tabular-nums; }
+.home-pipeline-stats .pipeline-bar { display: block; height: 4px; margin-top: 4px; border-radius: 999px; background: color-mix(in srgb, var(--tone) 14%, transparent); overflow: hidden; }
+.home-pipeline-stats .pipeline-bar > i { display: block; height: 100%; min-width: 0; border-radius: inherit; background: var(--tone); }
+.home-pipeline-stats .pipeline-stat.is-zero strong { color: var(--ink-4); font-weight: 450; }
+.home-pipeline-stats .pipeline-stat.is-zero.is-key { box-shadow: none; }
+@media (max-width: 900px) {
+  .stats.home-pipeline-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .home-pipeline-stats > .pipeline-stat:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 700px) {
+  .stats.home-pipeline-stats > div.pipeline-stat { padding: 12px 14px 12px; }
+  .home-pipeline-stats .pipeline-stat strong { font-size: 1.5rem; }
+  .home-pipeline-stats .pipeline-stat.is-key strong { font-size: 1.75rem; }
+}
