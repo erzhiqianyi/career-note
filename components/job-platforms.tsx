@@ -2,8 +2,8 @@
 import { RecordBack, useRecordPage } from './record-page';
 import { useLocale } from '@/components/locale-provider';
 
-import { useState, type SyntheticEvent } from 'react';
-import { BriefcaseBusiness, Code2, Globe2, Languages, ArrowUpRight, ExternalLink, Pencil, Plus, Power, RotateCcw, Search, Star, Trash2 } from 'lucide-react';
+import { useEffect, useState, type SyntheticEvent } from 'react';
+import { BriefcaseBusiness, Code2, FileText, Globe2, Languages, ArrowUpRight, ExternalLink, Pencil, Plus, Power, RotateCcw, Search, Star, Trash2 } from 'lucide-react';
 import { api } from '@/lib/career';
 import {
   builtinPlatforms,
@@ -18,6 +18,7 @@ const categoryIcons: Record<string, typeof Globe2> = {
 };
 
 type Props = { platforms: JobPlatform[]; reload: () => Promise<void> };
+type ResumeOption = { id: string; title: string; language: string; archived?: boolean; updatedAt?: string };
 export default function JobPlatforms({ platforms, reload }: Props) {
   const { t: tr } = useLocale();
   function platformText(
@@ -37,6 +38,16 @@ export default function JobPlatforms({ platforms, reload }: Props) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [selected, setSelected] = useRecordPage<JobPlatform>('#platforms', 'view', id => platforms.find(p => p.id === id) || null, p => p.id);
+  // Personalized resume drafts, loaded only when a detail or editor page needs their titles.
+  const [resumes, setResumes] = useState<ResumeOption[] | null>(null);
+  const needsResumes = Boolean(edit || selected?.currentResumeId);
+  useEffect(() => {
+    if (!needsResumes || resumes) return;
+    api('personalized-resumes')
+      .then((d) => setResumes((d as { drafts: ResumeOption[] }).drafts))
+      .catch(() => setResumes([]));
+  }, [needsResumes, resumes]);
+  const resumeTitle = (id: string) => resumes?.find((r) => r.id === id)?.title;
   const visible = platforms
     .filter(
       (p) =>
@@ -243,6 +254,14 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                       </div>
                       <p>{platformText(p, 'description') || tr('还没有平台说明。')}</p>
                       <p>{tr(p.registered ? '已注册' : '未注册')}{p.registered && p.accountEmail ? ' · ' + p.accountEmail : ''}</p>
+                      <p className="platform-current-resume">
+                        <FileText size={15} aria-hidden="true" />
+                        {tr('当前使用的简历：')}
+                        {p.currentResumeId
+                          ? <a href={'#personalized/view/' + encodeURIComponent(p.currentResumeId)}>{resumeTitle(p.currentResumeId) || (resumes ? tr('该简历版本已不存在') : p.currentResumeId)}</a>
+                          : tr('未指定')}
+                        {p.currentResumeNote && <span className="muted"> · {p.currentResumeNote}</span>}
+                      </p>
                       {p.notes && (
                         <p className="platform-notes">
                           {tr('我的备注：')}
@@ -329,6 +348,26 @@ export default function JobPlatforms({ platforms, reload }: Props) {
                   maxLength={254}
                   placeholder="you@example.com"
                   defaultValue={edit.accountEmail}
+                />
+              </label>
+              <label className="field">
+                <span>{tr('当前使用的简历')}</span>
+                <select name="currentResumeId" defaultValue={edit.currentResumeId || ''} key={resumes ? 'loaded' : 'loading'}>
+                  <option value="">{tr('未指定')}</option>
+                  {(resumes || [])
+                    .filter((r) => !r.archived || r.id === edit.currentResumeId)
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>{r.title}</option>
+                    ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>{tr('提交文件备注')}</span>
+                <input
+                  name="currentResumeNote"
+                  maxLength={500}
+                  placeholder={tr('例如：11/19 上传的 PDF 文件名')}
+                  defaultValue={edit.currentResumeNote}
                 />
               </label>
               <label className="field wide">

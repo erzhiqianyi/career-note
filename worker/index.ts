@@ -2067,15 +2067,27 @@ const handler = async (
       return pathname.endsWith('/revoke')
         ? revokeMaterialPublication(rawDb, db.namespace, payload.id)
         : publishMaterial(rawDb, db.namespace, payload, await getRecord(db, 'materials', String(payload.materialId || '')) as Material | null);
-    case '/api/career/platforms': {
+    case '/api/career/platforms':
+    case '/api/career/platforms/resume': {
       ensureScopes(context, ['career:write']);
       const kind = 'platforms:' + context.uid;
       const saved = await records(db, kind) as JobPlatform[];
       const old = mergePlatforms(saved).find((p) => p.id === payload.id);
       if (payload.id && !old) return jsonResponse({ error: '平台不存在，请刷新' }, { status: 404 });
+      // The resume route only moves the current-resume pair, so an agent cannot rewrite names, URLs or notes.
+      const resumeOnly = pathname.endsWith('/resume');
+      if (resumeOnly && !old) return jsonResponse({ error: '平台不存在，请刷新' }, { status: 404 });
       let platform: JobPlatform;
-      try { platform = validatePlatform(payload, old); }
+      try {
+        platform = validatePlatform(resumeOnly && old
+          ? { ...old, revision: payload.revision, currentResumeId: payload.currentResumeId, currentResumeNote: payload.currentResumeNote }
+          : payload, old);
+      }
       catch (error) { return jsonResponse({ error: error instanceof Error ? error.message : '平台数据无效' }, { status: 400 }); }
+      if (platform.currentResumeId && platform.currentResumeId !== old?.currentResumeId) {
+        const draft = await rawDb.prepare('SELECT 1 FROM personalized_resumes WHERE owner=? AND id=?').bind(db.namespace, platform.currentResumeId).first();
+        if (!draft) return jsonResponse({ error: '所选简历版本不存在，请刷新' }, { status: 400 });
+      }
       const write = await db.connection.prepare(`INSERT INTO records(kind,id,body) VALUES (?1,?2,?3)
         ON CONFLICT(kind,id) DO UPDATE SET body=excluded.body
         WHERE json_extract(records.body, '$.revision') = ?4`)

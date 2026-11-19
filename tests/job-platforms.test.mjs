@@ -15,6 +15,17 @@ const compiled = { exports: {} };
 runInNewContext(result.outputFiles[0].text, { module: compiled, exports: compiled.exports, crypto, URL });
 const { builtinPlatforms, postingSource, validatePlatform } = compiled.exports;
 
+void test('platform keeps the current resume version and its upload note', () => {
+  const base = { ...builtinPlatforms[0] };
+  const saved = validatePlatform({ ...base, currentResumeId: ' type-general-v2 ', currentResumeNote: ' upload.pdf ' }, base);
+  assert.equal(saved.currentResumeId, 'type-general-v2');
+  assert.equal(saved.currentResumeNote, 'upload.pdf');
+  // Older records have neither field; they stay unset.
+  assert.equal(validatePlatform(base, base).currentResumeId, '');
+  assert.throws(() => validatePlatform({ ...base, currentResumeId: '../other' }, base), /请选择有效的简历版本/);
+  assert.throws(() => validatePlatform({ ...base, currentResumeNote: 'x'.repeat(501) }, base), /简历备注不能超过 500 字/);
+});
+
 void test('platform account status keeps registration flag and login email', () => {
   const base = { ...builtinPlatforms[0] };
   const saved = validatePlatform(

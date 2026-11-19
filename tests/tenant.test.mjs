@@ -177,6 +177,21 @@ void test('Google users and their agents have isolated workspaces, including leg
   assert.equal(draftWrite.result.isError,false);
   assert.equal((await ok(b,'personalized-resumes')).drafts.length,0);
   assert.equal((await send('', 'personalized-resumes')).status,401);
+  // Platform resume link: the tool moves only the current-resume pair and rejects drafts the user does not own.
+  const platformBefore=(await ok(a,'state')).platforms.find(p=>p.id==='builtin-green');
+  const linkArgs={id:platformBefore.id,revision:platformBefore.revision,currentResumeId:draft.id,currentResumeNote:'green-upload.pdf'};
+  assert.equal((await send(issued.token,'platforms/resume',linkArgs)).status,403);
+  const bobLink=await rpc(writer.token,'tools/call',{name:'career_update_platform_resume',arguments:{...linkArgs,currentResumeId:'bob-only-draft'}});
+  assert.equal(bobLink.result.isError,true);
+  const linked=await rpc(writer.token,'tools/call',{name:'career_update_platform_resume',arguments:{...linkArgs,name:'Renamed by agent'}});
+  assert.equal(linked.result.isError,false,JSON.stringify(linked));
+  const platformAfter=(await ok(a,'state')).platforms.find(p=>p.id==='builtin-green');
+  assert.equal(platformAfter.currentResumeId,draft.id);
+  assert.equal(platformAfter.currentResumeNote,'green-upload.pdf');
+  assert.equal(platformAfter.name,platformBefore.name);
+  assert.equal(platformAfter.revision,platformBefore.revision+1);
+  assert.ok(!(await ok(b,'state')).platforms.find(p=>p.id==='builtin-green').currentResumeId);
+  assert.equal((await rpc(writer.token,'tools/call',{name:'career_update_platform_resume',arguments:linkArgs})).result.isError,true);
   assert.equal((await send(writer.token,'resume-publications',{draftId:draft.id,draftRevision:1,mode:'unlisted',expiresAt:''})).status,403);
   assert.equal((await send(b,'resume-publications',{draftId:draft.id,draftRevision:1,mode:'unlisted',expiresAt:''})).status,409);
   const pub=await ok(a,'resume-publications',{draftId:draft.id,draftRevision:1,mode:'unlisted',expiresAt:''});

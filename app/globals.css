@@ -2199,6 +2199,8 @@ dialog.drawer {
 .platform-card details { font-size: 0.875rem; margin-bottom: 16px; }
 .platform-card summary { cursor: pointer; color: var(--ink-3); }
 .platform-notes { white-space: pre-wrap; background: #f5f7fa; padding: 10px 12px; border-radius: 6px; }
+.platform-current-resume { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; overflow-wrap: anywhere; }
+.platform-current-resume svg { flex: none; }
 .platform-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: auto; padding-top: 18px; border-top: 1px solid #e5ebf3; }
 .platform-actions button { font-size: 0.8125rem; }
 .platform-open { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; }

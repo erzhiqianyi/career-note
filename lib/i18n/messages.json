@@ -6001,5 +6001,41 @@
   "删除此顺序": { "ja": "この順番を削除", "en": "Delete this order" },
   "请给这个顺序起个名字": { "ja": "順番に名前を付けてください", "en": "Name this order" },
   "已有同名顺序": { "ja": "同じ名前の順番があります", "en": "An order with this name already exists" },
-  "最多保存 {0} 个顺序": { "ja": "順番は最大 {0} 件まで保存できます", "en": "You can save up to {0} orders" }
+  "最多保存 {0} 个顺序": { "ja": "順番は最大 {0} 件まで保存できます", "en": "You can save up to {0} orders" },
+  "当前使用的简历：": {
+    "ja": "現在使用中の書類：",
+    "en": "Resume in use: "
+  },
+  "当前使用的简历": {
+    "ja": "現在使用中の書類",
+    "en": "Resume in use"
+  },
+  "未指定": {
+    "ja": "未指定",
+    "en": "Not set"
+  },
+  "该简历版本已不存在": {
+    "ja": "この書類バージョンは削除されています",
+    "en": "This resume version no longer exists"
+  },
+  "提交文件备注": {
+    "ja": "提出ファイルのメモ",
+    "en": "Submitted file note"
+  },
+  "例如：11/19 上传的 PDF 文件名": {
+    "ja": "例：11/19 にアップロードしたPDFのファイル名",
+    "en": "e.g. the PDF file name uploaded on 11/19"
+  },
+  "请选择有效的简历版本": {
+    "ja": "有効な書類バージョンを選択してください",
+    "en": "Choose a valid resume version"
+  },
+  "简历备注不能超过 500 字": {
+    "ja": "書類のメモは500文字以内で入力してください",
+    "en": "The resume note must be 500 characters or fewer"
+  },
+  "所选简历版本不存在，请刷新": {
+    "ja": "選択した書類バージョンが見つかりません。再読み込みしてください",
+    "en": "The selected resume version was not found; please reload"
+  }
 }

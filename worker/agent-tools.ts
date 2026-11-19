@@ -450,6 +450,19 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       handler: (payload, ctx) => api(ctx, 'jobs/status', payload),
     },
     {
+      name: 'career_update_platform_resume',
+      scope: 'career:write',
+      description: 'Record which personalized resume version the user currently uses on one job platform (for example the 職務経歴書 uploaded to a recruiting agent), only when the user says so. Read career_get_context for the platform id and revision (built-in platforms start at 0) and career_get_personalized_resumes for the draft id. currentResumeNote names the uploaded file or date (≤500 chars). Empty currentResumeId clears the link. Only these two fields and revision change; platform names, URLs, account email and notes are kept. A stale revision is rejected; read back after saving.',
+      inputSchema: {
+        id: z.string().min(1).max(120),
+        revision: z.number().int().nonnegative(),
+        currentResumeId: z.string().regex(/^[a-zA-Z0-9_-]{0,100}$/),
+        currentResumeNote: z.string().max(500).default(''),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      handler: (payload, ctx) => api(ctx, 'platforms/resume', payload),
+    },
+    {
       name: 'career_update_job_preference',
       scope: 'career:write',
       description: 'Save the applicant’s preference group for one existing job only when the user specifies it or explicitly authorizes judging it. First read career_get_context for id and revision. Never infer preference from stars or application status. Empty string clears the selection. Only preferenceGroup, revision and updatedAt change. Read back after saving; stale revisions are rejected.',

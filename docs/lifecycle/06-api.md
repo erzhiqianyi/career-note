@@ -16,7 +16,8 @@
 | POST `/jobs/preference` | 志望群のみ更新（`{id, revision, preferenceGroup}`、第一・第二・第三志望群または空文字、競合は409）。MCP: `career_update_job_preference` | career:write |
 | POST `/jobs/application-doc` | 出力用の志望動機・本人希望・応募用メールのみ更新（`{id, revision, applicationDoc}`、競合は409、本人のみ） | career:write |
 | POST `/question-orders` | 題組の練習順序を全件置換（`{questionSetId, revision, activeOrderId, orders:[{id, name, questionIds, onlySelected?}]}`、最大20件、競合は409）。質問・Q番号・回答は変更しない。MCP: `career_save_question_orders` | career:write |
-| POST `/platforms` | 求人サービス設定 | career:write |
+| POST `/platforms` | 求人サービス設定（`currentResumeId`・`currentResumeNote` で現在使用中の個人向け履歴書を記録） | career:write |
+| POST `/platforms/resume` | 現在使用中の履歴書のみ更新（`{id, revision, currentResumeId, currentResumeNote}`、存在しない下書きは400、競合は409）。名称・URL・メモは変更しない。MCP: `career_update_platform_resume` | career:write |
 | POST `/tasks` | 作業依頼 | agent:write |
 | POST `/attempts` | 面接の元回答保存 | career:write |
 | POST `/materials/archive` | 材料版の非表示・復元（`{items:[{id, archived}]}`、本文は保持） | career:write |

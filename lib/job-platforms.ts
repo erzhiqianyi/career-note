@@ -1,7 +1,18 @@
 import defaults from './data/job-platforms.json';
 
-export type JobPlatform = (typeof defaults)[number];
+/** currentResumeId points at the personalized resume draft used on this platform; the note says which file was uploaded. */
+export type JobPlatform = (typeof defaults)[number] & { currentResumeId?: string; currentResumeNote?: string };
 export const builtinPlatforms: JobPlatform[] = defaults;
+export const resumeIdPattern = /^[a-zA-Z0-9_-]{0,100}$/;
+
+/** Reads and checks only the current-resume pair; shared by the app form and the MCP tool. */
+export function platformResumeFields(data: Record<string, unknown>) {
+  const id = data.currentResumeId ?? '';
+  const note = data.currentResumeNote ?? '';
+  if (typeof id !== 'string' || !resumeIdPattern.test(id.trim())) throw Error('请选择有效的简历版本');
+  if (typeof note !== 'string' || note.length > 500) throw Error('简历备注不能超过 500 字');
+  return { currentResumeId: id.trim(), currentResumeNote: note.trim() };
+}
 export const platformCategories = [
   'IT・软件工程',
   '双语・国际业务',
@@ -83,6 +94,7 @@ export function validatePlatform(
     notes: text('notes', 5000),
     registered,
     accountEmail,
+    ...platformResumeFields(data),
     enabled: data.enabled as boolean,
     favorite: data.favorite as boolean,
     deleted: data.deleted as boolean,

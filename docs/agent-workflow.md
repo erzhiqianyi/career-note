@@ -40,6 +40,8 @@ MCP prompts（需要 agent:write）：`career_company_board`（参数 company：
 
 志望群是职位上的 `preferenceGroup`，可取 `第一志望群`、`第二志望群`、`第三志望群` 或空字符串（未选择）。它表示本人意愿，不按星级、匹配评价、优先级或投递状态自动映射。仅在用户指定或明确授权 Agent 判断后，调用 `career_update_job_preference({ id, revision, preferenceGroup })` 保存（需要 `career:write`），读回确认；409 时重新读取。工具只修改 preferenceGroup、revision 和 updatedAt。通用 jobs 研究导入禁止 preferenceGroup；旧客户端未传此字段时保留原值。公司列表与详情展示，职位编辑页可选择或清空。`career_application_preparation` prompt 会携带现有选择、星级、revision 和岗位证据，并明确保存与不提交申请的边界。
 
+平台当前使用的简历：用户告知某平台（如转职中介）现在提交的是哪一版简历时，用 `career_update_platform_resume({ id, revision, currentResumeId, currentResumeNote })` 记录（需要 `career:write`）。先用 `career_get_context` 读取平台 id 和 revision（内置平台未改过时为 0），用 `career_get_personalized_resumes` 找到对应的个性化简历 id；`currentResumeNote` 写实际上传的文件名或日期（最多 500 字），空 `currentResumeId` 表示清除。工具只修改这两个字段和 revision，平台名称、网址、登录邮箱和备注保持不变；简历 id 必须是本人已有的草稿。保留旧版本时另存新的简历草稿 id，不覆盖旧版。不根据招聘网站自行推断当前版本；409 时重新读取。平台详情页显示该版本并可跳转，编辑页可选择或清除。
+
 练习顺序只在用户要求调整题目顺序、挑选题目或命名顺序时，用 `career_save_question_orders({ questionSetId, revision, activeOrderId, orders })` 保存，需要 `career:write`。先读 `career_get_context` 的 `questionOrders`（按题组 id 一条记录；没有记录时 revision 为 0）。该调用整组替换，未重新提交的顺序会被删除；`questionIds` 用题组内的问题 id，不是 Q 编号；`onlySelected: true` 时未列出的题目被隐藏，否则按原顺序排在后面。`activeOrderId` 为 null 表示使用原顺序。问题、Q 编号、回答和点评都不变；409 时重新读取后再保存。
 
 以下 CLI 是维护者的备用路径；独立安装的技能不需要它。
