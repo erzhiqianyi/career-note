@@ -1764,13 +1764,18 @@ export default function Home() {
               </div>
             )}
           {'kind' in doc && doc.kind === '志望動機' && <ApplicationReason material={doc} />}
-          <article className="document-body">
-            {applicationDoc || (!('kind' in doc) && reportInterviewId(doc)) ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{markdownJapaneseReadings(applicationDoc ? applicationContent : doc.content)}</ReactMarkdown> : <DocumentText text={doc.content} />}
+          <article className={`document-body${!('kind' in doc) ? ' report-body' : ''}`}>
+            {!('kind' in doc) ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={reportMarkdown}>{markdownJapaneseReadings(doc.content)}</ReactMarkdown>
+              : applicationDoc ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownRuby}>{markdownJapaneseReadings(applicationContent)}</ReactMarkdown>
+              : <DocumentText text={doc.content} />}
           </article>
-          {!printableDoc && <div className="source-box">
+          {!printableDoc && (!('kind' in doc) ? <details className="source-box report-source-box">
+            <summary>{tr('依据与待确认事项')}</summary>
+            <p className="prewrap"><Ja text={doc.sourceNotes} /></p>
+          </details> : <div className="source-box">
             <h3>{tr('依据与待确认事项')}</h3>
             <p className="prewrap"><Ja text={doc.sourceNotes} /></p>
-          </div>}
+          </div>)}
           {'kind' in doc && doc.jobId && ['履歴書', '職務経歴書'].includes(doc.kind) && <MaterialPublications material={doc} />}
         </RecordPage>
       )}
@@ -1923,6 +1928,11 @@ function ProfileForm({
 const markdownRuby = Object.fromEntries(
   (['p', 'li', 'h1', 'h2', 'h3', 'h4', 'td', 'th', 'strong', 'em'] as const).map((Tag) => [Tag, ({ children }: { children?: ReactNode }) => <Tag><JaChildren mode="ja">{children}</JaChildren></Tag>]),
 );
+
+const reportMarkdown = {
+  ...markdownRuby,
+  table: ({ children }: { children?: ReactNode }) => <div className="document-table-scroll"><table>{children}</table></div>,
+};
 
 function DocumentText({ text }: { text: string }) {
   return (

@@ -4025,6 +4025,29 @@ header { min-height: 78px; height: auto; padding-block: 12px; gap: 16px; flex-wr
 .resume-export-check .resume-print-preview { margin-top: 16px; }
 .document-body table { width: 100%; border-collapse: collapse; margin: 16px 0; }
 .document-body th, .document-body td { padding: 10px; border: 1px solid var(--line); text-align: left; overflow-wrap: anywhere; }
+.report-body { color: var(--ink-2); }
+.report-body h1 { margin: 10px 0 18px; font-size: 1.5rem; line-height: 1.45; }
+.report-body h2 { margin: 34px 0 16px; padding-bottom: 9px; border-bottom: 1px solid var(--line); font-size: 1.25rem; line-height: 1.5; }
+.report-body h3 { margin: 26px 0 12px; font-size: 1.0625rem; line-height: 1.55; }
+.report-body ul, .report-body ol { margin: 0 0 22px; padding-left: 1.5rem; }
+.report-body li { margin: 7px 0; line-height: 1.8; }
+.document-table-scroll { margin: 18px 0 26px; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 8px 24px rgb(34 55 79 / 5%); }
+.document-table-scroll table { min-width: 760px; margin: 0; border-collapse: separate; border-spacing: 0; font-size: .875rem; line-height: 1.65; }
+.document-table-scroll th, .document-table-scroll td { padding: 12px 14px; border-width: 0 1px 1px 0; vertical-align: top; }
+.document-table-scroll th:last-child, .document-table-scroll td:last-child { border-right: 0; }
+.document-table-scroll tbody tr:last-child td { border-bottom: 0; }
+.document-table-scroll thead th { background: #f3f7f5; color: var(--ink-2); font-weight: 650; white-space: nowrap; }
+.document-table-scroll tbody tr:nth-child(even) td { background: rgb(247 250 249 / 72%); }
+.report-source-box { padding: 0; overflow: hidden; }
+.report-source-box summary { margin: 0; padding: 16px 20px; color: var(--ink-2); font-size: .875rem; font-weight: 650; list-style-position: inside; }
+.report-source-box[open] summary { border-bottom: 1px solid var(--line); }
+.report-source-box p { max-height: 320px; margin: 0; padding: 18px 20px; overflow: auto; font-size: .8125rem; line-height: 1.75; }
+@media (max-width: 700px) {
+  .report-body h1 { font-size: 1.25rem; }
+  .report-body h2 { font-size: 1.125rem; }
+  .document-table-scroll { margin-right: -8px; margin-left: -8px; border-radius: 8px; }
+  .document-table-scroll table { min-width: 680px; }
+}
 .application-export-entry { display: flex; justify-content: flex-end; padding: 12px 16px 0; }
 .application-export-entry button { display: inline-flex; align-items: center; gap: 8px; }
 .application-export-form { display: grid; gap: 12px; margin-bottom: 12px; }
