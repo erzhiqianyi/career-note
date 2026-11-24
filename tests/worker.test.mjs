@@ -189,6 +189,25 @@ void test('company board is validated, kept across research refreshes and remove
  assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,companyProfile:null}],completeTaskIds:[]})).status,200);
  assert.equal((await (await send('state')).json()).jobs[0].companyProfile,null);
 });
+void test('company reviews are validated, kept across research refreshes and removed only by null',async t=>{
+ const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+ const source={id:'review-job',company:'Example',role:'Engineer'};
+ const companyReviews={overall:'3.9（口コミ10件）',summaryJa:'案件次第という声が多い。',summaryZh:'很多人说取决于案件。',themes:[{title:'働き方',tone:'mixed',ja:'案件次第',zh:'取决于案件'}],entries:[{postedAt:'2026-11-08',reviewer:'男性／エンジニア',category:'働き方',rating:'2.4',ja:'有休は現場次第。',zh:'年假取决于现场。',url:'https://example.com/r/1'}],sources:[{label:'口コミサイト',url:'https://example.com/kuchikomi'}],verifiedAt:'2026-11-24'};
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,companyReviews}],completeTaskIds:[]})).status,200);
+ let job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.companyReviews.entries[0].zh,'年假取决于现场。');assert.equal(job.companyReviews.themes[0].tone,'mixed');
+ assert.equal((await send('import',{schemaVersion:1,jobs:[source],completeTaskIds:[]})).status,200);
+ job=(await (await send('state')).json()).jobs[0];
+ assert.equal(job.companyReviews.summaryJa,companyReviews.summaryJa);
+ assert.equal((await send('jobs',{...job,status:'准备投递'})).status,200);
+ assert.equal((await (await send('state')).json()).jobs[0].companyReviews.overall,companyReviews.overall);
+ for(const bad of [{...companyReviews,sources:[]},{...companyReviews,verifiedAt:'2026/11/24'},{...companyReviews,summaryJa:''},{...companyReviews,themes:[{title:'x',tone:'great',ja:'x'}]},{...companyReviews,entries:[{...companyReviews.entries[0],url:'javascript:alert(1)'}]},{...companyReviews,entries:Array(61).fill(companyReviews.entries[0])},[]]){
+  assert.equal((await send('import/preview',{schemaVersion:1,jobs:[{...source,companyReviews:bad}],completeTaskIds:[]})).status,400);
+  assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,companyReviews:bad}],completeTaskIds:[]})).status,400);
+ }
+ assert.equal((await send('import',{schemaVersion:1,jobs:[{...source,companyReviews:null}],completeTaskIds:[]})).status,200);
+ assert.equal((await (await send('state')).json()).jobs[0].companyReviews,null);
+});
 void test('bulk job deletion checks revisions and removes only selected jobs with their dependent records',async t=>{
  const mf=await worker(t);const send=(path,body)=>mf.dispatchFetch('http://local/api/career/'+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
  const jobs=[{id:'delete-a',company:'Company A',role:'Engineer'},{id:'keep-b',company:'Company B',role:'Designer'},{id:'delete-c',company:'Company C',role:'Analyst'}];

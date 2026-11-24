@@ -2,6 +2,7 @@ import type { AnswerFlow } from './answer-flow';
 import { apiUrl } from './api-base';
 import { freshAuthToken } from './career-auth';
 import type { CompanyProfile } from './company-profile';
+import type { CompanyReviews } from './company-reviews';
 import type { PreferenceGroup } from './job-preferences';
 export { preferenceGroups } from './job-preferences';
 import { jobStatuses } from './job-status';
@@ -42,6 +43,8 @@ export type Job = {
   employmentType?: string;
   /** Agent-written Japanese company board; null or absent until researched. */
   companyProfile?: CompanyProfile | null;
+  /** Agent-collected employee reviews (口コミ) in Japanese with Chinese translations; null or absent until collected. */
+  companyReviews?: CompanyReviews | null;
   japanese: string;
   foreigner: string;
   visa: string;

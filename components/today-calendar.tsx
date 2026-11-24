@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useLocale } from '@/components/locale-provider';
 import type { Job } from '@/lib/career';
+import { isActiveSelectionStatus, isSelectionProgressStatus } from '../lib/job-status';
 import { eventIcs, type CareerEvent, type EventKind, type EventLink, type EventStatus, type EventTimeStatus, type EventTodo } from '../lib/calendar-events';
 import { workspaceDay } from '../lib/workspace-day';
 
@@ -18,7 +19,7 @@ export type DayActivity = {
   progressed: string[]; // other status changes, "company · status"
 };
 
-export const isFollowingJob = (job: Job) => ['已投递', '书类选考', '面试中'].includes(job.status);
+export const isFollowingJob = (job: Job) => isActiveSelectionStatus(job.status);
 
 export { workspaceDay };
 
@@ -27,7 +28,7 @@ export function collectActivity(jobs: Job[]): Record<string, DayActivity> {
   const at = (date: string) => (days[date] ??= { applied: [], progressed: [] });
   for (const job of jobs.filter(isFollowingJob)) {
     job.history.forEach((entry) => {
-      if (!entry.at || !['已投递', '书类选考', '面试中'].includes(entry.status)) return;
+      if (!entry.at || !isSelectionProgressStatus(entry.status) || entry.status === '内定') return;
       const date = workspaceDay(entry.at);
       if (entry.status === '已投递') at(date).applied.push(`${job.company} · ${job.role}`);
       else at(date).progressed.push(`${job.company} · ${entry.status}`);

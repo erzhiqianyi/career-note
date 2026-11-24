@@ -44,6 +44,18 @@
   "还没有企业看板": { "ja": "企業ボードはまだありません", "en": "No company board yet" },
   "让 Agent 按 career-job-research 流程调研这家公司，写入 companyProfile 后会在这里显示业务、优势、沿革和发展预期。": { "ja": "Agent に career-job-research の手順でこの会社を調べてもらい、companyProfile を書き込むと、事業・強み・沿革・今後の展望がここに表示されます。", "en": "Ask an agent to research this company with career-job-research. Once it writes companyProfile, the business, strengths, history and outlook appear here." },
   "打印 / 保存 PDF": { "ja": "印刷 / PDF 保存", "en": "Print / save PDF" },
+  "口碑": { "ja": "口コミ", "en": "Reviews" },
+  "还没有口碑": { "ja": "口コミはまだありません", "en": "No reviews yet" },
+  "让 Agent 读取口碑网站并写入 companyReviews 后，这里会并排显示日语原文与中文翻译。": { "ja": "Agent に口コミサイトを読んでもらい companyReviews を書き込むと、日本語と中国語訳がここに並んで表示されます。", "en": "Ask an agent to read review sites and write companyReviews; the Japanese text and Chinese translation then appear here side by side." },
+  "口碑是在职或离职员工的个人感受，不是已核实的公司事实；时间较早的评价可能已不符合现状。": { "ja": "口コミは現職・元社員の個人的な感想で、確認済みの事実ではありません。古い投稿は現状と異なる場合があります。", "en": "Reviews are personal impressions of current or former staff, not verified facts; older posts may no longer reflect the company." },
+  "主要话题": { "ja": "主なテーマ", "en": "Main themes" },
+  "口碑列表": { "ja": "口コミ一覧", "en": "Review list" },
+  "好评": { "ja": "好意的", "en": "Positive" },
+  "差评": { "ja": "否定的", "en": "Negative" },
+  "褒贬不一": { "ja": "賛否あり", "en": "Mixed" },
+  "打开原文": { "ja": "元の投稿を開く", "en": "Open original post" },
+  "来源": { "ja": "出典", "en": "Sources" },
+  "核验日期": { "ja": "確認日", "en": "Checked" },
   "个人评分": { "ja": "個人評価", "en": "My rating" },
   "评分优先": { "ja": "評価順", "en": "Rating first" },
   "时间优先": { "ja": "日程順", "en": "Date first" },
@@ -498,9 +510,37 @@
     "ja": "応募済み",
     "en": "Applied"
   },
+  "轻松面谈": {
+    "ja": "カジュアル面談",
+    "en": "Casual interview"
+  },
   "书类选考": {
     "ja": "書類選考中",
     "en": "Document screening"
+  },
+  "适性检查": {
+    "ja": "適性検査・技術試験",
+    "en": "Assessment / technical test"
+  },
+  "一次面试": {
+    "ja": "一次面接",
+    "en": "First interview"
+  },
+  "二次面试": {
+    "ja": "二次面接",
+    "en": "Second interview"
+  },
+  "最终面试": {
+    "ja": "最終面接",
+    "en": "Final interview"
+  },
+  "条件面谈": {
+    "ja": "条件面談",
+    "en": "Offer meeting"
+  },
+  "结果待确认": {
+    "ja": "結果確認中",
+    "en": "Result pending"
   },
   "已整理 {0} 个职位{1}。": {
     "ja": "求人 {0} 件を整理済み{1}。",

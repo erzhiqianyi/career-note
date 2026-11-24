@@ -40,7 +40,7 @@ void test('calendar initially shows today details and exposes readable counts on
 void test('calendar includes only selection milestones for currently followed companies',async()=>{
  const {collectActivity}=await load();
  const jobs=[
-  {company:'A社',role:'Backend',status:'面试中',history:[{status:'关注中',at:'2026-09-10T01:00:00Z'},{status:'已投递',at:'2026-09-12T01:00:00Z'},{status:'书类选考',at:'2026-09-13T01:00:00Z'},{status:'面试中',at:'2026-09-14T01:00:00Z'}]},
+  {company:'A社',role:'Backend',status:'一次面试',history:[{status:'关注中',at:'2026-09-10T01:00:00Z'},{status:'已投递',at:'2026-09-12T01:00:00Z'},{status:'书类选考',at:'2026-09-13T01:00:00Z'},{status:'一次面试',at:'2026-09-14T01:00:00Z'}]},
   ...['关注中','准备投递','未通过','已撤回','内定'].map(status=>({company:status,role:'Web',status,history:[{status:'已投递',at:'2026-09-11T02:00:00Z'},{status,at:'2026-09-12T02:00:00Z'}]})),
   {company:'C社',role:'Web',status:'已投递',history:[{status:'已投递',at:'2026-09-12T02:00:00Z'}]},
  ];
@@ -50,6 +50,6 @@ void test('calendar includes only selection milestones for currently followed co
  assert.equal(days['2026-09-11'],undefined);
  assert.deepEqual(days['2026-09-12'],{applied:['A社 · Backend','C社 · Web'],progressed:[]});
  assert.deepEqual(days['2026-09-13'].progressed,['A社 · 书类选考']);
- assert.deepEqual(days['2026-09-14'].progressed,['A社 · 面试中']);
+ assert.deepEqual(days['2026-09-14'].progressed,['A社 · 一次面试']);
  assert.deepEqual(Object.keys(days['2026-09-12']).sort(),['applied','progressed']);
 });

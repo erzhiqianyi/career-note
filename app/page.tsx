@@ -19,6 +19,7 @@ import ScheduledTemplates from '@/components/scheduled-templates';
 import TodayCalendar, { EventDetail, collectActivity, isFollowingJob, type CalendarMark } from '@/components/today-calendar';
 import { eventsFromReports, type CareerEvent } from '@/lib/calendar-events';
 import { applicationFunnelCounts } from '@/lib/company-timeline';
+import { isInterviewStatus } from '@/lib/job-status';
 import CareerWelcome from '@/components/career-welcome';
 import SystemSettings from '@/components/system-settings';
 import { Ja, JaChildren } from '@/components/japanese-text';
@@ -214,7 +215,7 @@ function Badge({ children }: { children: ReactNode }) {
         'badge ' +
         (children === '需重做'
           ? 'amber'
-          : children === '面试中'
+          : typeof children === 'string' && isInterviewStatus(children)
             ? 'blue'
             : children === '内定' || children === '已核对'
               ? 'green'
@@ -735,7 +736,7 @@ export default function Home() {
     if (!job.nextDate) continue;
     const date = job.nextDate.slice(0, 10);
     if (followedCalendarEvents.some(event => event.date === date && event.jobId === job.id)) continue;
-    const interview = job.status === '面试中' || /面试|面接|interview/i.test(job.nextAction);
+    const interview = isInterviewStatus(job.status) || /面试|面接|interview/i.test(job.nextAction);
     const kind = interview ? 'interview' : 'due';
     const previous = calendarMarks[date];
     if (previous?.kind === 'interview' && !interview) continue;

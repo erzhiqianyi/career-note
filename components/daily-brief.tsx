@@ -7,6 +7,7 @@ import StatusMark from '@/components/status-mark';
 import { workspaceDay } from '@/components/today-calendar';
 import type { Job, Material, Report, State } from '@/lib/career';
 import { hasPracticeQuestions } from '@/lib/practice-plan';
+import { isInterviewStatus } from '@/lib/job-status';
 
 /**
  * Everything that happened in the workspace on one day: what agents (scheduled or not) brought in,
@@ -93,7 +94,7 @@ export default function DailyBrief({
   const sections: Section[] = [
     section('due', Clock3, date === data.today ? '今天到期' : '当天到期', [
       ...brief.overdue.map((j) => jobRow(j, j.nextAction || j.role, { tag: t('已逾期') + ' ' + day(j.nextDate) })),
-      ...brief.due.map((j) => jobRow(j, j.nextAction || j.role, { tag: j.status === '面试中' ? t('面试') : t('跟进') })),
+      ...brief.due.map((j) => jobRow(j, j.nextAction || j.role, { tag: isInterviewStatus(j.status) ? t('面试') : t('跟进') })),
     ]),
     section('reports', Sparkles, 'Agent 分析', brief.reports.map((r) => ({ id: r.id, title: r.title, time: clock(r.createdAt), excerpt: r.content.replace(/[#*>`_-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200), onOpen: () => openReport(r) }))),
     section('jobs', BriefcaseBusiness, '新收集的职位', brief.addedJobs.map((j) => jobRow(j, j.role, { time: clock(j.history[0]?.at) }))),

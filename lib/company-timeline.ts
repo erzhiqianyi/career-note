@@ -1,9 +1,13 @@
 import type { Job, State } from './career';
 import { eventsFromReports, type CareerEvent } from './calendar-events';
+import { isInterviewStatus, isSelectionProgressStatus } from './job-status';
 import { workspaceDay } from './workspace-day';
 
 /** The usual path of one application; 未通过 and 已撤回 end it at whichever step it had reached. */
-export const pipeline = ['关注中', '准备投递', '已投递', '书类选考', '面试中', '内定'] as const;
+export const pipeline = [
+  '关注中', '准备投递', '已投递', '轻松面谈', '书类选考', '适性检查',
+  '面试中', '一次面试', '二次面试', '最终面试', '条件面谈', '结果待确认', '内定',
+] as const;
 const endings = ['未通过', '已撤回'];
 
 export type PipelineStep = {
@@ -39,8 +43,7 @@ export function pipelineView(job: Pick<Job, 'status' | 'history'>): PipelineView
  */
 export function isScreeningRejection(job: Pick<Job, 'status' | 'history'>): boolean {
   if (job.status !== '未通过') return false;
-  const interview = pipeline.indexOf('面试中');
-  return !(job.history || []).some((item) => pipeline.indexOf(item.status as (typeof pipeline)[number]) >= interview);
+  return !(job.history || []).some((item) => isInterviewStatus(item.status) || item.status === '内定');
 }
 
 /** Cumulative homepage funnel. Terminal records still count in the furthest stage they actually reached. */
@@ -48,10 +51,10 @@ export function applicationFunnelCounts(jobs: Pick<Job, 'status' | 'history'>[])
   const reached = (job: Pick<Job, 'status' | 'history'>, status: string) =>
     job.status === status || (job.history || []).some((item) => item.status === status);
   const applied = (job: Pick<Job, 'status' | 'history'>) =>
-    ['已投递', '书类选考', '面试中', '内定'].some((status) => reached(job, status)) ||
+    isSelectionProgressStatus(job.status) || (job.history || []).some((item) => isSelectionProgressStatus(item.status)) ||
     (job.status === '未通过' && !(job.history || []).length);
   const interviewed = (job: Pick<Job, 'status' | 'history'>) =>
-    reached(job, '面试中') || reached(job, '内定');
+    isInterviewStatus(job.status) || (job.history || []).some((item) => isInterviewStatus(item.status)) || reached(job, '内定');
   return {
     companies: jobs.length,
     applied: jobs.filter(applied).length,

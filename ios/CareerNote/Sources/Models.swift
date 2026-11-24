@@ -297,7 +297,8 @@ struct CareerJob: Codable, Identifiable {
 
     /// 不採用 before any interview counts as document screening, matching the web archive.
     var endedAtScreening: Bool {
-        !(history ?? []).contains { $0.status == "面试中" || $0.status == "内定" }
+        let interviewStatuses = ["面试中", "一次面试", "二次面试", "最终面试", "条件面谈", "内定"]
+        return !(history ?? []).contains { interviewStatuses.contains($0.status) }
     }
 
     /// Day (YYYY-MM-DD) the job entered its current status.

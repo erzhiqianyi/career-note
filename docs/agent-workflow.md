@@ -36,7 +36,7 @@ MCP prompts（需要 agent:write）：`career_company_board`（参数 company：
 
 个人星级评价通过 `career_update_job_rating({ id, revision, rating })` 单独更新，需要 `career:write` 权限，并且仅在用户要求评价或修改星级时调用。先用 `career_get_context` 读取现有职位 id 和 revision；rating 必须是 0–5 的整数（0 表示未评分）。工具只更新 rating、revision 和 updatedAt，保留研究字段、投递状态、历史、跟进安排和笔记。评分须有岗位与本人事实依据，不表示录用概率。多家公司逐一调用；每次成功后读回，发生 409 冲突时重新读取并判断，不盲目重试。研究理由仍通过预览/导入更新 matchNotes；通用 jobs 导入继续禁止 rating。部署新版 Worker 且客户端刷新工具列表后，才可使用该工具。
 
-投递状态只在用户明确告知新状态时（如「#19 已进入书类选考」）用 `career_update_job_status({ id, revision, status, statusDate })` 记录，需要 `career:write`。`statusDate` 是状态实际变化的日期（YYYY-MM-DD，不能晚于今天），用户说了哪天就传，省略时记为当前时间；对当前状态再传不同日期时，只更正最近一条历史的日期。网页编辑页也有「状态更新日期」，公司列表在状态下方显示该日期。status 取 关注中、准备投递、已投递、书类选考、面试中、内定、未通过、已撤回 之一。不得根据邮件、招聘网站、面试邀约或自行判断推测状态，也不代替用户提交申请或联系企业。先用 `career_get_context` 读取 id 和 revision；工具只修改 status、history（状态变化时追加一条）、revision 和 updatedAt，保留优先级、星级、匹配评价、下一步、日期和笔记。status 为 未通过 时可附 `rejectionReason`（≤2000 字），只记录用户转述的企业或顾问给出的理由，不得推测；省略则保留原有理由，空字符串清除。网页的「不採用归档」按落选阶段、日期和理由列出这些公司。与当前状态相同时不做修改。409 时重新读取再判断，成功后读回；多家公司逐一调用。通用 jobs 导入仍禁止 status/history。
+投递状态只在用户明确告知新状态时（如「#19 已进入书类选考」）用 `career_update_job_status({ id, revision, status, statusDate })` 记录，需要 `career:write`。`statusDate` 是状态实际变化的日期（YYYY-MM-DD，不能晚于今天），用户说了哪天就传，省略时记为当前时间；对当前状态再传不同日期时，只更正最近一条历史的日期。网页编辑页也有「状态更新日期」，公司列表在状态下方显示该日期。status 取 关注中、准备投递、已投递、轻松面谈、书类选考、适性检查、面试中、一次面试、二次面试、最终面试、条件面谈、结果待确认、内定、未通过、已撤回 之一。`面试中` 是不知道轮次或旧记录使用的兼容状态；轮次明确时优先记录一次、二次或最终面试。适性检查也包含笔试与技术测试。招聘网站只显示「选考结束」且没有合否时用结果待确认，不得直接记为未通过。不得根据邮件、招聘网站、面试邀约或自行判断推测状态，也不代替用户提交申请或联系企业。先用 `career_get_context` 读取 id 和 revision；工具只修改 status、history（状态变化时追加一条）、revision 和 updatedAt，保留优先级、星级、匹配评价、下一步、日期和笔记。status 为 未通过 时可附 `rejectionReason`（≤2000 字），只记录用户转述的企业或顾问给出的理由，不得推测；省略则保留原有理由，空字符串清除。网页的「不採用归档」按落选阶段、日期和理由列出这些公司。与当前状态相同时不做修改。409 时重新读取再判断，成功后读回；多家公司逐一调用。通用 jobs 导入仍禁止 status/history。
 
 志望群是职位上的 `preferenceGroup`，可取 `第一志望群`、`第二志望群`、`第三志望群` 或空字符串（未选择）。它表示本人意愿，不按星级、匹配评价、优先级或投递状态自动映射。仅在用户指定或明确授权 Agent 判断后，调用 `career_update_job_preference({ id, revision, preferenceGroup })` 保存（需要 `career:write`），读回确认；409 时重新读取。工具只修改 preferenceGroup、revision 和 updatedAt。通用 jobs 研究导入禁止 preferenceGroup；旧客户端未传此字段时保留原值。公司列表与详情展示，职位编辑页可选择或清空。`career_application_preparation` prompt 会携带现有选择、星级、revision 和岗位证据，并明确保存与不提交申请的边界。
 
@@ -158,6 +158,22 @@ node scripts/career-data.mjs state
 ```
 
 `overview`、`verifiedAt`（YYYY-MM-DD）和至少一个 http(s) `sources` 必填；facts 最多 12 条，segments、strengths、outlook、concerns 各最多 8 条，history 最多 30 条，sources 最多 20 条。优先使用公司官网、IR 资料、有価証券報告書、中期経営計画、公开新闻稿。数字保留年度和「約」；没有来源的数字不写。facts 尽量包含「従業員数」（注明基准日，连结/单体有区别时写明）；未写时看板会改用职位的 `employeeCount`。`outlook` 先写公司公开的计划，自己的推断在 detail 中以「分析：」开头，不能写成事实。`concerns` 写风险和面试中要确认的点（如客先常驻比例、业绩波动），不写无根据的负面评价。未上市或信息少的公司可少写条目，不补造沿革或业绩。
+
+`companyReviews` 是可选的口碑（口コミ）资料，网页「口碑」页签把日语与中文翻译上下并排显示。用户提供口碑网站链接或要求整理口碑时填写；只读用户指定或公开可访问的页面，不登录、不绕过付费墙。缺省时保留已有口碑，传 `null` 才删除；一旦提供就整体替换。
+
+```json
+"companyReviews": {
+  "overall": "3.9（口コミ220件、2026-11-24時点）",
+  "summaryJa": "全体の傾向（日本語）",
+  "summaryZh": "整体倾向（中文翻译）",
+  "themes": [{ "title": "案件次第の働き方", "tone": "mixed", "ja": "要点（日本語）", "zh": "要点（中文）" }],
+  "entries": [{ "postedAt": "2026-11-08", "reviewer": "男性／ITエンジニア／退職済み（2024年）", "category": "企業カルチャー・組織体制", "rating": "2.4", "ja": "投稿の要約（日本語）", "zh": "中文翻译", "url": "https://example.com/review" }],
+  "sources": [{ "label": "エン カイシャの評判", "url": "https://example.com/company/kuchikomi/" }],
+  "verifiedAt": "2026-11-24"
+}
+```
+
+`summaryJa`、`verifiedAt`（YYYY-MM-DD）和至少一个 http(s) `sources` 必填；themes 最多 12 条（tone 只能是 `positive`、`negative`、`mixed`），entries 最多 60 条，sources 最多 10 条。口碑是他人的个人感受，不能写进 companyProfile 的事实或当作公司实绩；entries 保留投稿日期、回答者属性、分类和原站评分，优先近两年的投稿，同一时期集中出现的大量好评在 summary 中注明。`ja` 用忠实于原意的日语要点摘要，不整段转载原文（原文版权属于投稿者和网站），需要原文时附 `url`；`zh` 是 `ja` 的中文翻译，不加入原文没有的判断。
 
 职位 `id` 是内部关联键，材料和题组仍用它关联公司。Worker 保存前为每个账号分配并持久化递增的 `companyNumber`，导入包不要指定或修改此字段；公司页面使用 `#jobs/company/<companyNumber>`，旧的 `id` 页面地址仍可打开。
 

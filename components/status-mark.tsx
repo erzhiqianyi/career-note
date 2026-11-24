@@ -1,5 +1,5 @@
 'use client';
-import { Award, Ban, Eye, FileSearch, FileText, MessageSquare, Send, XCircle } from 'lucide-react';
+import { Award, Ban, Clock3, Coffee, Eye, FileSearch, FileText, MessageSquare, Send, XCircle } from 'lucide-react';
 import { useLocale } from '@/components/locale-provider';
 
 /** One icon + colour per application status, so lists can show the stage without spelling it out. */
@@ -7,8 +7,15 @@ const MARKS: Record<string, { Icon: typeof Eye; tone: string }> = {
   关注中: { Icon: Eye, tone: 'gray' },
   准备投递: { Icon: FileText, tone: 'slate' },
   已投递: { Icon: Send, tone: 'blue' },
+  轻松面谈: { Icon: Coffee, tone: 'teal' },
   书类选考: { Icon: FileSearch, tone: 'indigo' },
+  适性检查: { Icon: FileSearch, tone: 'indigo' },
   面试中: { Icon: MessageSquare, tone: 'strong' },
+  一次面试: { Icon: MessageSquare, tone: 'strong' },
+  二次面试: { Icon: MessageSquare, tone: 'strong' },
+  最终面试: { Icon: MessageSquare, tone: 'strong' },
+  条件面谈: { Icon: Coffee, tone: 'teal' },
+  结果待确认: { Icon: Clock3, tone: 'blue' },
   内定: { Icon: Award, tone: 'green' },
   未通过: { Icon: XCircle, tone: 'red' },
   已撤回: { Icon: Ban, tone: 'muted' },

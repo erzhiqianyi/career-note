@@ -48,9 +48,11 @@ import { resumeSections } from '@/lib/resume';
 import { prepRank, prepStage, prepStageTone, type PrepProgress } from '@/lib/prep-stage';
 import { Ja } from '@/components/japanese-text';
 import { CompanyBoard } from '@/components/company-board';
+import { CompanyReviewsPanel } from '@/components/company-reviews';
 import { CompanyTimeline, ProgressStepper } from '@/components/company-progress';
 import type { CareerEvent } from '@/lib/calendar-events';
 import { isScreeningRejection } from '@/lib/company-timeline';
+import { isInterviewStatus } from '@/lib/job-status';
 import { plainJapanese } from '@/lib/japanese-readings';
 import { currentApplicationReason } from '@/lib/application-reason';
 import { ReasonCopyButton } from '@/components/application-reason';
@@ -85,11 +87,12 @@ const sortOptions: { key: PrepSortKey; label: string }[] = [
 ];
 type PrepColumn = PrepSortKey;
 /** Sections of one company's preparation page. */
-type PrepTab = 'info' | 'progress' | 'board' | 'materials' | 'practice' | 'summary';
+type PrepTab = 'info' | 'progress' | 'board' | 'reviews' | 'materials' | 'practice' | 'summary';
 const PREP_TABS: Array<[PrepTab, string]> = [
   ['info', '企业'],
   ['progress', '进度'],
   ['board', '企业看板'],
+  ['reviews', '口碑'],
   ['materials', '资料'],
   ['practice', '练习'],
   ['summary', '总结'],
@@ -499,7 +502,7 @@ export default function InterviewPractice({
       const answered = latest ? new Set(data.attempts.filter(a => a.questionSetId === latest.id).map(a => a.questionId)).size : 0;
       return latest ? { answered, total: latest.questions.length } : null;
     };
-    const isInterview = (job: State['jobs'][number]) => job.status === '面试中' || /面试|面接|interview/i.test(job.nextAction || '');
+    const isInterview = (job: State['jobs'][number]) => isInterviewStatus(job.status) || /面试|面接|interview/i.test(job.nextAction || '');
     // Everything the preparation stage is derived from, per company.
     const prepOf = (job: State['jobs'][number]): PrepProgress => {
       const p = progress(job.id);
@@ -734,7 +737,7 @@ export default function InterviewPractice({
   const currentJob = data.jobs.find(j => j.id === jobId);
   if (company && !practiceRecord && !guide && !help) {
     // Keep the company and posting together, and show practice feedback with its summary.
-    const tabs = PREP_TABS.filter(([id]) => !isBank || (id !== 'info' && id !== 'progress' && id !== 'board'));
+    const tabs = PREP_TABS.filter(([id]) => !isBank || (id !== 'info' && id !== 'progress' && id !== 'board' && id !== 'reviews'));
     const activeTab = tabs.some(([id]) => id === tab) ? tab : 'practice';
     const companyMaterials = materialsFor(isBank ? '' : jobId);
     const archivedMaterials = materialsFor(isBank ? '' : jobId, true);
@@ -845,6 +848,7 @@ export default function InterviewPractice({
         </details>
       </div>}
       {activeTab === 'board' && currentJob && <CompanyBoard job={currentJob} />}
+      {activeTab === 'reviews' && currentJob && <CompanyReviewsPanel job={currentJob} />}
       {activeTab === 'materials' && <section className="panel dt-panel practice-materials prep-tab-panel">
         {!isBank && currentJob && exportDocuments && <div className="application-export-entry"><button type="button" className="secondary" onClick={() => exportDocuments(currentJob)}><FileOutput size={17} />{tr('从资料导出履歴書・職務経歴書')}</button></div>}
         {companyMaterials.length ? materialTable(companyMaterials, tr('准备资料')) : <div className="empty"><p>{tr(isBank ? '还没有通用准备资料。' : '还没有这家公司的准备资料。')}</p></div>}

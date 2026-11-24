@@ -23,6 +23,7 @@ import type { Material } from '../lib/career';
 import { parseEventHeader, withEventHeader, type EventHeader } from '../lib/calendar-events';
 import { applicationBodyIssues, type ApplicationKind, type MaterialReviewItem } from '../lib/material-print-content';
 import { normalizeCompanyProfile } from '../lib/company-profile';
+import { normalizeCompanyReviews } from '../lib/company-reviews';
 import { plainJapanese } from '../lib/japanese-readings';
 import { preferenceGroups } from '../lib/job-preferences';
 import { jobStatuses, type JobStatus } from '../lib/job-status';
@@ -482,6 +483,12 @@ async function saveJob(db: Workspace, data: Record<string, unknown>, researchOnl
   else {
     try { base.companyProfile = normalizeCompanyProfile(data.companyProfile); }
     catch (error) { throw new AppError(400, error instanceof Error ? error.message : '企业看板数据无效'); }
+  }
+  // Reviews follow the same rule: omitted keeps them, null removes them.
+  if (data.companyReviews === undefined) base.companyReviews = old?.companyReviews ?? null;
+  else {
+    try { base.companyReviews = normalizeCompanyReviews(data.companyReviews); }
+    catch (error) { throw new AppError(400, error instanceof Error ? error.message : '口碑数据无效'); }
   }
 
   if (!researchOnly) {
@@ -1329,6 +1336,10 @@ async function importBundle(db: Workspace, data: Record<string, unknown>, previe
         if (preview && obj.companyProfile !== undefined) {
           try { normalizeCompanyProfile(obj.companyProfile); }
           catch (error) { throw new AppError(400, error instanceof Error ? error.message : '企业看板数据无效'); }
+        }
+        if (preview && obj.companyReviews !== undefined) {
+          try { normalizeCompanyReviews(obj.companyReviews); }
+          catch (error) { throw new AppError(400, error instanceof Error ? error.message : '口碑数据无效'); }
         }
         if (!preview) await saveJob(db, obj, true);
         counts.jobs += 1;

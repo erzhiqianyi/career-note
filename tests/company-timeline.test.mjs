@@ -22,8 +22,15 @@ test('the pipeline dates each reached step and marks skipped ones as passed', ()
     ['关注中', 'done', '2026-10-01'],
     ['准备投递', 'done', ''],
     ['已投递', 'done', '2026-10-20'],
+    ['轻松面谈', 'done', ''],
     ['书类选考', 'current', '2026-10-25'],
+    ['适性检查', 'upcoming', ''],
     ['面试中', 'upcoming', ''],
+    ['一次面试', 'upcoming', ''],
+    ['二次面试', 'upcoming', ''],
+    ['最终面试', 'upcoming', ''],
+    ['条件面谈', 'upcoming', ''],
+    ['结果待确认', 'upcoming', ''],
     ['内定', 'upcoming', ''],
   ]);
   assert.equal(view.ending, undefined);
@@ -35,8 +42,8 @@ test('an ended application stops at the furthest step it reached', () => {
     { status: '面试中', at: '2026-10-26T00:00:00.000Z' },
     { status: '未通过', at: '2026-10-28T00:00:00.000Z' },
   ]));
-  assert.equal(view.steps[4].state, 'ended');
-  assert.equal(view.steps[5].state, 'upcoming');
+  assert.equal(view.steps[6].state, 'ended');
+  assert.equal(view.steps[7].state, 'upcoming');
   assert.deepEqual(view.ending, { status: '未通过', date: '2026-10-28' });
 });
 
@@ -65,6 +72,7 @@ test('only rejections that never reached an interview count as document-screenin
   assert.equal(isScreeningRejection(job('未通过', [{ status: '书类选考' }, { status: '未通过' }])), true);
   assert.equal(isScreeningRejection(job('未通过', [])), true);
   assert.equal(isScreeningRejection(job('未通过', [{ status: '面试中' }, { status: '未通过' }])), false);
+  assert.equal(isScreeningRejection(job('未通过', [{ status: '一次面试' }, { status: '未通过' }])), false);
   assert.equal(isScreeningRejection(job('已撤回', [{ status: '已投递' }])), false);
   assert.equal(isScreeningRejection(job('已投递', [])), false);
 });
@@ -85,4 +93,36 @@ test('homepage funnel keeps ended applications in the furthest stage they reache
     interviewed: 2,
     offers: 1,
   });
+});
+
+test('a casual interview is ordered after application and before document screening', () => {
+  const view = pipelineView(job('轻松面谈', [
+    { status: '关注中', at: '2026-11-20T00:00:00.000Z' },
+    { status: '已投递', at: '2026-11-20T01:00:00.000Z' },
+    { status: '轻松面谈', at: '2026-11-21T00:00:00.000Z' },
+  ]));
+  assert.deepEqual(view.steps.map((s) => [s.status, s.state]), [
+    ['关注中', 'done'],
+    ['准备投递', 'done'],
+    ['已投递', 'done'],
+    ['轻松面谈', 'current'],
+    ['书类选考', 'upcoming'],
+    ['适性检查', 'upcoming'],
+    ['面试中', 'upcoming'],
+    ['一次面试', 'upcoming'],
+    ['二次面试', 'upcoming'],
+    ['最终面试', 'upcoming'],
+    ['条件面谈', 'upcoming'],
+    ['结果待确认', 'upcoming'],
+    ['内定', 'upcoming'],
+  ]);
+});
+
+test('granular interview rounds count as interviews and result-pending stays active without implying rejection', () => {
+  const counts = applicationFunnelCounts([
+    job('一次面试', [{ status: '已投递' }, { status: '书类选考' }, { status: '一次面试' }]),
+    job('结果待确认', [{ status: '已投递' }, { status: '最终面试' }, { status: '结果待确认' }]),
+    job('结果待确认', [{ status: '已投递' }, { status: '书类选考' }, { status: '结果待确认' }]),
+  ]);
+  assert.deepEqual(counts, { companies: 3, applied: 3, screeningRejected: 0, interviewed: 2, offers: 0 });
 });
