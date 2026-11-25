@@ -132,6 +132,10 @@ test('MCP exposes whole-interview workflow, scoped stage writes, bounded reads a
   const tools = (await rpc(reader, 'tools/list')).result.tools;
   assert.ok(tools.some(item => item.name === 'career_get_interview'));
   assert.ok(!tools.some(item => item.name === 'career_save_interview_stage'));
+  assert.ok(!tools.some(item => item.name === 'career_prepare_interview_upload'));
+  const writerTools = (await rpc(writer, 'tools/list')).result.tools;
+  assert.ok(writerTools.some(item => item.name === 'career_prepare_interview_upload'));
+  assert.ok(writerTools.some(item => item.name === 'career_complete_interview_upload'));
   assert.match((await call(reader, 'career_get_interview_guide')).content[0].text, /WHOLE/);
   assert.equal((await call(reader, 'career_list_interviews')).structuredContent.interviews.length, 1);
   const current = (await call(reader, 'career_get_interview', { id: source.id })).structuredContent;
@@ -143,6 +147,38 @@ test('MCP exposes whole-interview workflow, scoped stage writes, bounded reads a
   assert.equal((await call(reader, 'career_get_interview_audio', { id: source.id })).structuredContent.size, 16);
   await api(mf, writer)('interviews', { ...source, id: 'forbidden' }, 403);
   await api(mf, reader)('interviews/stage', change, 403);
+});
+
+test('MCP creates and resumes a private interview upload with short-lived exact-part URLs', async t => {
+  const mf = await host(t);
+  const reader = (await authorizeAgent(mf, { scopes: ['career:read'] })).issued.access_token;
+  const writer = (await authorizeAgent(mf, { scopes: ['career:read', 'agent:write'] })).issued.access_token;
+  const rpc = async (token, name, args = {}) => {
+    const response = await api(mf, token)('mcp', { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }, 200,
+      { Accept: 'application/json, text/event-stream' });
+    assert.ok(response.result && !response.result.isError, JSON.stringify(response));
+    return response.result.structuredContent;
+  };
+  const uploadSource = { ...source, id: 'mcp-upload', title: 'MCP source' };
+  const prepared = await rpc(writer, 'career_prepare_interview_upload', {
+    session: uploadSource, audio: { size: 16, contentType: 'audio/mp4', fileName: 'mcp.m4a' },
+  });
+  assert.equal(prepared.complete, false);
+  assert.equal(prepared.totalParts, 1);
+  assert.equal(prepared.missingParts[0].size, 16);
+  const wrong = await mf.dispatchFetch(prepared.missingParts[0].url, { method: 'POST', body: new Uint8Array(15) });
+  assert.equal(wrong.status, 400);
+  const uploaded = await mf.dispatchFetch(prepared.missingParts[0].url, { method: 'POST', body: new Uint8Array(16).fill(7) });
+  assert.equal(uploaded.status, 200, await uploaded.text());
+  const resumed = await rpc(writer, 'career_prepare_interview_upload', {
+    session: uploadSource, audio: { size: 16, contentType: 'audio/mp4', fileName: 'mcp.m4a' },
+  });
+  assert.deepEqual(resumed.missingParts, []);
+  const completed = await rpc(writer, 'career_complete_interview_upload', { id: uploadSource.id });
+  assert.equal(completed.audio.size, 16);
+  assert.equal((await rpc(reader, 'career_get_interview', { id: uploadSource.id })).audio.size, 16);
+  const replay = await rpc(writer, 'career_complete_interview_upload', { id: uploadSource.id });
+  assert.equal(replay.revision, completed.revision);
 });
 
 test('interview source, transcript, history, upload receipts and audio remain isolated by authenticated owner', async t => {

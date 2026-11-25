@@ -28,7 +28,8 @@ import { plainJapanese } from '../lib/japanese-readings';
 import { preferenceGroups } from '../lib/job-preferences';
 import { jobStatuses, type JobStatus } from '../lib/job-status';
 import { InterviewError, listInterviews, getInterview, getInterviewVersion, createInterview, updateInterview, requestInterviewAnalysis,
-  importInterviewSource, beginInterviewAudio, uploadInterviewPart, completeInterviewAudio, interviewAudioResponse, readInterviewBytes } from './interviews';
+  importInterviewSource, beginInterviewAudio, uploadInterviewPart, completeInterviewAudio, interviewAudioResponse, readInterviewBytes,
+  INTERVIEW_PART_SIZE } from './interviews';
 import { interviewSummary } from '../lib/interview-session';
 import { PracticePlanError, createPracticePlan, deletePracticePlan, editPracticePlan, getPracticePlan, listPracticePlans, practicePlanDetail,
   requestPracticePlanTask, savePracticePlan, savePracticePlanReview, setPracticePlanStatus, validatePracticeContext, type PracticePlanStore } from './practice-plans';
@@ -1166,6 +1167,12 @@ async function attemptAudioResponse(env: Env, key: string, contentType: string) 
 
 // Agents cannot receive audio through MCP, so they get a short-lived, unguessable download URL instead.
 const audioLinks = (connection: D1Database): Workspace => ({ connection, namespace: '' });
+const interviewUploadLinks = audioLinks;
+function randomLinkToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 async function createAudioLink(db: Workspace, env: Env, request: Request, uid: string, attemptId: string) {
   const attempt = await getRecord(db, 'attempts', attemptId);
   if (!attempt) throw new AppError(404, '回答版本不存在');
@@ -1186,6 +1193,57 @@ async function createAudioLink(db: Workspace, env: Env, request: Request, uid: s
     durationSeconds: attempt.durationSeconds,
     language: attempt.language,
   };
+}
+async function prepareInterviewUpload(db: Workspace, rawDb: D1Database, env: Env, request: Request, uid: string,
+  input: Record<string, unknown>) {
+  const sessionInput = input.session;
+  const audioInput = input.audio;
+  if (!sessionInput || typeof sessionInput !== 'object' || Array.isArray(sessionInput) ||
+      !audioInput || typeof audioInput !== 'object' || Array.isArray(audioInput))
+    throw new InterviewError(400, 'session 和 audio 必须是对象');
+  const session = await createInterview({ ...db, get: (kind, id) => getRecord(db, kind, id),
+    put: (kind, value) => putRecord(db, kind, value), list: (kind) => records(db, kind) }, sessionInput);
+  const interviewId = String(session.id);
+  const audio = audioInput as Record<string, unknown>;
+  const store = { ...db, get: (kind: string, id: string) => getRecord(db, kind, id),
+    put: (kind: string, value: Record<string, unknown>) => putRecord(db, kind, value),
+    list: (kind: string) => records(db, kind) };
+  const upload = await beginInterviewAudio(store, audioBucket(env), uid, { ...audio, id: interviewId });
+  if (upload.complete) return { interview: interviewSummary(await getInterview(store, interviewId)), complete: true,
+    partSize: INTERVIEW_PART_SIZE, totalParts: Math.ceil(Number(audio.size) / INTERVIEW_PART_SIZE), missingParts: [] };
+  const completed = new Set(upload.parts.map((part) => part.partNumber));
+  const totalParts = Math.ceil(Number(audio.size) / INTERVIEW_PART_SIZE);
+  const expiresAt = new Date(Date.now() + AUDIO_LINK_TTL_MS).toISOString();
+  const origin = resolveOrigins(request, env).publicOrigin;
+  const missingParts: { part: number; size: number; url: string }[] = [];
+  for (let part = 1; part <= totalParts; part++) {
+    if (completed.has(part)) continue;
+    const size = Math.min(INTERVIEW_PART_SIZE, Number(audio.size) - (part - 1) * INTERVIEW_PART_SIZE);
+    const token = randomLinkToken();
+    await putRecord(interviewUploadLinks(rawDb), 'interviewUploadLinks', {
+      id: token, namespace: db.namespace, interviewId, part, size, expiresAt,
+    });
+    missingParts.push({ part, size, url: `${origin}/api/career/interviews/upload/${token}` });
+  }
+  return { interview: interviewSummary(await getInterview(store, interviewId)), complete: false,
+    partSize: INTERVIEW_PART_SIZE, totalParts, expiresAt, missingParts };
+}
+async function interviewUploadLinkResponse(rawDb: D1Database, env: Env, token: string, request: Request) {
+  const links = interviewUploadLinks(rawDb);
+  const link = await getRecord(links, 'interviewUploadLinks', token);
+  if (!link) return jsonResponse({ error: '上传链接不存在或已过期' }, { status: 404 });
+  if (Date.parse(String(link.expiresAt)) < Date.now()) {
+    await rawDb.prepare('DELETE FROM records WHERE kind=?1 AND id=?2').bind(workspaceKey(links, 'interviewUploadLinks'), token).run();
+    return jsonResponse({ error: '上传链接已过期，请重新获取' }, { status: 410 });
+  }
+  const declared = request.headers.get('content-length');
+  if (declared !== null && Number(declared) !== Number(link.size))
+    return jsonResponse({ error: '上传分段大小不正确' }, { status: 400 });
+  const db: Workspace = { connection: rawDb, namespace: String(link.namespace || '') };
+  const store = { ...db, get: (kind: string, id: string) => getRecord(db, kind, id),
+    put: (kind: string, value: Record<string, unknown>) => putRecord(db, kind, value),
+    list: (kind: string) => records(db, kind) };
+  return jsonResponse(await uploadInterviewPart(store, audioBucket(env), String(link.interviewId), Number(link.part), request));
 }
 async function audioLinkResponse(rawDb: D1Database, env: Env, token: string, request: Request) {
   const links = audioLinks(rawDb);
@@ -1653,6 +1711,8 @@ const handler = async (
   }
   const audioMatch = new URL(request.url).pathname.match(/^\/api\/career\/(?:attempts|interviews)\/audio\/([a-f0-9]{48})$/);
   if (audioMatch && request.method === 'GET') return audioLinkResponse(rawDb, env, audioMatch[1], request);
+  const interviewUploadMatch = new URL(request.url).pathname.match(/^\/api\/career\/interviews\/upload\/([a-f0-9]{48})$/);
+  if (interviewUploadMatch && request.method === 'POST') return interviewUploadLinkResponse(rawDb, env, interviewUploadMatch[1], request);
 
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -1812,7 +1872,7 @@ const handler = async (
       throw new InterviewError(404, '面试接口不存在');
     }
     if (method !== 'POST') throw new InterviewError(405, '请求方法不支持');
-    if (['/stage', '/stage/preview'].includes(action)) ensureScopes(context, ['agent:write']);
+    if (['/stage', '/stage/preview', '/upload-links', '/upload-complete'].includes(action)) ensureScopes(context, ['agent:write']);
     else if (action === '/audio-link') ensureScopes(context, ['career:read']);
     else {
       ensureScopes(context, ['career:write']);
@@ -1825,6 +1885,7 @@ const handler = async (
     try { data = JSON.parse(body); } catch { throw new InterviewError(400, '请求体必须是 JSON 对象'); }
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new InterviewError(400, '请求体必须是 JSON 对象');
     if (!action) return jsonResponse(await createInterview(store, data));
+    if (action === '/upload-links') return jsonResponse(await prepareInterviewUpload(db, rawDb, env, request, context.uid, data));
     if (action === '/stage' || action === '/stage/preview') {
       const result = await updateInterview(store, data, action.endsWith('/preview'));
       if (action === '/stage' && data.stage === 'practice') {

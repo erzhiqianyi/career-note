@@ -59,6 +59,19 @@ const questionSetPatch = z.object({
   removeQuestionIds: z.array(z.string()).max(MAX_QUESTIONS_PER_SET).optional().describe('Questions to drop; answered question ids cannot be removed.'),
 }).strict();
 
+const interviewUploadSession = z.object({
+  id: z.string().regex(/^[a-zA-Z0-9:_-]{1,120}$/),
+  title: z.string().trim().min(1).max(200),
+  jobId: z.string().max(120).default(''),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  durationSeconds: z.number().positive().max(8 * 3600),
+}).strict();
+const interviewUploadAudio = z.object({
+  size: z.number().int().positive().max(256 * 1024 * 1024),
+  contentType: z.enum(['audio/mp4', 'audio/x-m4a', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg']),
+  fileName: z.string().min(1).max(240),
+}).strict();
+
 const bundle = z
   .object({
     schemaVersion: z.literal(1),
@@ -142,6 +155,20 @@ export function createCareerTools(invoke: Invoke): AgentTool[] {
       description: 'Read the whole-interview workflow: source audio/transcript, understand full flow, split logical exchanges, review, then link targeted practice. Instructions only; the calling agent performs analysis.',
       inputSchema: {}, annotations: { readOnlyHint: true, openWorldHint: false },
       handler: async () => ({ content: [{ type: 'text', text: INTERVIEW_GUIDE }] }),
+    },
+    {
+      name: 'career_prepare_interview_upload', scope: 'agent:write',
+      description: 'Create or resume a real interview source and return short-lived URLs for only the missing fixed-size audio parts. Use the exact source metadata and local file byte size; upload each byte range directly to its URL. URLs cannot choose an account, bucket or object key.',
+      inputSchema: { session: interviewUploadSession, audio: interviewUploadAudio },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      handler: (args, ctx) => api(ctx, 'interviews/upload-links', args),
+    },
+    {
+      name: 'career_complete_interview_upload', scope: 'agent:write',
+      description: 'Complete a prepared interview audio upload after every returned part succeeded, then return the versioned interview record. Safe to retry after a lost response. Follow with career_get_interview before saving transcript/flow/review stages.',
+      inputSchema: { id: z.string().regex(/^[a-zA-Z0-9:_-]{1,120}$/) },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      handler: (args, ctx) => api(ctx, 'interviews/upload-complete', args),
     },
     {
       name: 'career_list_interviews', scope: 'career:read',

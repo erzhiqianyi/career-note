@@ -335,6 +335,6 @@ documentの本文は更新できないため、新しい版は新しいidを使�
 
 ## 已上传的面试原资料登记
 
-MCP `career_preview_import` / `career_import` 的 `reports[]` 可带可选 `sourceInterview`，把独立报告关联到本账号已上传的私有原录音。该字段结构是 `{session:{id,title,jobId,date,durationSeconds},audio:{size,contentType,fileName},transcript?,flow?,review?}`。三个可选阶段使用面试专用 schema，按转写、全体流程、复盘顺序校验；原回答不创建为 attempts。来源文件先由用户在应用导入，或由明确获得上传授权的维护者上传到本账号 R2。服务按认证账号和 session.id 推导对象键，核对文件大小与 MIME 类型，不接受客户端指定桶、存储路径或账号。
+MCP `career_preview_import` / `career_import` 的 `reports[]` 可带可选 `sourceInterview`，把独立报告关联到本账号已上传的私有原录音。该字段结构是 `{session:{id,title,jobId,date,durationSeconds},audio:{size,contentType,fileName},transcript?,flow?,review?}`。三个可选阶段使用面试专用 schema，按转写、全体流程、复盘顺序校验；原回答不创建为 attempts。若用户明确要求 Agent 上传本机来源文件，先调用 `career_prepare_interview_upload`，按返回的 5 MiB 不足分片与精确字节数逐个上传，再调用 `career_complete_interview_upload` 并读回。短时 URL 不写入材料或 sourceNotes；重试 prepare 只返回缺失分片。服务按认证账号和 session.id 推导对象键，核对文件大小与 MIME 类型，不接受客户端指定桶、存储路径或账号。
 
 预览不创建面试记录。保存保留版本；同一来源可继续登记未完成阶段，已有转写和本人修正不一致时拒绝覆盖。报告保存 `interviewId`，报告本身独立于公司材料；面试的 `jobId` 仅用于注明对应公司。实际问题可单独保存为 reports，正文保留面试日期、公司、录音时刻与待核对项，不覆盖公司准备题组，也不把“尚无内定”写成“不通过”。录音上传、面试登记、报告读回分别核验，不能把其中一步当作全部完成。

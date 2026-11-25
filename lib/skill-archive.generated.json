@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-24T13:37:02.439Z",
-  "revision": "0483bb178f589ab5b3ccc4d4fb705b2bd873d252f22322e2850f010a9497945e",
-  "archiveUrl": "/skill-archive/project-skills-0483bb178f589ab5.zip",
+  "generatedAt": "2026-11-25T23:03:02.648Z",
+  "revision": "10efe9634c10cb704b6c7988512a47d96f5cf822336cde49de56e0200d73c53b",
+  "archiveUrl": "/skill-archive/project-skills-10efe9634c10cb70.zip",
   "skills": [
     {
       "name": "career-application-materials",
@@ -181,6 +181,13 @@
     }
   ],
   "history": [
+    {
+      "url": "/skill-archive/project-skills-10efe9634c10cb70.zip",
+      "createdAt": "2026-11-25T23:03:02.648Z",
+      "revision": "10efe9634c10cb704b6c7988512a47d96f5cf822336cde49de56e0200d73c53b",
+      "skillCount": 11,
+      "bytes": 80914
+    },
     {
       "url": "/skill-archive/project-skills-0483bb178f589ab5.zip",
       "createdAt": "2026-11-24T13:37:02.439Z",
